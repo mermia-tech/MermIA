@@ -30,16 +30,16 @@ Everything lives in `packages/contracts`. A change after day 2 needs a PR approv
 
 | Contract | Content | Primary author |
 |---|---|---|
-| C1 Normalized schema v1 | SQL migrations for 09 sections 2.1-2.5 (tables, enums, RLS policies), as DDL plus generated TS types | Dev A |
-| C2 `NormalizedBatch` v1 | Zod schema (09 section 3); the parser output format | Dev A |
+| C1 Normalized schema v1 | SQL migrations for 09 sections 2.1-2.5 (tables, enums, RLS policies), as DDL plus generated Pydantic models | Dev A |
+| C2 `NormalizedBatch` v1 | Pydantic model (09 section 3); the parser output format | Dev A |
 | C3 Metric RPC interfaces | The 11 read RPCs in 09 section 4.1: name, args, response JSON with formatted and raw values, flags, envelope; 1-2 example responses each | Dev A writes, Dev B reviews |
-| C4 Agent tool definitions | 12 tools as JSON Schema generated from C3 Zod types; one-line descriptions; ≤125 tokens each, measured with `count_tokens` | Dev B writes, Dev A reviews |
+| C4 Agent tool definitions | 12 tools as JSON Schema generated from C3 Pydantic models; one-line descriptions; ≤125 tokens each, measured with `count_tokens` | Dev B writes, Dev A reviews |
 | C5 `PendingChange` kinds | `ingredient_price.set`, `recipe.upsert`, `menu_item_price.set`, `import_batch.approve`, `import_batch.rollback`; payload schemas; `apply_pending_change(id, user_id)` signature and result codes | Dev A + B |
 | C6 `AgentRequest` / `AgentResponse` | 09 section 4.3 | Dev B |
 | C7 Fixtures | "Taquería El Güero" (13 H3): 2 locations, 8 weeks of item-daily sales, about 40 menu items, about 60 ingredients, recipes for the top 15, 3 suppliers, 2 price jumps, 1 cancellation-heavy Saturday. Delivered as SQL seed, JSON files and **mock RPC responses generated from the seed** | Dev A (seed), Dev B (mock server) |
 | C8 Sample SR exports | Pilot files in `fixtures/sr/<version>/`, each paired with an expected `NormalizedBatch` golden JSON (start with 2 report types) | Dev A |
 
-Exit of day 2: contracts merged on `main`. The mock RPC server (`apps/mock-rpc`, serving C7 data in the C3 shapes) runs locally. A contract test is in CI: real RPC output must parse with the C3 Zod schemas.
+Exit of day 2: contracts merged on `main`. The mock RPC server (`apps/mock-rpc`, serving C7 data in the C3 shapes) runs locally. A contract test is in CI: real RPC output must parse with the C3 Pydantic models.
 
 ## Ownership
 
@@ -52,7 +52,7 @@ Exit of day 2: contracts merged on `main`. The mock RPC server (`apps/mock-rpc`,
 | Agent | - | router, templates, LLM gateway (routing, caps, `llm_usage`), broker loop, number validator, memory |
 | LLM selection | reviews eval expectations against fixture numbers | eval harness, 40 questions, runs, decision memo |
 | Confirmations | `apply_pending_change`, version and role checks, audit triggers | confirmation service, buttons, expiry job, replies |
-| Reports | `build_weekly_report(location_id, period)` RPC returning the data | scheduling (pg-boss), template send, follow-up detail |
+| Reports | `build_weekly_report(location_id, period)` RPC returning the data | scheduling (Procrastinate), template send, follow-up detail |
 | Onboarding, ops | tenant/user admin script | opt-in flow, aviso link, `message_log`, Sentry, deploy |
 
 ## Week by week
@@ -75,7 +75,7 @@ Dependencies:
 | Practice | Detail |
 |---|---|
 | Fixtures first | One fixture restaurant is the shared truth for evals, mocks, pgTAP and parser tests |
-| Mock RPC server | Generated from the seed through the real SQL when available; hand-written JSON before that; validated by the same Zod schemas |
+| Mock RPC server | Generated from the seed through the real SQL when available; hand-written JSON before that; validated by the same Pydantic models |
 | Contract tests in CI | Real RPC responses must parse with the C3 schemas; tool schemas must stay under the token budget |
 | Golden files | Each SR sample export has an expected `NormalizedBatch`; a parser change that alters golden output needs review |
 | Branching | Trunk-based: short branches (≤1 day), PR to `main`, the other dev reviews the same day; PRs under about 400 lines; migrations numbered and only appended; `packages/contracts` changes need both approvals; squash merge |

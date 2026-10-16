@@ -14,7 +14,7 @@ Date: 2026-10-15. Labels: **verified**, **likely** and **unverified** apply to f
 | D6 | **The agent is a deterministic router first and an LLM second.** Templates answer the top questions with zero tokens. Claude Haiku 5.5 brokers 12 tools, and a validator rejects any number not found in the tool output. | Token cost (13: about US$0.66 per restaurant per month) and owner trust. |
 | D7 | **Writes happen only through `pending_change`.** The agent's only write tool is `propose_change`. The change is applied by an `apply_pending_change()` SQL function after a role-checked human approval. Every step is logged in an append-only `audit_log`. | This is the human-approval rule from the brief, and it is channel-agnostic. |
 | D8 | **Tool calls run as the user.** The backend mints a short-lived JWT holding the user's `tenant_id`, role and locations, so RLS applies to agent reads too. The service role is used only by ingestion and the apply functions. | A prompt-injection or tool-argument bug cannot cross tenants. |
-| D9 | **TypeScript end to end** (contracts, API, workers, dashboard, POS), with **Supabase** (Postgres, RLS, Auth, Storage) and **one always-on Node service**. | Two developers share one language and one schema package across all three phases. |
+| D9 | **Python backend, TypeScript frontend**, with **Supabase** (Postgres, RLS, Auth, Storage) and **one always-on FastAPI service**. Pydantic is the source of truth for contracts; TypeScript types for the dashboard and POS are generated from its JSON Schema. | Python is stronger for messy Excel parsing and LLM work. The generated types keep one schema across all three phases (**opinion**; the generation pipeline is untested, allow half a day in Phase 2). |
 
 ## 1. Components
 
@@ -28,14 +28,14 @@ flowchart LR
     POS[MermIA POS<br/>Phase 3]
   end
 
-  subgraph API[apps/api - Node/TypeScript, one service]
+  subgraph API[apps/api - Python/FastAPI, one service]
     CH[Channel adapters<br/>WhatsApp now, web, POS later]
     TR[Ingestion transports]
     PR[Parser registry<br/>fingerprint to parser]
     LD[Batch loader<br/>validate, stage, apply]
     AG[Agent core<br/>router, templates, LLM broker, validator]
     CF[Confirmation service]
-    JOB[Jobs + schedules<br/>pg-boss]
+    JOB[Jobs + schedules<br/>Procrastinate]
     RB[Report and alert builder<br/>code, no LLM]
     GW[LLM gateway<br/>routing, caps, metering]
   end
@@ -73,7 +73,7 @@ Module boundaries (these follow the Dev A / Dev B split in `08-mvp-4-week-plan.m
 
 | Module | Owns | Talks to others only through |
 |---|---|---|
-| `packages/contracts` | Zod schemas: `NormalizedBatch`, RPC request and response types, agent tool JSON schemas, `PendingChange` kinds, `AgentRequest`/`AgentResponse`, fixtures | Imported by everything; changes need both devs to approve |
+| `packages/contracts` | Pydantic models (plus exported JSON Schema): `NormalizedBatch`, RPC request and response types, agent tool JSON schemas, `PendingChange` kinds, `AgentRequest`/`AgentResponse`, fixtures | Imported by everything; changes need both devs to approve |
 | `packages/db` | Migrations, RLS policies, metric RPCs, `apply_batch`, `rollback_batch`, `apply_pending_change`, pgTAP tests | SQL function signatures in contracts |
 | `apps/api/ingestion` | Transports, parser registry, batch loader | `NormalizedBatch`, `apply_batch` |
 | `apps/api/agent` | Router, templates, LLM broker, validator, memory | Tool schemas; RPCs reached through `ToolExecutor` |
@@ -248,7 +248,7 @@ flowchart LR
   R -->|regex intent, top ~8 questions| T[Template: RPC + es-MX template, 0 tokens]
   R -->|everything else| L[Haiku 5.5 + 12 tools<br/>cached static prefix]
   L -->|more than 2 tools, retry, propose_change, 'está mal'| S[Sonnet 5.5]
-  L --> X[ToolExecutor: zod-validate args, user JWT, call RPC]
+  L --> X[ToolExecutor: pydantic-validate args, user JWT, call RPC]
   S --> X
   X --> L
   L --> V{Number validator}
@@ -365,20 +365,20 @@ Rules:
 | Layer | Choice | Justification | Cost (USD/mo) |
 |---|---|---|---|
 | Database, auth, storage | **Supabase Pro**: Postgres, RLS, Auth, Storage, daily backups | RLS covers multi-tenancy; PostgREST exposes the RPCs to the dashboard for free; Realtime is there for Phase 2-3 | 25, including a US$10 compute credit (**verified**, notes) |
-| Backend | **One Node 22 + TypeScript service** (Hono), hosted on Render Starter or Fly.io: webhooks, ingestion, agent, confirmations, jobs | Always-on, so Meta webhooks get a fast 200; no Edge Function CPU limits for Excel parsing (notes); one deployable | about 7 (**unverified**, notes) |
-| Jobs and schedules | **pg-boss** on the same Postgres | Retries, cron and idempotency with no extra infrastructure | 0 |
-| Parsing | SheetJS (xls and xlsx), fast-xml-parser (CFDI), unpdf (PDF text); vision model only as fallback | Mature JavaScript libraries (**likely**); the binary `.xls` format matters for older SR | 0 |
-| Validation and contracts | **Zod** schemas in `packages/contracts`, compiled to JSON Schema for tool definitions | One source for API, tools and tests | 0 |
+| Backend | **One Python 3.12 service** (FastAPI, managed with `uv`), hosted on Render Starter (Fly.io only if latency from Mexico is a problem): webhooks, ingestion, agent, confirmations, jobs | Always-on, so Meta webhooks get a fast 200; no Edge Function CPU limits for Excel parsing (notes); one deployable | about 7 (**unverified**, notes) |
+| Jobs and schedules | **Procrastinate** on the same Postgres (Supabase `pg_cron` as the fallback for the weekly report) | Retries, cron and idempotency with no extra infrastructure; pg-boss is Node-only | 0 |
+| Parsing | pandas with openpyxl (xlsx) and xlrd (xls), lxml (CFDI), pypdf (PDF text); vision model only as fallback | Mature Python libraries (**likely**); the binary `.xls` format matters for older SR | 0 |
+| Validation and contracts | **Pydantic** models in `packages/contracts`, exported with `model_json_schema()` for tool definitions and for generated TypeScript types | One source for API, tools, tests and the frontend; CI fails if generated files are stale | 0 |
 | WhatsApp | **Cloud API direct**, one MermIA number | No markup; avoid Twilio (04) | messages only |
 | Email inbox | Inbound-email webhook (Postmark Inbound or Cloudflare Email Routing to a Worker) | SR 12 Corte Z and CFDI forwarding | 0-15 (**unverified**) |
 | LLM | Claude Haiku 5.5 primary, Sonnet 5.5 escalation, GPT-6 Luna fallback, behind a provider adapter | 13 H4; the eval is the gate | about 0.66 per restaurant |
 | Observability | Sentry Developer (free), Langfuse Hobby (free), `llm_usage` and `message_log` tables, Metabase later | 13 I4 | 0 at pilot scale |
 | Dashboard (Phase 2) | React + Vite PWA on Cloudflare Pages, supabase-js | Reuses contracts; Pages avoids per-seat hosting fees; the same components later go into the POS | about 0-5 (**unverified**) |
-| Repository | pnpm monorepo, GitHub Actions (typecheck, vitest, pgTAP, contract tests, eval subset on prompt or tool changes) | | free tier |
+| Repository | `uv` workspace for Python and pnpm for the Phase 2 frontend, GitHub Actions (ruff, mypy, pytest, pgTAP, contract tests, eval subset on prompt or tool changes) | | free tier |
 
 Rejected alternatives:
 - Supabase Edge Functions for everything: Deno plus CPU limits make Excel parsing and the LLM loop awkward.
-- Python for parsers: a second language for two devs and no shared types.
+- TypeScript backend: better type sharing with the frontend, but weaker Excel parsing; revisit only if the Python-to-TypeScript type generation proves painful.
 - A separate metrics microservice: it duplicates RLS.
 - Next.js on Vercel: per-seat cost (notes) and server components we don't need.
 
