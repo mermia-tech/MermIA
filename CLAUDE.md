@@ -6,6 +6,9 @@ Restaurant intelligence for Mexico. Phase 1: WhatsApp agent fed by Soft Restaura
 - Kickoff research and plan: `docs/kickoff/` — start with `00-executive-summary.md`; architecture `09`, 4-week plan (Dev A / Dev B) `08`, features vs Soft Restaurant and Toast IQ `14`, LLM and token strategy `13`.
 - Current direction (from kickoff, 2026-10-15): sell cost-side value (margin alerts, price suggestions, CFDI/receipt price capture), not sales Q&A that SR already gives free; MVP ingestion = WhatsApp upload + email inbox, target = SR ERP/PMS JSON push; Phase 3 POS is a decision gate at ~month 9, not a commitment.
 
+## Stack
+Python 3.12 + FastAPI backend (one always-on service on Render), Pydantic contracts, Supabase (Postgres, RLS), Procrastinate jobs, `uv`. Phase 2 frontend: React + Vite, with TypeScript types generated from the Pydantic JSON Schema. Details: `docs/kickoff/09-architecture.md` §7.
+
 ## Conventions
 - **Language:** code, technical docs and dev communication in English. Everything customers see (agent replies, WhatsApp messages, reports, UI text, marketing) in Mexican Spanish.
 - **Target customers:** independent owners and small chains (2–10 locations). Phase 1 MVP goal: live pilot within 4 weeks.
