@@ -16,3 +16,6 @@ Python 3.12 + FastAPI backend (one always-on service on Render), Pydantic contra
 - **Proven models first:** replicate and adapt features and business models that already work elsewhere (e.g. ToastIQ); don't invent from scratch.
 - **DB writes need human approval:** any create/edit/delete the agent triggers needs explicit confirmation from an owner, manager or admin, and is audit-logged.
 - **Lean agent:** backend RPCs do the heavy lifting; the LLM acts as a broker to keep token cost low.
+
+## Claude Code workflow
+Project skills in `.claude/skills/` (they load in CLI and cloud sessions): `/start-ticket MR-<n>` to begin a ticket, `/check` for ruff, mypy, pytest and pgTAP, `/review` before opening a PR (built-in `/code-review`, then the `skeptic-reviewer` agent in `.claude/agents/`). Hooks in `.claude/settings.json` run `uv sync` at cloud session start, run `ruff format` on edited Python files, and block edits to `.env` and key files.
