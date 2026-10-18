@@ -156,5 +156,39 @@ select lives_ok($$insert into public.daily_sales_agg (tenant_id, location_id, so
   'a daily row may report the cancellation count without the amount');
 select is((select cancellations_amount from public.daily_sales_agg limit 1), null, 'an unreported amount stays null, not zero');
 
+-- control tables (spec 5.7, 7.2.6) ---------------------------------------------------------------------------
+select throws_ok($$insert into public.pending_change (tenant_id, kind, proposed_via)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '  ', 'agent')$$, '23514', null, 'pending_change.kind cannot be blank');
+select throws_ok($$insert into public.pending_change (tenant_id, proposed_via)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', 'agent')$$, '23502', null, 'pending_change.kind is required');
+select lives_ok($$insert into public.pending_change (id, tenant_id, kind, target_type, proposed_via)
+  values ('9c000000-0000-7000-8000-000000000001', 'aaaaaaaa-0000-7000-8000-000000000001', 'ingredient_price.set', 'ingredient', 'agent')$$,
+  'a pending change defaults to status pending');
+select is((select status::text from public.pending_change where id = '9c000000-0000-7000-8000-000000000001'), 'pending', 'default status is pending');
+
+insert into public.audit_log (id, tenant_id, actor_kind, action, pending_change_id)
+  values ('a0d17000-0000-7000-8000-000000000001', 'aaaaaaaa-0000-7000-8000-000000000001', 'agent', 'proposed', '9c000000-0000-7000-8000-000000000001');
+select throws_ok($$update public.audit_log set action = 'x'$$, '42501', 'audit_log is append-only', 'audit_log rows cannot be updated, even by the owner role');
+select throws_ok($$delete from public.audit_log$$, '42501', 'audit_log is append-only', 'audit_log rows cannot be deleted, even by the owner role');
+select throws_ok($$truncate public.audit_log$$, '42501', 'audit_log is append-only', 'audit_log cannot be truncated, even by the owner role');
+select throws_ok($$insert into public.audit_log (tenant_id, actor_kind, action, pending_change_id)
+  values ('bbbbbbbb-0000-7000-8000-000000000002', 'agent', 'x', '9c000000-0000-7000-8000-000000000001')$$,
+  '23503', null, 'an audit row cannot reference another tenant''s pending change');
+select throws_ok($$insert into public.audit_log (tenant_id, actor_kind) values ('aaaaaaaa-0000-7000-8000-000000000001', 'user')$$,
+  '23502', null, 'an audit row needs an action');
+
+select lives_ok($$insert into public.conversation (tenant_id, user_id, channel) values ('aaaaaaaa-0000-7000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'whatsapp')$$,
+  'a conversation per user and channel');
+select throws_ok($$insert into public.conversation (tenant_id, user_id, channel) values ('aaaaaaaa-0000-7000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'whatsapp')$$,
+  '23505', null, 'only one conversation per user, channel and tenant');
+select throws_ok($$insert into public.llm_usage (tenant_id, route, input_tokens) values ('aaaaaaaa-0000-7000-8000-000000000001', 'haiku', -5)$$,
+  '23514', null, 'token counts cannot be negative');
+select throws_ok($$insert into public.llm_usage (tenant_id, route) values ('aaaaaaaa-0000-7000-8000-000000000001', 'gpt')$$,
+  '22P02', null, 'llm route is template, haiku, sonnet or fallback');
+select throws_ok($$insert into public.report_run (tenant_id, kind, period_from, period_to) values ('aaaaaaaa-0000-7000-8000-000000000001', 'weekly', '2026-10-12', '2026-10-05')$$,
+  '23514', null, 'a report period cannot end before it starts');
+select throws_ok($$insert into public.message_log (tenant_id, wa_message_id, direction, pricing_category) values ('aaaaaaaa-0000-7000-8000-000000000001', 'wamid.1', 'out', 'premium')$$,
+  '22P02', null, 'pricing category is one of the four Meta categories');
+
 select * from finish();
 rollback;
