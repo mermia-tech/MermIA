@@ -143,11 +143,27 @@ def fixtures():
                 ),
                 (TA, B_CENTRO, TA, B_POLANCO),
             ),
+            (
+                (
+                    "insert into public.menu_category (id, tenant_id, name, parent_id) values "
+                    "('ca7e0000-0000-7000-8000-0000000000e1', %s, 'Bebidas', null), "
+                    "('ca7e0000-0000-7000-8000-0000000000e2', %s, 'Aguas',"
+                    " 'ca7e0000-0000-7000-8000-0000000000e1')"
+                ),
+                (TA, TA),
+            ),
         ]
         for sql, params in statements:
             conn.execute(sql, params)
         yield
-        for table in ("import_issue", "import_batch", "raw_file", "source", "location"):
+        for table in (
+            "import_issue",
+            "import_batch",
+            "raw_file",
+            "source",
+            "menu_category",
+            "location",
+        ):
             conn.execute(
                 f"delete from public.{table} where tenant_id in (%s, %s)", (TA, TB)
             )
@@ -298,3 +314,18 @@ def test_graphql_does_not_expose_backend_only_tables_or_secrets(fixtures) -> Non
     assert SECRET_FILE not in body
     _, body = graphql("{ sourceCollection { edges { node { config } } } }")
     assert SECRET_CONFIG not in body
+
+
+def test_a_self_referencing_composite_foreign_key_embeds(fixtures) -> None:
+    status, body = call(
+        "menu_category?select=name,menu_category(name)&order=name", token()
+    )
+    assert status == 200, body[:200]
+    rows = {
+        r["name"]: [c["name"] for c in r["menu_category"]] for r in json.loads(body)
+    }
+    assert rows == {"Aguas": [], "Bebidas": ["Aguas"]}
+    status, body = call(
+        "menu_category?select=name,menu_category(name)", token(tenant=TB)
+    )
+    assert status == 200 and json.loads(body) == []

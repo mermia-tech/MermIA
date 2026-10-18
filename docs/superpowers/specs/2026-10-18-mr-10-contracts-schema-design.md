@@ -966,12 +966,11 @@ Approved on 2026-10-18 (2.3): A1, A2, A4 (split kept), A5, A8, A10, A12, A13, A1
 
 ### 16.4 Technical verifications
 
-Ran and passed on 2026-10-18 (section 17): whole schema under `supabase db reset` from an empty database; all six pgTAP files (219 tests) including the 40-table isolation matrix under `pg_prove` with replica mode; `touch_row`, the membership trigger, `uuid_v7` (10,000 values), the partial unique index and the composite foreign keys; the generator, its determinism, the hash and freshness guards and `--check`; the `NormalizedBatch` contract tests (86 without a database); 22 REST exposure tests through PostgREST including embedding, hidden columns, OpenAPI and forged tokens; `ruff check`, `ruff format --check` and `mypy` on the package.
+Ran and passed on 2026-10-18 (section 17): whole schema under `supabase db reset` from an empty database; all six pgTAP files (219 tests) including the 40-table isolation matrix under `pg_prove` with replica mode; `touch_row`, the membership trigger, `uuid_v7` (10,000 values), the partial unique index and the composite foreign keys; the generator, its determinism, the hash and freshness guards and `--check`; the `NormalizedBatch` contract tests (86 without a database); 23 REST exposure tests through PostgREST including embedding (also through the self-referencing `menu_category.parent_id` composite foreign key), hidden columns, OpenAPI and forged tokens; `ruff check`, `ruff format --check` and `mypy` on the package.
 
 Not run, with the reason:
 - **GraphQL exposure**: `pg_graphql` is not enabled on the local stack (V31).
 - **`supabase db lint`**: not part of the acceptance set (not exercised).
-- **PostgREST embedding through a self-referencing composite foreign key** (`sale_line.parent_line_id`, `menu_category.parent_id`, `recipe_line.sub_recipe_id`): the plain composite case is verified (V13); the self-referencing case was not exercised through the API.
 - **The partial unique index under a real apply sequence**: only the constraint itself is tested; the apply functions do not exist yet (MR-16).
 - **Production behaviour**: key custody, the Supabase Auth hook, token lifetime, the backend issuer (7.6; out of MR-10), and the hosted project's extensions and default grants.
 - **Repo CI**: no CI exists yet (MR-9); `.claude/skills/check/check.sh` ran and reported pgTAP PASS and Python checks skipped (no root `pyproject.toml`), so the Python checks were run directly with `uv`, `uvx ruff` and `uvx mypy`.
@@ -990,7 +989,7 @@ Run from a clean state: `supabase stop --no-backup`, `supabase start -x ...`, `s
 | `supabase test db` | 6 files, 219 tests, PASS |
 | `cd packages/contracts && uv run pytest` | 86 passed (no database) |
 | `MERMIA_DB_URL=... uv run pytest -m db -k 'not rest_exposure'` | 5 passed |
-| `MERMIA_DB_URL=... MERMIA_API_URL=... MERMIA_JWT_SECRET=... MERMIA_API_KEY=... uv run pytest -m rest -rs` | 22 passed, 1 skipped (GraphQL: `pg_graphql` not enabled) |
+| `MERMIA_DB_URL=... MERMIA_API_URL=... MERMIA_JWT_SECRET=... MERMIA_API_KEY=... uv run pytest -m rest -rs` | 23 passed, 1 skipped (GraphQL: `pg_graphql` not enabled) |
 | `uv run python -m mermia_contracts.tools.gen_db_models --check` | `db/models.py` is up to date |
 | `uvx ruff check .` and `uvx ruff format --check .` (package) | passed |
 | `uvx --with pydantic --with psycopg mypy src` | no issues in 8 source files |
