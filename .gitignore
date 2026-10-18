@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Supabase local state
+**/supabase/.branches/
+**/supabase/.temp/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
