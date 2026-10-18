@@ -116,3 +116,13 @@ def test_json_numbers_for_decimals_are_exact() -> None:
     )
     batch = NormalizedBatch.model_validate_json(text)
     assert batch.item_sales[0].units == Decimal("0.1")
+
+
+def test_default_dump_uses_the_wire_names() -> None:
+    batch = make()
+    assert json.loads(batch.model_dump_json())["period"] == {
+        "from": "2026-10-12",
+        "to": "2026-10-12",
+    }
+    assert batch.model_dump()["period"] == {"from": D, "to": D}
+    assert NormalizedBatch.model_validate_json(batch.model_dump_json()) == batch

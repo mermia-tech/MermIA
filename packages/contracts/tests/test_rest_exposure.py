@@ -204,18 +204,33 @@ def test_source_hides_its_secret_columns(fixtures) -> None:
         "raw_file(*)",
         "applied_by(*)",
         "applied_by:app_user!import_batch_applied_by_fkey(*)",
+        "raw_file:raw_file!import_batch_tenant_id_raw_file_id_fkey(*)",
         "source(*)",
     ],
 )
-def test_embedding_never_returns_backend_only_or_hidden_data(
-    fixtures, embed: str
-) -> None:
+def test_embedding_backend_only_or_hidden_data_is_refused(fixtures, embed: str) -> None:
     status, body = call(f"import_batch?select=slice_key,{embed}", token())
+    assert status == 403 and json.loads(body)["code"] == "42501", (
+        embed,
+        status,
+        body[:200],
+    )
     assert (
         SECRET_PHONE not in body
         and SECRET_FILE not in body
         and SECRET_CONFIG not in body
-    ), (embed, status, body[:300])
+    )
+
+
+def test_embedding_the_readable_columns_of_source_works(fixtures) -> None:
+    # positive control: the refusals above are about privileges, not about a broken request
+    status, body = call(
+        "import_batch?select=slice_key,source(id,kind)&order=slice_key", token()
+    )
+    assert status == 200, body[:200]
+    kinds = {r["slice_key"]: r["source"]["kind"] for r in json.loads(body)}
+    assert kinds == {"rest-centro": "sr_report", "rest-polanco": "sr_report"}
+    assert SECRET_CONFIG not in body
 
 
 def test_embedding_cannot_reach_a_hidden_table_from_the_other_side(fixtures) -> None:

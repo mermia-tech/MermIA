@@ -186,3 +186,15 @@ def test_counts_cannot_be_negative() -> None:
 def test_a_recipe_needs_at_least_one_line() -> None:
     with pytest.raises(ValidationError):
         RecipeIn(menu_item_name="Taco", yield_qty=Decimal(1), lines=[])
+
+
+def test_cents_stay_inside_bigint_and_counts_inside_int() -> None:
+    ItemSalesIn(**item_sales(gross=2**63 - 1))
+    ItemSalesIn(**item_sales(gross=-(2**63)))
+    with pytest.raises(ValidationError):
+        ItemSalesIn(**item_sales(gross=2**63))
+    with pytest.raises(ValidationError):
+        ItemSalesIn(**item_sales(gross=10**30))
+    DailySalesIn(business_date=D, net_sales=1, tickets=2**31 - 1)
+    with pytest.raises(ValidationError):
+        DailySalesIn(business_date=D, net_sales=1, tickets=2**31)

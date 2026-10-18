@@ -51,5 +51,13 @@ select is((select pg_get_expr(adbin, adrelid) from pg_attrdef d join pg_attribut
 select is((select pg_get_expr(adbin, adrelid) from pg_attrdef d join pg_attribute a on a.attrelid = d.adrelid and a.attnum = d.adnum
            where a.attrelid = 'public.membership'::regclass and a.attname = 'location_ids'), '''{}''::uuid[]', 'location_ids defaults to the empty list');
 
+-- the audit trail cannot be bypassed by a function in the schema either (spec 7.2.6) ----------------------
+-- The owner role can still switch replica mode or disable a trigger by hand; the database cannot
+-- prevent that, so no function we ship may do it.
+select is((select count(*) from pg_proc where pronamespace in ('public'::regnamespace, 'app'::regnamespace)
+           and (prosrc ilike '%session_replication_role%' or prosrc ilike '%disable trigger%'
+                or prosrc ilike '%enable always%' or prosrc ilike '%enable replica%')), 0::bigint,
+          'no function in public or app switches replica mode or disables triggers');
+
 select * from finish();
 rollback;

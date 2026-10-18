@@ -6,8 +6,11 @@ Enums are the generated database enums, so the contract cannot drift from the sc
 
 Types marked PROVISIONAL depend on report formats that are still unverified (Corte Z,
 "Productos vendidos", "Recetas"); they may change until the first real parser lands
-(MR-15, MR-23). Each field's docstring-free mapping to a table column is checked by
-tests/test_batch_matches_db.py.
+(MR-15, MR-23). Which input field feeds which table column is pinned by the MAP and
+LOADER_ONLY tables in tests/test_batch_matches_db.py: add a field there when you add it here.
+Dumps use the wire names (period.from) by default; there is no cross-field validation here
+(grain against rows, dates against period, totals against rows): that is the loader's job
+(MR-16).
 """
 
 from __future__ import annotations
@@ -40,8 +43,11 @@ from mermia_contracts.db.models import (
 )
 
 # Strict types: no float, no string, no bool where a number is expected (spec 10.1).
-Cents = Annotated[int, Field(strict=True, description="unit=centavos")]
-Count = Annotated[int, Field(strict=True, ge=0)]
+Cents = Annotated[
+    int,
+    Field(strict=True, ge=-(2**63), le=2**63 - 1, description="unit=centavos"),
+]  # bigint range
+Count = Annotated[int, Field(strict=True, ge=0, le=2**31 - 1)]  # int range
 Quantity = Annotated[
     Decimal,
     Field(strict=True, max_digits=18, decimal_places=6, description="unit=quantity"),
@@ -90,7 +96,9 @@ class Grain(StrEnum):
 
 
 class Model(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
+    model_config = ConfigDict(
+        extra="forbid", frozen=True, populate_by_name=True, serialize_by_alias=True
+    )
 
 
 class Period(Model):

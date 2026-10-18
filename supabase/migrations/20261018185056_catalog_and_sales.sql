@@ -1,6 +1,8 @@
 -- MR-10 catalog and sales facts (09 section 2.3; spec 5.4, 5.6, 5.7).
 -- Every table carries location_id, source_id, external_id and batch_id (09 section 2). They are
--- nullable on shared catalog rows and not null on fact rows. Money is bigint centavos plus a
+-- nullable on shared catalog rows and not null on fact rows. All ten tables are class L: a row
+-- with a location follows the location filter, and a row without one is tenant-level (shared
+-- catalog), visible to members who have at least one location or all of them. Money is bigint centavos plus a
 -- currency; quantities are numeric(18,6).
 
 create table public.menu_category (
@@ -25,7 +27,7 @@ create index menu_category_location_idx on public.menu_category (tenant_id, loca
 create index menu_category_source_idx on public.menu_category (tenant_id, source_id);
 create index menu_category_batch_idx on public.menu_category (tenant_id, batch_id);
 create index menu_category_parent_idx on public.menu_category (tenant_id, parent_id);
-select app.finish_table('public.menu_category', 'tenant');
+select app.finish_table('public.menu_category', 'location', 'location_id');
 
 -- Shared across locations: location_id stays null.
 create table public.menu_item (
@@ -54,7 +56,7 @@ create index menu_item_source_idx on public.menu_item (tenant_id, source_id);
 create index menu_item_batch_idx on public.menu_item (tenant_id, batch_id);
 create index menu_item_category_idx on public.menu_item (tenant_id, category_id);
 create index menu_item_normalized_name_idx on public.menu_item (tenant_id, normalized_name);
-select app.finish_table('public.menu_item', 'tenant');
+select app.finish_table('public.menu_item', 'location', 'location_id');
 
 create table public.menu_item_price (
   id uuid primary key default app.uuid_v7(),
@@ -116,7 +118,7 @@ create index modifier_link_batch_idx on public.modifier_link (tenant_id, batch_i
 create index modifier_link_item_idx on public.modifier_link (tenant_id, menu_item_id);
 create index modifier_link_modifier_idx on public.modifier_link (tenant_id, modifier_item_id);
 select app.tag('public.modifier_link', 'unit=centavos', array['price_delta']);
-select app.finish_table('public.modifier_link', 'tenant');
+select app.finish_table('public.modifier_link', 'location', 'location_id');
 
 -- Personal data: first name only (09 section 2.3).
 create table public.staff (
@@ -140,7 +142,7 @@ create index staff_location_idx on public.staff (tenant_id, location_id);
 create index staff_source_idx on public.staff (tenant_id, source_id);
 create index staff_batch_idx on public.staff (tenant_id, batch_id);
 select app.tag('public.staff', 'values not yet specified', array['role']);
-select app.finish_table('public.staff', 'tenant');
+select app.finish_table('public.staff', 'location', 'location_id');
 
 create table public.sale_ticket (
   id uuid primary key default app.uuid_v7(),

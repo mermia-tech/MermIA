@@ -132,3 +132,11 @@ def test_documented_jsonb_columns_are_typed_and_the_rest_are_open() -> None:
     assert mix == PaymentMix
     payload = models.PendingChangeRow.model_fields["payload"].annotation
     assert str(payload) == "pydantic.types.JsonValue" or "JsonValue" in str(payload)
+
+
+def test_import_batch_stats_totals_reject_floats() -> None:
+    assert ImportBatchStats(totals={"net_sales": 3188000}).totals == {
+        "net_sales": 3188000
+    }
+    with pytest.raises(ValidationError):
+        ImportBatchStats(totals={"net_sales": 1234.56})

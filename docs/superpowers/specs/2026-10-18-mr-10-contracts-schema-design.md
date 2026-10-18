@@ -344,11 +344,11 @@ Columns are exactly those of `09` §2.1-2.5 unless noted; this section adds type
 
 | Table | Class | Notes |
 |---|---|---|
-| `menu_category` | T | `name`, `parent_id` (self). Catalog columns nullable. |
-| `menu_item` | T | `name`, `normalized_name`, `category_id`, `kind menu_item_kind not null default 'dish'`, `is_active bool not null default true`. Shared across locations: `location_id` null. |
+| `menu_category` | L | `name`, `parent_id` (self). Catalog columns nullable; a row without a location is tenant-level (shared). |
+| `menu_item` | L | `name`, `normalized_name`, `category_id`, `kind menu_item_kind not null default 'dish'`, `is_active bool not null default true`. Shared across locations: `location_id` null. |
 | `menu_item_price` | L | `menu_item_id`, `location_id`, `price_gross bigint` (centavos), `tax_rate numeric(5,4)`, `effective_from date not null`, `effective_to date`, `source text`. Check `effective_to is null or effective_to >= effective_from`. |
-| `modifier_link` | T | `menu_item_id`, `modifier_item_id`, `price_delta bigint` (centavos). |
-| `staff` | T | `display_name text` (first name only), `external_id`, `role text`. Personal data: minimal. |
+| `modifier_link` | L | `menu_item_id`, `modifier_item_id`, `price_delta bigint` (centavos). |
+| `staff` | L | `display_name text` (first name only), `external_id`, `role text`. Personal data: minimal. A row without a location is tenant-level. |
 | `sale_ticket` | L | `business_date date not null`, `opened_at`, `closed_at`, `channel sale_channel`, `area text`, `table_label text`, `guests int`, `staff_id`, `subtotal, discount, tax, tip, total bigint`, `status ticket_status not null`, `fiscal_status fiscal_status not null default 'none'`. |
 | `sale_line` | L | `ticket_id`, `menu_item_id`, `parent_line_id` (self, modifiers), `qty numeric(18,6)`, `unit_price bigint`, `discount bigint`, `tax bigint`, `net bigint`, `is_void bool not null default false`, `void_reason text`, `voided_by` (staff id). |
 | `payment` | L | `ticket_id`, `method payment_method not null`, `amount bigint`, `tip bigint`, `provider text`, `provider_ref text`. |
@@ -429,8 +429,8 @@ For each table: (a) who writes it, (b) who is documented to read it and how, (c)
 
 | Class | Meaning | Policy and grants | Tables |
 |---|---|---|---|
-| **T** tenant-wide | Any member of the active tenant may read, whatever their locations. | `SELECT` to `authenticated`; policy `tenant_id = (select app.current_tenant_id())`. (`tenant` root: `id = ...`.) | 14 |
-| **L** location-scoped | Tenant plus location authorization. | As T, plus `and app.can_see_location(<location column>)`. Rows whose location column is null are tenant-level: visible with an explicit all-locations scope or a non-empty list, not with an absent, empty or malformed claim (V29). | 13 |
+| **T** tenant-wide | Any member of the active tenant may read, whatever their locations. | `SELECT` to `authenticated`; policy `tenant_id = (select app.current_tenant_id())`. (`tenant` root: `id = ...`.) | 10 |
+| **L** location-scoped | Tenant plus location authorization. | As T, plus `and app.can_see_location(<location column>)`. Rows whose location column is null are tenant-level: visible with an explicit all-locations scope or a non-empty list, not with an absent, empty or malformed claim (V29). | 17 |
 | **LP** location inherited from a parent | Child of a located row; no own location column. | As T, plus `exists (select 1 from <parent> p where p.tenant_id = child.tenant_id and p.id = child.<fk>)`; the parent's RLS applies inside the subquery (V19). | 1 |
 | **F** full-tenant members only | Tenant-wide data with no location column that may reveal other locations; readable only by members whose claim is explicit JSON `null` for `location_ids` ("all locations"). | As T, plus `and app.has_all_locations()` (V21). | 2 |
 | **X** backend-only | No client session reads it directly. | RLS enabled, **no policy**, no grants to `anon` or `authenticated`. Only `service_role` (and, in MR-14, the hook role for `membership`) accesses it. | 10 |
@@ -442,10 +442,7 @@ Documented operation = what the architecture says reads or writes the table. "Ba
 | Table | Class | Reason (evidence) | Mechanism |
 |---|---|---|---|
 | `tenant` | T | `get_food_cost_pct` returns the target from `tenant.settings` (`09` §4.1 #8, §2.1); dashboard KPIs saved in `settings` (`07`). Root row: the member's own tenant. | `id = current_tenant_id()` |
-| `menu_category` | T | Shared catalog, no location (`09` §2.3); `get_top_dishes(category)`. | tenant policy |
-| `menu_item` | T | "Shared across locations" (`09` §2.3). | tenant policy |
-| `modifier_link` | T | Catalog; no location (`09` §2.3). | tenant policy |
-| `staff` | T | No location column (`09` §2.3); `get_sales_breakdown(by staff)` and `get_cancellations` "by staff (first names)" (`09` §4.1 #5, #6). First names only. | tenant policy |
+| `menu_category`, `menu_item`, `modifier_link`, `staff` | L | Shared catalog and staff (`09` §2.3; `get_top_dishes(category)`, `get_sales_breakdown(by staff)`, `get_cancellations` "by staff (first names)", `09` §4.1 #4-#6). They carry a nullable `location_id` by the `09` §2 rule, and the owner decided (2026-10-18, option A after the pre-PR review) that a row with a location follows the location filter. A row without one (the normal shared menu) is tenant-level. | `can_see_location(location_id)` |
 | `supplier`, `ingredient`, `ingredient_alias`, `unit_conversion` | T | Costing master data is tenant-level; managers propose and approve `ingredient_price.set` and `ingredient_alias.confirm` for the tenant (`09` §5.1, no location dimension). | tenant policy |
 | `purchase_doc`, `purchase_line` | T | Supplier invoices have no location (`09` §2.4); read by cost RPCs (`get_cost_alerts`, `get_dish_margin`). | tenant policy |
 | `ingredient_price`, `recipe`, `recipe_line` | T | Read by `get_dish_margin`, `get_cost_alerts`, `get_food_cost_pct` (`09` §4.1); tenant-level catalog changed by tenant-wide approvals (`09` §5.1). | tenant policy |
@@ -465,7 +462,7 @@ Documented operation = what the architecture says reads or writes the table. "Ba
 | `llm_usage`, `message_log` | X | Internal cost metering and Meta reconciliation (`13` §I4, `04`); MermIA business data, not tenant data. | none for clients |
 | `app_user`, `channel_identity`, `consent_log` | X | No `tenant_id` by design (D10); phone numbers and consent evidence are personal data (`05` risk 10, 11); resolved by the backend. | none for clients |
 
-Counts: T 14 (`tenant` plus 13), L 13, LP 1, F 2, X 10 = 40.
+Counts: T 10 (`tenant` plus 9), L 17, LP 1, F 2, X 10 = 40.
 
 #### 7.2.3 Ambiguities, recommendations and consequences
 
@@ -476,7 +473,7 @@ Counts: T 14 (`tenant` plus 13), L 13, LP 1, F 2, X 10 = 40.
 | AMB-3 | `import_issue`: `09` says issues are shown to the manager, but the only documented reader is the backend. A direct client read is "later" (`03` B.5). | (a) X now. (b) LP now. | **(b) LP.** The class costs nothing (V19), keeps location isolation if a client ever reads it, and the backend is unaffected (it bypasses RLS). Needs approval (12.1 A14). |
 | AMB-4 | `membership`: roles and location lists of colleagues. No documented client reader; the claim already carries what policies need. | (a) X. (b) T. | **(a) X.** The team view in the dashboard (`settings.update`, owner) is not documented as a direct read. The hook (MR-14) gets its own grant. Needs approval (12.1 A1). |
 | AMB-5 | Meaning of an **absent** `location_ids` claim. `09` §2.1: `membership.location_ids` null = all. A claim built by hand or by a buggy issuer could omit the key. | (a) absent = all. (b) absent = none; "all" must be the explicit JSON `null`. | **(b) fail-closed** (V20). Consequence: every issuer must always set the claim. A missing key can never widen access. Needs approval (12.1 A12). |
-| AMB-6 | `staff` and the T-class catalog and costing tables carry no location; a location-limited manager reads them for the whole tenant. | (a) accept. (b) add location columns. | **(a) accept.** Matches the approval matrix (managers handle tenant-wide costing, `09` §5.1) and `staff` holds first names only. No new column is invented. |
+| AMB-6 | The pre-PR review found that `menu_category`, `menu_item`, `modifier_link` and `staff` do carry a nullable `location_id` (`09` §2 rule) although revision 3 classified them T on the premise that they had none. | (a) class L. (b) keep T and document the ignored column. | **(a) class L, approved by the owner on 2026-10-18.** A row with a location follows the location filter, so a loader that sets `location_id` cannot leak another branch's staff or dishes. Shared rows (null location) stay tenant-level, but members with an absent or empty location claim no longer see them. Edge: a ticket in one location that refers to a staff row loaded for another location loses the name in a join for a member of the first location only. The costing tables (`supplier`, `ingredient`, ...) have no location column and stay T (managers handle them tenant-wide, `09` §5.1). |
 | AMB-7 | Whether `support` (MermIA staff) membership is location-limited. `09` §2.1: "can propose but never approve". | - | Not decided here; `support` follows the same claim rules as any member. |
 
 #### 7.2.4 Do the policies fit the expected operations?
@@ -521,7 +518,7 @@ MR-10 provides only the **data model and the read rule**. It does not approve or
 | **Execution** of a change | `apply_pending_change(id, user_id)`: tenant from the row, role, status `pending`, expiry, `version = base_version`, location authorization for located targets; writes the audit row in the same transaction | `SECURITY DEFINER`, `EXECUTE` for `service_role` only (V23) | MR-32 |
 | **Audit reading** | Same as visibility: all-location members, plus `service_role` | `SELECT` policy of class F | MR-10 |
 | **Audit writing** | `service_role` and the definer functions only | Privilege `INSERT` for `service_role` only; clients have none | MR-10 (privilege), MR-32 (writers) |
-| **Audit immutability** | Nobody | `UPDATE`, `DELETE`, `TRUNCATE`, `REFERENCES`, `TRIGGER` revoked from every role; triggers raise `42501` for the owner role | MR-10 |
+| **Audit immutability** | No client or service role; the owner role only by deliberate manual action | `UPDATE`, `DELETE`, `TRUNCATE`, `REFERENCES`, `TRIGGER` revoked from `anon`, `authenticated` and `service_role`; triggers raise `42501` for the owner role in normal sessions. **Limit (found in the pre-PR review):** the owner role can still run `set session_replication_role = replica` or `alter table ... disable trigger` and then change rows, and so can any `SECURITY DEFINER` function it owns. The database cannot prevent that; a test fails if a function in `public` or `app` mentions those settings, and reviews of later definers must check it | MR-10 |
 
 ### 7.3 Claims and helpers [APPROVED D3; semantics of absence: 12.1 A12]
 
@@ -676,6 +673,14 @@ No new authentication architecture. The mechanisms are those already in `09` D8 
 
 Views over these tables must be created `with (security_invoker = true)`, otherwise they run with the owner's privileges and `postgres` has `BYPASSRLS` (V5). `SECURITY INVOKER` RPCs (`09` §4.1) need `SELECT` on every table they read; class X tables are not readable by clients, so an RPC that needs one must be `SECURITY DEFINER` with its own checks (7.5.7). Not done in MR-10.
 
+### 8.2 Requirements this PR leaves to later tickets
+
+Found by the pre-PR review; none is a defect of MR-10, all need an owner.
+
+- **MR-16 (`apply_batch`)**: ticket-grain idempotency. Facts have no unique key on `(tenant_id, source_id, external_id)`, so the same ERP ticket pushed in two batches would give two rows unless `apply_batch` deduplicates. It must also validate what the model does not: `grain` against the populated lists, dates against `period`, `totals` against the rows, and out-of-range values must end in `needs_review`, not an insert error.
+- **MR-9 (CI)**: set `MERMIA_DB_URL` (and the REST variables) so the model-freshness and exposure tests run; without them they skip and CI would be green without them.
+- **MR-32 and any `SECURITY DEFINER` function**: never touch `session_replication_role` or trigger state (7.2.6); a pgTAP test enforces it for functions in `public` and `app`.
+
 ## 9. Contradictions, evidence and how this spec handles them
 
 ### 9.1 Contradictions found
@@ -715,10 +720,10 @@ SR 10-12 column layouts, the Corte Z format and whether recipes carry costs are 
 
 ### 10.1 `NormalizedBatch` [DOC `09` §3, APPROVED D8]
 
-Wire format is JSON with `snake_case` names. Models use `extra='forbid'`, `frozen=True` and `Cents`/`Quantity`/`UnitPrice` annotated types. Enums are **imported from the generated `db/models.py`** (single source: the SQL). `Grain` is the only enum defined in `batch.py`, because it is not a database enum.
+Wire format is JSON with `snake_case` names, and default dumps use the wire names (`serialize_by_alias`, pydantic >= 2.11). Models use `extra='forbid'`, `frozen=True` and `Cents`/`Quantity`/`UnitPrice` annotated types. Enums are **imported from the generated `db/models.py`** (single source: the SQL). `Grain` is the only enum defined in `batch.py`, because it is not a database enum.
 
 ```text
-Cents      = int, strict (no float, no str)
+Cents      = int, strict (no float, no str), within bigint; counts within int
 Quantity   = Decimal, max 18 digits, 6 decimal places
 UnitPrice  = Decimal, max 20 digits, 6 decimal places    # pesos per unit
 Grain      = ticket | item_daily | daily | purchase | catalog      # 09 section 3
@@ -872,7 +877,7 @@ Status key: **Documented** = a repo document states or directly implies it; **Re
 | A15 | Composite FKs. | **Approved** (D18) | V12, V13 (cross-tenant blocked; PostgREST embedding works). Self-referencing FKs not yet tested (section 16). | - |
 | A16 | One multi-mode `app.secure_table` function; table comment `rls_class=...` checked by the catalog test. | Recommended (implementation detail, no approval needed) | Each class behaviour verified (V10, V19-V22); the combined function is not. | Per-table statements in each migration; same behaviour, more repetition. |
 | A17 | No function in `public`; catalog test enforces it. | Recommended | V24, V26 (7.5.3). | A function that sets claims in an exposed schema would break the trust model. |
-| A18 | Tenant-wide catalog, costing and `staff` tables readable by location-limited members (AMB-6). | Recommended | `09` §5.1 (managers handle tenant-wide costing), `09` §2.3 (no location on these tables), `staff` is first names only. | Adding location columns would be an invented requirement. |
+| A18 | Costing master data (`supplier`, `ingredient`, `ingredient_alias`, `unit_conversion`, `purchase_*`, `ingredient_price`, `recipe*`) has no location column and is class T. The four catalog/staff tables with a nullable `location_id` are class L (AMB-6). | **Approved** (owner, 2026-10-18) for the L move; the T part is Recommended | `09` §5.1 (managers handle tenant-wide costing); `09` §2 rule (catalog rows carry `location_id`); pre-PR review. | Keeping the four tables in T would leave a column the policy ignores. |
 
 Owner decisions of 2026-10-18 on these calls are in 2.3: A1, A12, A13, A14, A2, A4, A5, A8 and A10 are **approved** (with the conditions listed there); the rest are kept where consistent with the canonical documents. Two calls were added to satisfy those conditions:
 
@@ -962,11 +967,11 @@ Table list and columns (`09` §2.1-2.5); batch lifecycle (§2.6); `NormalizedBat
 
 ### 16.3 Owner approvals and what is still a recommendation
 
-Approved on 2026-10-18 (2.3): A1, A2, A4 (split kept), A5, A8, A10, A12, A13, A14. Kept as recommended because consistent with the canonical documents: A3, A6, A7, A9, A11, A15, A16, A17, A18. Added for the approval conditions and awaiting the owner's review of the final PR: A19, A20. AMB-1 to AMB-4 follow the approved classes; AMB-7, `sub` and key custody stay as documented dependencies.
+Approved on 2026-10-18 (2.3): A1, A2, A4 (split kept), A5, A8, A10, A12, A13, A14. Kept as recommended because consistent with the canonical documents: A3, A6, A7, A9, A11, A15, A16, A17. Approved after the pre-PR review: A18 (class L for the four tables). Added for the approval conditions and awaiting the owner's review of the final PR: A19, A20. AMB-1 to AMB-4 follow the approved classes; AMB-7, `sub` and key custody stay as documented dependencies.
 
 ### 16.4 Technical verifications
 
-Ran and passed on 2026-10-18 (section 17): whole schema under `supabase db reset` from an empty database; all six pgTAP files (219 tests) including the 40-table isolation matrix under `pg_prove` with replica mode; `touch_row`, the membership trigger, `uuid_v7` (10,000 values), the partial unique index and the composite foreign keys; the generator, its determinism, the hash and freshness guards and `--check`; the `NormalizedBatch` contract tests (86 without a database); 23 REST exposure tests through PostgREST including embedding (also through the self-referencing `menu_category.parent_id` composite foreign key), hidden columns, OpenAPI and forged tokens; `ruff check`, `ruff format --check` and `mypy` on the package.
+Ran and passed on 2026-10-18 (section 17): whole schema under `supabase db reset` from an empty database; all six pgTAP files (228 tests) including the 40-table isolation matrix under `pg_prove` with replica mode; `touch_row`, the membership trigger, `uuid_v7` (10,000 values), the partial unique index and the composite foreign keys; the generator, its determinism, the hash and freshness guards and `--check`; the `NormalizedBatch` contract tests (89 without a database); 25 REST exposure tests through PostgREST including embedding (also through the self-referencing `menu_category.parent_id` composite foreign key), hidden columns, OpenAPI and forged tokens; `ruff check`, `ruff format --check` and `mypy` on the package.
 
 Not run, with the reason:
 - **GraphQL exposure**: `pg_graphql` is not enabled on the local stack (V31).
@@ -986,10 +991,10 @@ Run from a clean state: `supabase stop --no-backup`, `supabase start -x ...`, `s
 | Command | Result |
 |---|---|
 | `supabase db reset` | 8 migrations applied from an empty database, no error |
-| `supabase test db` | 6 files, 219 tests, PASS |
-| `cd packages/contracts && uv run pytest` | 86 passed (no database) |
+| `supabase test db` | 6 files, 228 tests, PASS |
+| `cd packages/contracts && uv run pytest` | 89 passed (no database) |
 | `MERMIA_DB_URL=... uv run pytest -m db -k 'not rest_exposure'` | 5 passed |
-| `MERMIA_DB_URL=... MERMIA_API_URL=... MERMIA_JWT_SECRET=... MERMIA_API_KEY=... uv run pytest -m rest -rs` | 23 passed, 1 skipped (GraphQL: `pg_graphql` not enabled) |
+| `MERMIA_DB_URL=... MERMIA_API_URL=... MERMIA_JWT_SECRET=... MERMIA_API_KEY=... uv run pytest -m rest -rs` | 25 passed, 1 skipped (GraphQL: `pg_graphql` not enabled) |
 | `uv run python -m mermia_contracts.tools.gen_db_models --check` | `db/models.py` is up to date |
 | `uvx ruff check .` and `uvx ruff format --check .` (package) | passed |
 | `uvx --with pydantic --with psycopg mypy src` | no issues in 8 source files |
@@ -997,3 +1002,18 @@ Run from a clean state: `supabase stop --no-backup`, `supabase start -x ...`, `s
 
 Findings the tests produced while building (all fixed or recorded): V27, V28, V29, V30, V31, V32, V33, V34, C18, the invalid `SET ROLE` test replaced by membership checks, and a first version of `can_see_location` that leaked tenant-level rows.
 
+### 17.1 Pre-PR review (code-review pass and skeptic-reviewer pass, 2026-10-18)
+
+| Finding | Disposition |
+|---|---|
+| Four catalog/staff tables carry `location_id` but were class T (major) | Fixed: class L, owner-approved (AMB-6, A18); tests added and mutation-checked |
+| Audit immutability stated more strongly than built (owner role can use replica mode or disable triggers) | Fixed: wording corrected (7.2.6), test forbids such functions in `public` and `app` |
+| `Period` dumped as `from_` by default | Fixed: `serialize_by_alias`, pydantic floor 2.11, test |
+| `ImportBatchStats.totals` accepted floats | Fixed: `int | str | None`, test |
+| `Cents`/`Count` had no integer bounds | Fixed: bigint and int ranges, test |
+| Weak embedding test (no status, no control) | Fixed: exact 403/42501 per embed and a positive control |
+| No unique key for tickets, no cross-field validation | Recorded as requirements for MR-16 (8.2) |
+| Model-freshness tests skip without `MERMIA_DB_URL` | Recorded for MR-9 (8.2) |
+| Rejected after testing: per-row cost of `can_see_location` (no failing path; measure at scale), global `PUBLIC` revoke vs extensions (`pg_trgm` created as `postgres` stayed executable), hash test failing outside the repo (intended), docstring wording, duplicated pgTAP helpers (per-file by design), generic error for `all_locations` (approved behaviour) | No change |
+
+After the fixes: `supabase test db` 228 tests PASS; `uv run pytest` 89 passed; `-m db` 5 passed; `-m rest` 25 passed, 1 skipped (GraphQL); `gen_db_models --check`, `ruff`, `mypy` clean.

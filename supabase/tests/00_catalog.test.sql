@@ -65,8 +65,7 @@ select is((
 -- the 40 tables and their access class (spec 7.2.2) -------------------------------------------------------------
 create temp table expected_class (tbl text primary key, cls text not null);
 insert into expected_class values
-  ('tenant','rls_class=T'),('menu_category','rls_class=T'),('menu_item','rls_class=T'),('modifier_link','rls_class=T'),
-  ('staff','rls_class=T'),('supplier','rls_class=T'),('ingredient','rls_class=T'),('ingredient_alias','rls_class=T'),
+  ('tenant','rls_class=T'),('supplier','rls_class=T'),('ingredient','rls_class=T'),('ingredient_alias','rls_class=T'),
   ('unit_conversion','rls_class=T'),('purchase_doc','rls_class=T'),('purchase_line','rls_class=T'),
   ('ingredient_price','rls_class=T'),('recipe','rls_class=T'),('recipe_line','rls_class=T'),
   ('location','rls_class=L;loc_col=id'),('source','rls_class=L;loc_col=location_id'),
@@ -74,6 +73,8 @@ insert into expected_class values
   ('sale_ticket','rls_class=L;loc_col=location_id'),('sale_line','rls_class=L;loc_col=location_id'),
   ('payment','rls_class=L;loc_col=location_id'),('item_sales_agg','rls_class=L;loc_col=location_id'),
   ('daily_sales_agg','rls_class=L;loc_col=location_id'),('dish_cost_snapshot','rls_class=L;loc_col=location_id'),
+  ('menu_category','rls_class=L;loc_col=location_id'),('menu_item','rls_class=L;loc_col=location_id'),
+  ('modifier_link','rls_class=L;loc_col=location_id'),('staff','rls_class=L;loc_col=location_id'),
   ('daily_location_metrics','rls_class=L;loc_col=location_id'),('alert','rls_class=L;loc_col=location_id'),
   ('price_suggestion','rls_class=L;loc_col=location_id'),
   ('import_issue','rls_class=LP'),

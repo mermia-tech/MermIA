@@ -22,6 +22,8 @@
           "anyOf": [
             {
               "description": "unit=centavos",
+              "maximum": 9223372036854775807,
+              "minimum": -9223372036854775808,
               "type": "integer"
             },
             {
@@ -34,6 +36,7 @@
         "cancellations_count": {
           "anyOf": [
             {
+              "maximum": 2147483647,
               "minimum": 0,
               "type": "integer"
             },
@@ -48,6 +51,8 @@
           "anyOf": [
             {
               "description": "unit=centavos",
+              "maximum": 9223372036854775807,
+              "minimum": -9223372036854775808,
               "type": "integer"
             },
             {
@@ -60,6 +65,7 @@
         "guests": {
           "anyOf": [
             {
+              "maximum": 2147483647,
               "minimum": 0,
               "type": "integer"
             },
@@ -72,12 +78,16 @@
         },
         "net_sales": {
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Net Sales",
           "type": "integer"
         },
         "payment_mix": {
           "additionalProperties": {
             "description": "unit=centavos",
+            "maximum": 9223372036854775807,
+            "minimum": -9223372036854775808,
             "type": "integer"
           },
           "propertyNames": {
@@ -90,6 +100,8 @@
           "anyOf": [
             {
               "description": "unit=centavos",
+              "maximum": 9223372036854775807,
+              "minimum": -9223372036854775808,
               "type": "integer"
             },
             {
@@ -102,6 +114,7 @@
         "tickets": {
           "anyOf": [
             {
+              "maximum": 2147483647,
               "minimum": 0,
               "type": "integer"
             },
@@ -116,6 +129,8 @@
           "anyOf": [
             {
               "description": "unit=centavos",
+              "maximum": 9223372036854775807,
+              "minimum": -9223372036854775808,
               "type": "integer"
             },
             {
@@ -209,11 +224,15 @@
       "properties": {
         "discount": {
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Discount",
           "type": "integer"
         },
         "gross": {
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Gross",
           "type": "integer"
         },
@@ -237,6 +256,8 @@
         },
         "net": {
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Net",
           "type": "integer"
         },
@@ -318,6 +339,8 @@
           "anyOf": [
             {
               "description": "unit=centavos",
+              "maximum": 9223372036854775807,
+              "minimum": -9223372036854775808,
               "type": "integer"
             },
             {
@@ -372,6 +395,8 @@
       "properties": {
         "amount": {
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Amount",
           "type": "integer"
         },
@@ -407,6 +432,8 @@
         "tip": {
           "default": 0,
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Tip",
           "type": "integer"
         }
@@ -494,6 +521,8 @@
         },
         "subtotal": {
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Subtotal",
           "type": "integer"
         },
@@ -502,6 +531,8 @@
         },
         "total": {
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Total",
           "type": "integer"
         }
@@ -853,6 +884,8 @@
         "discount": {
           "default": 0,
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Discount",
           "type": "integer"
         },
@@ -868,6 +901,7 @@
         "guests": {
           "anyOf": [
             {
+              "maximum": 2147483647,
               "minimum": 0,
               "type": "integer"
             },
@@ -921,6 +955,8 @@
         },
         "subtotal": {
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Subtotal",
           "type": "integer"
         },
@@ -940,17 +976,23 @@
         "tax": {
           "default": 0,
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Tax",
           "type": "integer"
         },
         "tip": {
           "default": 0,
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Tip",
           "type": "integer"
         },
         "total": {
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Total",
           "type": "integer"
         }
@@ -972,6 +1014,8 @@
         "discount": {
           "default": 0,
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Discount",
           "type": "integer"
         },
@@ -1000,6 +1044,8 @@
         },
         "net": {
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Net",
           "type": "integer"
         },
@@ -1031,11 +1077,15 @@
         "tax": {
           "default": 0,
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Tax",
           "type": "integer"
         },
         "unit_price": {
           "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
           "title": "Unit Price",
           "type": "integer"
         },
@@ -1075,6 +1125,7 @@
       "description": "Figures the loader checks against the rows (03 B.5).",
       "properties": {
         "lines": {
+          "maximum": 2147483647,
           "minimum": 0,
           "title": "Lines",
           "type": "integer"
@@ -1083,6 +1134,8 @@
           "anyOf": [
             {
               "description": "unit=centavos",
+              "maximum": 9223372036854775807,
+              "minimum": -9223372036854775808,
               "type": "integer"
             },
             {

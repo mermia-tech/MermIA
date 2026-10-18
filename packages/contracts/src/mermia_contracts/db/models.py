@@ -4,7 +4,7 @@ Regenerate with `python -m mermia_contracts.tools.gen_db_models` after
 `supabase db reset`. Source of truth: supabase/migrations.
 
 generator_version: 1
-migrations_sha256: 9b3e123de269d7d6c462d0a23a7900741afdc78f0b9f8407fb2bb89a4c568fa5
+migrations_sha256: fb3145736baf9824de47fd1ac254cf283db11111589694bdbd77ad48c3c43a94
 """
 
 import datetime as dt
@@ -525,7 +525,7 @@ class MembershipRow(RowModel):
 
 
 class MenuCategoryRow(RowModel):
-    """Row of public.menu_category. rls_class=T."""
+    """Row of public.menu_category. rls_class=L;loc_col=location_id."""
 
     id: UUID
     tenant_id: UUID
@@ -541,7 +541,7 @@ class MenuCategoryRow(RowModel):
 
 
 class MenuItemRow(RowModel):
-    """Row of public.menu_item. rls_class=T."""
+    """Row of public.menu_item. rls_class=L;loc_col=location_id."""
 
     id: UUID
     tenant_id: UUID
@@ -597,7 +597,7 @@ class MessageLogRow(RowModel):
 
 
 class ModifierLinkRow(RowModel):
-    """Row of public.modifier_link. rls_class=T."""
+    """Row of public.modifier_link. rls_class=L;loc_col=location_id."""
 
     id: UUID
     tenant_id: UUID
@@ -853,7 +853,7 @@ class SourceRow(RowModel):
 
 
 class StaffRow(RowModel):
-    """Row of public.staff. rls_class=T."""
+    """Row of public.staff. rls_class=L;loc_col=location_id."""
 
     id: UUID
     tenant_id: UUID

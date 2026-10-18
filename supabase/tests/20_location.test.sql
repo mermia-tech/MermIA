@@ -121,5 +121,25 @@ select is(pg_temp.rows(:ABSENT, 'select kind from public.pending_change'), '<non
 select is(pg_temp.rows(:ALLA, 'select action from public.audit_log'), 'seed', 'F: explicit null scope reads the audit log');
 select is(pg_temp.rows(:CENTRO, 'select action from public.audit_log'), '<none>', 'F: a Centro-only member reads no audit row');
 
+-- shared catalog with and without a location (class L, spec 7.2.2) ---------------------------------------
+insert into public.staff (tenant_id, location_id, display_name) values
+  ('aaaaaaaa-0000-7000-8000-000000000001', 'a2a2a2a2-0000-7000-8000-000000000002', 'Pedro'),
+  ('aaaaaaaa-0000-7000-8000-000000000001', null, 'Juan');
+insert into public.menu_item (tenant_id, location_id, name) values
+  ('aaaaaaaa-0000-7000-8000-000000000001', 'a2a2a2a2-0000-7000-8000-000000000002', 'Platillo de Polanco'),
+  ('aaaaaaaa-0000-7000-8000-000000000001', null, 'Platillo compartido');
+insert into public.menu_category (tenant_id, location_id, name) values
+  ('aaaaaaaa-0000-7000-8000-000000000001', 'a2a2a2a2-0000-7000-8000-000000000002', 'Categoria de Polanco'),
+  ('aaaaaaaa-0000-7000-8000-000000000001', null, 'Categoria compartida');
+
+select is(pg_temp.rows(:CENTRO, 'select display_name from public.staff'), 'Juan', 'staff: a Centro-only member does not read Polanco staff, only tenant-level staff');
+select is(pg_temp.rows(:ALLA, 'select display_name from public.staff'), 'Juan,Pedro', 'staff: all-locations scope reads both');
+select is(pg_temp.rows(:ABSENT, 'select display_name from public.staff'), '<none>', 'staff: an absent claim reads none, not even tenant-level rows');
+select is(pg_temp.rows(:EMPTY_LIST, 'select display_name from public.staff'), '<none>', 'staff: an empty list reads none');
+select is(pg_temp.rows(:CENTRO, 'select name from public.menu_item'), 'Platillo compartido', 'menu_item: shared items are visible, other locations'' items are not');
+select is(pg_temp.rows(:ALLA, 'select name from public.menu_item'), 'Platillo compartido,Platillo de Polanco', 'menu_item: all-locations scope reads both');
+select is(pg_temp.rows(:CENTRO, 'select name from public.menu_category'), 'Categoria compartida', 'menu_category: shared categories are visible, other locations'' are not');
+select is(pg_temp.rows(:EMPTY_LIST, 'select name from public.menu_category'), '<none>', 'menu_category: an empty list reads none');
+
 select * from finish();
 rollback;

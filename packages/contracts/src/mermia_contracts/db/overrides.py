@@ -28,7 +28,7 @@ class ImportBatchStats(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     rows: int | None = None
-    totals: dict[str, int | float | str | None] | None = None
+    totals: dict[str, int | str | None] | None = None  # no floats: totals can be money
     anomalies: list[str] | None = None
 
 
