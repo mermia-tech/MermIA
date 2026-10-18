@@ -190,5 +190,61 @@ select throws_ok($$insert into public.report_run (tenant_id, kind, period_from, 
 select throws_ok($$insert into public.message_log (tenant_id, wa_message_id, direction, pricing_category) values ('aaaaaaaa-0000-7000-8000-000000000001', 'wamid.1', 'out', 'premium')$$,
   '22P02', null, 'pricing category is one of the four Meta categories');
 
+-- costing and metrics (spec 5.7) ----------------------------------------------------------------------------
+insert into public.ingredient (id, tenant_id, name, base_unit) values ('1a000000-0000-7000-8000-000000000001', 'aaaaaaaa-0000-7000-8000-000000000001', 'Carne al pastor', 'g');
+insert into public.supplier (id, tenant_id, name, kind) values ('50000000-0000-7000-8000-000000000001', 'aaaaaaaa-0000-7000-8000-000000000001', 'Carnes SA', 'cfdi');
+select is((select default_yield_pct from public.ingredient where id = '1a000000-0000-7000-8000-000000000001'), 100::numeric, 'default yield is 100 percent points');
+
+select throws_ok($$insert into public.recipe (tenant_id, recipe_version) values ('aaaaaaaa-0000-7000-8000-000000000001', 1)$$,
+  '23514', null, 'a recipe needs a dish or a produced ingredient');
+select throws_ok($$insert into public.recipe (tenant_id, recipe_version, menu_item_id, produces_ingredient_id)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', 1, '3e100000-0000-7000-8000-000000000001', '1a000000-0000-7000-8000-000000000001')$$,
+  '23514', null, 'a recipe cannot be both a dish recipe and a sub-recipe');
+insert into public.recipe (id, tenant_id, recipe_version, menu_item_id) values ('4ec10000-0000-7000-8000-000000000001', 'aaaaaaaa-0000-7000-8000-000000000001', 1, '3e100000-0000-7000-8000-000000000001');
+select is((select status::text from public.recipe where id = '4ec10000-0000-7000-8000-000000000001'), 'draft', 'recipes start as draft');
+select throws_ok($$insert into public.recipe_line (tenant_id, recipe_id, qty_base) values ('aaaaaaaa-0000-7000-8000-000000000001', '4ec10000-0000-7000-8000-000000000001', 100)$$,
+  '23514', null, 'a recipe line needs an ingredient or a sub-recipe');
+select throws_ok($$insert into public.recipe_line (tenant_id, recipe_id, ingredient_id, sub_recipe_id, qty_base)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '4ec10000-0000-7000-8000-000000000001', '1a000000-0000-7000-8000-000000000001', '4ec10000-0000-7000-8000-000000000001', 100)$$,
+  '23514', null, 'a recipe line cannot have both');
+select lives_ok($$insert into public.recipe_line (tenant_id, recipe_id, ingredient_id, qty_base, yield_override_pct)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '4ec10000-0000-7000-8000-000000000001', '1a000000-0000-7000-8000-000000000001', 100, 85.5)$$,
+  'a valid recipe line');
+
+select throws_ok($$insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source, batch_id, pending_change_id)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '1a000000-0000-7000-8000-000000000001', 0.220000, '2026-10-12', 'manual',
+          'ba7c0000-0000-7000-8000-000000000001', '9c000000-0000-7000-8000-000000000001')$$,
+  '23514', null, 'a price comes from a batch or a pending change, not both');
+select lives_ok($$insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source, pending_change_id)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '1a000000-0000-7000-8000-000000000001', 0.220000, '2026-10-12', 'manual', '9c000000-0000-7000-8000-000000000001')$$,
+  'a price from a pending change');
+select is((select unit_price_net from public.ingredient_price limit 1), 0.220000::numeric, 'unit prices keep six decimals (pesos per base unit)');
+select throws_ok($$insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, effective_to, source)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '1a000000-0000-7000-8000-000000000001', 1, '2026-10-12', '2026-10-01', 'manual')$$,
+  '23514', null, 'a price cannot end before it starts');
+
+select lives_ok($$insert into public.unit_conversion (tenant_id, from_unit, to_unit, factor) values ('aaaaaaaa-0000-7000-8000-000000000001', 'kg', 'g', 1000)$$, 'a global conversion');
+select throws_ok($$insert into public.unit_conversion (tenant_id, from_unit, to_unit, factor) values ('aaaaaaaa-0000-7000-8000-000000000001', 'kg', 'g', 1000)$$,
+  '23505', null, 'a duplicate global conversion is rejected (nulls not distinct)');
+select throws_ok($$insert into public.unit_conversion (tenant_id, from_unit, to_unit, factor) values ('aaaaaaaa-0000-7000-8000-000000000001', 'l', 'ml', 0)$$,
+  '23514', null, 'a conversion factor must be positive');
+
+insert into public.purchase_doc (id, tenant_id, supplier_id, kind, cfdi_uuid) values ('d0c00000-0000-7000-8000-000000000001', 'aaaaaaaa-0000-7000-8000-000000000001', '50000000-0000-7000-8000-000000000001', 'cfdi', 'cfd10000-0000-4000-8000-000000000001');
+select throws_ok($$insert into public.purchase_doc (tenant_id, supplier_id, kind, cfdi_uuid) values ('aaaaaaaa-0000-7000-8000-000000000001', '50000000-0000-7000-8000-000000000001', 'cfdi', 'cfd10000-0000-4000-8000-000000000001')$$,
+  '23505', null, 'the same CFDI cannot be loaded twice');
+select lives_ok($$insert into public.purchase_doc (tenant_id, supplier_id, kind) values ('aaaaaaaa-0000-7000-8000-000000000001', '50000000-0000-7000-8000-000000000001', 'manual')$$, 'documents without a CFDI uuid do not collide');
+select throws_ok($$insert into public.ingredient_alias (tenant_id, supplier_id, source_text, ingredient_id) values ('aaaaaaaa-0000-7000-8000-000000000001', '50000000-0000-7000-8000-000000000001', 'PASTOR KG', '1a000000-0000-7000-8000-000000000001'), ('aaaaaaaa-0000-7000-8000-000000000001', '50000000-0000-7000-8000-000000000001', 'PASTOR KG', '1a000000-0000-7000-8000-000000000001')$$,
+  '23505', null, 'one alias per supplier text');
+
+select lives_ok($$insert into public.dish_cost_snapshot (tenant_id, menu_item_id, location_id, date, cost, price_net, margin, food_cost_pct, confidence)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '3e100000-0000-7000-8000-000000000001', 'a1a1a1a1-0000-7000-8000-000000000001', '2026-10-12', 2100, 5000, 2900, 42.0, 'estimated')$$,
+  'a dish cost snapshot');
+select throws_ok($$insert into public.dish_cost_snapshot (tenant_id, menu_item_id, location_id, date, cost, price_net, margin, food_cost_pct, confidence)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '3e100000-0000-7000-8000-000000000001', 'a1a1a1a1-0000-7000-8000-000000000001', '2026-10-12', 2100, 5000, 2900, 42.0, 'estimated')$$,
+  '23505', null, 'one snapshot per dish, location and date');
+select throws_ok($$insert into public.daily_location_metrics (tenant_id, location_id, business_date, net_sales) values
+  ('aaaaaaaa-0000-7000-8000-000000000001', 'a1a1a1a1-0000-7000-8000-000000000001', '2026-10-12', 1), ('aaaaaaaa-0000-7000-8000-000000000001', 'a1a1a1a1-0000-7000-8000-000000000001', '2026-10-12', 2)$$,
+  '23505', null, 'one metrics row per location and day');
+
 select * from finish();
 rollback;
