@@ -13,7 +13,7 @@ Date: 2026-10-15. Labels: **verified**, **likely** and **unverified** apply to f
 | D5 | **The metrics layer is Postgres SQL functions (RPCs).** They return small, pre-formatted JSON and are called through PostgREST under RLS. | The agent, dashboard and POS share one implementation. Numbers are computed once, in SQL. |
 | D6 | **The agent is a deterministic router first and an LLM second.** Templates answer the top questions with zero tokens. Claude Haiku 5.5 brokers 12 tools, and a validator rejects any number not found in the tool output. | Token cost (13: about US$0.66 per restaurant per month) and owner trust. |
 | D7 | **Writes happen only through `pending_change`.** The agent's only write tool is `propose_change`. The change is applied by an `apply_pending_change()` SQL function after a role-checked human approval. Every step is logged in an append-only `audit_log`. | This is the human-approval rule from the brief, and it is channel-agnostic. |
-| D8 | **Tool calls run as the user.** The backend mints a short-lived JWT holding the user's `tenant_id`, role and locations, so RLS applies to agent reads too. The service role is used only by ingestion and the apply functions. | A prompt-injection or tool-argument bug cannot cross tenants. |
+| D8 | **Tool calls run as the user.** The backend issues a short-lived identity holding the user's `tenant_id`, `app_role` and `location_ids` claims, so RLS applies to agent reads too (claim names and trust boundary: section 6; the JWT `role` claim is the Postgres role and is never used for the app role). The service role is used only by ingestion and the apply functions. | A prompt-injection or tool-argument bug cannot cross tenants. |
 | D9 | **Python backend, TypeScript frontend**, with **Supabase** (Postgres, RLS, Auth, Storage) and **one always-on FastAPI service**. Pydantic is the source of truth for contracts; TypeScript types for the dashboard and POS are generated from its JSON Schema. | Python is stronger for messy Excel parsing and LLM work. The generated types keep one schema across all three phases (**opinion**; the generation pipeline is untested, allow half a day in Phase 2). |
 
 ## 1. Components
@@ -74,7 +74,7 @@ Module boundaries (these follow the Dev A / Dev B split in `08-mvp-4-week-plan.m
 | Module | Owns | Talks to others only through |
 |---|---|---|
 | `packages/contracts` | Pydantic models (plus exported JSON Schema): `NormalizedBatch`, RPC request and response types, agent tool JSON schemas, `PendingChange` kinds, `AgentRequest`/`AgentResponse`, fixtures | Imported by everything; changes need both devs to approve |
-| `packages/db` | Migrations, RLS policies, metric RPCs, `apply_batch`, `rollback_batch`, `apply_pending_change`, pgTAP tests | SQL function signatures in contracts |
+| `supabase/` (repo root) | Migrations (`supabase/migrations`), RLS policies, metric RPCs, `apply_batch`, `rollback_batch`, `apply_pending_change`, pgTAP tests (`supabase/tests`). The Supabase CLI looks for this folder from anywhere in the repo, so it is not under `packages/` | SQL function signatures in contracts |
 | `apps/api/ingestion` | Transports, parser registry, batch loader | `NormalizedBatch`, `apply_batch` |
 | `apps/api/agent` | Router, templates, LLM broker, validator, memory | Tool schemas; RPCs reached through `ToolExecutor` |
 | `apps/api/channels` | WhatsApp webhook, sending, media download, template registry | `AgentRequest`/`AgentResponse` |
@@ -84,9 +84,9 @@ Module boundaries (these follow the Dev A / Dev B split in `08-mvp-4-week-plan.m
 ## 2. Normalized data model
 
 Columns shared by every table:
-- `id uuid` (UUIDv7, can be generated on a device for Phase 3), `tenant_id`, `created_at`, `updated_at`, `version int` (optimistic concurrency).
+- `id uuid` (UUIDv7, can be generated on a device for Phase 3; on Postgres 17 the default is `app.uuid_v7()`, a vendored sub-millisecond implementation), `tenant_id`, `created_at`, `updated_at`, `version int` (optimistic concurrency). Exceptions (MR-10): `app_user`, `channel_identity` and `consent_log` have no `tenant_id` (a person can belong to several tenants) and are backend-only; `tenant` has no `tenant_id` (its `id` is the tenant); `audit_log` has neither `updated_at` nor `version` (append-only).
 - Fact and catalog rows also carry `location_id`, `source_id`, `external_id` and `batch_id`.
-- Money is `bigint` centavos plus `currency char(3)`, with gross and net (IVA) stored separately.
+- Money is `bigint` centavos plus `currency char(3)`, with gross and net (IVA) stored separately. Unit prices and unit costs (`ingredient_price`, `purchase_line`) are `numeric(20,6)` **pesos** per base unit (or per purchase unit), because a price per gram is not a whole number of centavos. Convert once at the end: `round(pesos * 100)`, never rounding intermediate results. Percentages (`*_pct`) are **percent points** (34.1 means 34.1 %), tax rates are fractions (0.16).
 - Each location has a time zone, and every fact carries a `business_date`.
 
 ### 2.1 Tenancy, identity, sources
@@ -96,7 +96,7 @@ Columns shared by every table:
 | `tenant` | name, rfc, plan, settings (food-cost target, report cadence), status | One per restaurant business; a chain is one tenant |
 | `location` | tenant_id, name, timezone, address, sr_version, sr_edition | Multi-location from day 1 |
 | `app_user` | name, phone_e164, email, auth_user_id | One person can belong to several tenants |
-| `membership` | user_id, tenant_id, role (`owner`, `manager`, `admin`, `support`), location_ids[] (null = all), can_approve[] | Tenant roles. `support` is MermIA staff and can propose but never approve |
+| `membership` | user_id, tenant_id, role (`owner`, `manager`, `admin`, `support`), location_ids[] (null = all), all_locations, can_approve[] | Tenant roles. `support` is MermIA staff and can propose but never approve. MR-10: full scope needs both `location_ids` null and `all_locations = true`; a row without a stated scope gets an empty list (no location) |
 | `channel_identity` | user_id, channel (`whatsapp`, `web`, `pos`), external_id (wa_id), verified_at | Maps a sender to a user. Unknown senders are ignored |
 | `consent_log` | user_id, notice_version, channel, accepted_at, message_types | Opt-in and aviso de privacidad evidence (04, notes 2.2) |
 | `source` | tenant_id, location_id, kind (`sr_report`, `sr_corte_email`, `sr_erp_push`, `sr_connector`, `cfdi`, `photo_ocr`, `manual`, `mermia_pos`), config, api_key_hash, status | One row per configured data source |
@@ -119,11 +119,11 @@ Columns shared by every table:
 | `menu_item_price` | menu_item_id, location_id, price_gross, tax_rate, effective_from, effective_to, source | Effective-dated, so past margins can be recomputed |
 | `modifier_link` | menu_item_id, modifier_item_id, price_delta | Modifiers are `menu_item`s of kind `modifier` |
 | `staff` | display_name (first name only), external_id, role | Personal data; keep it minimal (notes 2.3) |
-| `sale_ticket` | business_date, opened_at, closed_at, channel (`dine_in`, `takeout`, `delivery_app`, `delivery`), area, table, guests, staff_id, subtotal, discount, tax, tip, total, status (`paid`, `cancelled`), fiscal_status (`none`, `requested`, `in_global`, `stamped`) | Ticket grain: ERP push, connector, POS |
+| `sale_ticket` | business_date, opened_at, closed_at, channel (`dine_in`, `takeout`, `delivery_app`, `delivery`), area, table_label (MR-10: `table` is a reserved word), guests, staff_id, subtotal, discount, tax, tip, total, status (`paid`, `cancelled`), fiscal_status (`none`, `requested`, `in_global`, `stamped`) | Ticket grain: ERP push, connector, POS |
 | `sale_line` | ticket_id, menu_item_id, parent_line_id (modifier), qty (numeric), unit_price, discount, tax, net, is_void, void_reason, voided_by | |
 | `payment` | ticket_id, method (`cash`, `card`, `transfer`, `voucher`, `other`), amount, tip, provider, provider_ref | |
-| `item_sales_agg` | location_id, business_date (or period), menu_item_id, units, gross, discount, net | Aggregate grain: "Productos vendidos" style reports |
-| `daily_sales_agg` | location_id, business_date, net_sales, tax, tickets, guests, discounts, cancellations, payment_mix jsonb, tips | Aggregate grain: Corte Z / "Ventas por día" |
+| `item_sales_agg` | location_id, period_from, period_to (MR-10: equal for a single day), menu_item_id, units, gross, discount, net | Aggregate grain: "Productos vendidos" style reports |
+| `daily_sales_agg` | location_id, business_date, net_sales, tax, tickets, guests, discounts, cancellations_amount, cancellations_count (MR-10: both nullable, null = not reported), payment_mix jsonb, tips | Aggregate grain: Corte Z / "Ventas por día" |
 
 ### 2.4 Costing
 
@@ -136,7 +136,7 @@ Columns shared by every table:
 | `purchase_doc` | supplier_id, kind (`cfdi`, `nota_photo`, `manual`), cfdi_uuid (unique), issued_at, subtotal, total, raw_file_id | |
 | `purchase_line` | purchase_doc_id, description, qty, unit, unit_price_net, ingredient_id (nullable until mapped) | |
 | `ingredient_price` | ingredient_id, unit_price_net per base unit, effective_from, effective_to, source (`cfdi`, `nota`, `sr_import`, `manual`, `benchmark`), source_ref, confidence, batch_id or pending_change_id | Append-only. Cost of record per date follows source priority (03) |
-| `recipe` | menu_item_id or produces_ingredient_id (sub-recipe), version, effective_from, effective_to, yield_qty, status (`draft`, `confirmed`) | |
+| `recipe` | menu_item_id or produces_ingredient_id (sub-recipe), recipe_version (MR-10: `version` is the optimistic-concurrency column), effective_from, effective_to, yield_qty, status (`draft`, `confirmed`) | |
 | `recipe_line` | recipe_id, ingredient_id or sub_recipe_id, qty_base, yield_override_pct | |
 
 ### 2.5 Control, metrics, operations
@@ -147,7 +147,7 @@ Columns shared by every table:
 | `audit_log` | ts, actor_user_id, actor_kind (`user`, `system`, `agent`), channel, action, entity_type, entity_id, before, after, pending_change_id, batch_id, request_id | Append-only: a trigger blocks UPDATE and DELETE, and there are no grants for either |
 | `dish_cost_snapshot` | menu_item_id, location_id, date, cost, price_net, food_cost_pct, margin, confidence (`confirmed`, `estimated`, `missing`) | Recomputed when a price, recipe or batch changes |
 | `daily_location_metrics` | location_id, business_date, net_sales, tickets, avg_ticket, theoretical_food_cost_pct, cost_coverage_pct | Precomputed, so RPCs stay fast |
-| `alert` / `price_suggestion` | rule, subject, value, threshold, status, suggested_price, rationale_code | Rules live in code (03) |
+| `alert`, `price_suggestion` | rule, subject, value, threshold, status, location_id (MR-10); `price_suggestion` adds suggested_price, rationale_code | Two tables (MR-10). Rules live in code (03) |
 | `report_run` | kind (`weekly`, `daily`), period, recipients, template, status, wa_message_ids | |
 | `conversation` | user_id, channel, summary (≤300 tokens), last_turns jsonb, window_open_until | Short memory (13 I1) |
 | `llm_usage` | the fields in 13 I4 | Cost metering from day 1 |
@@ -190,7 +190,7 @@ Rules:
 | Local SR DB connector | Windows service, outbound HTTPS | `NormalizedBatch` (tickets, recipes, inventory) | ticket + catalog | 2 (only where the ERP push is not possible, or for recipes) | Feasible, with commercial precedent; schema **unverified**; legal risk medium (01, 03) |
 | MermIA POS | Direct writes (sync engine) | Same tables; `source.kind = mermia_pos`; one batch per location and business_date | ticket/event | 3 | Design |
 
-Parser contract (in `packages/contracts`, sketch):
+Parser contract (in `packages/contracts`; the Pydantic model `mermia_contracts.batch.NormalizedBatch` is the source of truth, JSON uses snake_case, the TypeScript below is only an illustrative sketch):
 
 ```ts
 type NormalizedBatch = {
@@ -354,7 +354,8 @@ Rules:
 ## 6. Multi-tenancy
 
 - Every table has `tenant_id NOT NULL`, indexed first in composite indexes.
-- RLS policy on every table: `tenant_id = (select auth.jwt()->>'tenant_id')::uuid`. Wrapping the call in a subselect is Supabase's documented performance pattern (**likely**). There is an additional location filter from `membership.location_ids`.
+- RLS policy on every client-readable table: `tenant_id = (select app.current_tenant_id())`, where the helper reads the `tenant_id` claim of `auth.jwt()` (MR-10). Wrapping the call in a subselect is Supabase's documented performance pattern (**likely**). Location-scoped tables add `app.can_see_location(<location column>)`: an explicit `location_ids: null` claim means all locations, a list means those locations, and an **absent, empty or malformed claim means none** (fail-closed). `pending_change` and `audit_log` need the explicit all-locations scope. Backend-only tables have RLS on, no policy and no client privilege. Claims: `tenant_id`, `app_role`, `location_ids`; never the JWT `role` claim, which PostgREST uses as the Postgres role.
+- RLS reads claims; it does not make them trustworthy. A claim is trustworthy only when a trusted issuer (the auth hook, or the backend) computes it from `membership` and nobody else can sign it. The trust boundary, the validations an issuer must perform and the production conditions are in `docs/superpowers/specs/2026-10-18-mr-10-contracts-schema-design.md` sections 7.5 and 7.6.
 - The dashboard uses Supabase Auth sessions with `tenant_id` set as a custom claim through an auth hook (**likely** available on Pro; verify in week 1).
 - Agent and job calls use a short-lived JWT minted by the API for the resolved user (D8). Only ingestion (`apply_batch`) and `apply_pending_change` run as `SECURITY DEFINER` with explicit tenant checks inside.
 - Tests: pgTAP suite with two fixture tenants. Every RPC is called as tenant A and must return nothing for tenant B. It runs in CI on every migration.
