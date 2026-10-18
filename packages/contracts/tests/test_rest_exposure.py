@@ -103,8 +103,10 @@ def fixtures():
                 (TA, TB),
             ),
             (
-                "insert into public.location (tenant_id, id, name, timezone) values "
-                "(%s, %s, 'Centro', 'x'), (%s, %s, 'Polanco', 'x'), (%s, %s, 'B uno', 'x')",
+                (
+                    "insert into public.location (tenant_id, id, name, timezone) values "
+                    "(%s, %s, 'Centro', 'x'), (%s, %s, 'Polanco', 'x'), (%s, %s, 'B uno', 'x')"
+                ),
                 (TA, A1, TA, A2, TB, B1),
             ),
             (
@@ -112,25 +114,33 @@ def fixtures():
                 (USER, SECRET_PHONE),
             ),
             (
-                "insert into public.source (id, tenant_id, location_id, kind, config) "
-                "values (%s, %s, %s, 'sr_report', %s::jsonb)",
+                (
+                    "insert into public.source (id, tenant_id, location_id, kind, config) "
+                    "values (%s, %s, %s, 'sr_report', %s::jsonb)"
+                ),
                 (SRC, TA, A1, json.dumps({"k": SECRET_CONFIG})),
             ),
             (
-                "insert into public.raw_file (id, tenant_id, storage_path, sha256, filename) "
-                "values (%s, %s, 'raw/x', repeat('c', 64), %s)",
+                (
+                    "insert into public.raw_file (id, tenant_id, storage_path, sha256, filename) "
+                    "values (%s, %s, 'raw/x', repeat('c', 64), %s)"
+                ),
                 (FILE, TA, SECRET_FILE),
             ),
             (
-                "insert into public.import_batch "
-                "(id, tenant_id, source_id, raw_file_id, location_id, parser, slice_key, applied_by) values "
-                "(%s, %s, %s, %s, %s, 'sr.x@v1', 'rest-centro', %s), "
-                "(%s, %s, %s, null, %s, 'sr.x@v1', 'rest-polanco', null)",
+                (
+                    "insert into public.import_batch "
+                    "(id, tenant_id, source_id, raw_file_id, location_id, parser, slice_key, applied_by) values "
+                    "(%s, %s, %s, %s, %s, 'sr.x@v1', 'rest-centro', %s), "
+                    "(%s, %s, %s, null, %s, 'sr.x@v1', 'rest-polanco', null)"
+                ),
                 (B_CENTRO, TA, SRC, FILE, A1, USER, B_POLANCO, TA, SRC, A2),
             ),
             (
-                "insert into public.import_issue (tenant_id, batch_id, severity, code, message_es) values "
-                "(%s, %s, 'info', 'centro_issue', 'Centro'), (%s, %s, 'info', 'polanco_issue', 'Polanco')",
+                (
+                    "insert into public.import_issue (tenant_id, batch_id, severity, code, message_es) values "
+                    "(%s, %s, 'info', 'centro_issue', 'Centro'), (%s, %s, 'info', 'polanco_issue', 'Polanco')"
+                ),
                 (TA, B_CENTRO, TA, B_POLANCO),
             ),
         ]

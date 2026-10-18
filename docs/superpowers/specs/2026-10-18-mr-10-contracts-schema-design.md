@@ -1,6 +1,6 @@
 # MR-10 Design: database schema and `NormalizedBatch` contract
 
-Date: 2026-10-18. Ticket: [#10](https://github.com/mermia-tech/MermIA/issues/10). Branch (not yet created): `MR-10-contracts-schema`. Status: **revision 3. Approved by the owner on 2026-10-18 with the adjustments listed in 2.3; implementation authorized (one branch, one PR).**
+Date: 2026-10-18. Ticket: [#10](https://github.com/mermia-tech/MermIA/issues/10). Branch (not yet created): `MR-10-contracts-schema`. Status: **revision 3. Approved by the owner on 2026-10-18 with the adjustments listed in 2.3. Implemented on branch `MR-10-contracts-schema`; the verification record is in section 17.**
 
 This document is written so a builder can plan MR-10 from it without going back to the owner, except for the items in section 12.
 
@@ -146,6 +146,15 @@ Environment: macOS, Docker 29.8.1, Supabase CLI 2.121.0 (installed with `brew in
 | V24 | **The Data API cannot change claims.** `POST /rest/v1/rpc/set_config` returns `404 PGRST202`; an RPC on schema `app` returns `406`; `public` held zero functions in the PoC database; direct writes through the Data API to a read-only table return `403`. | [VERIFIED] |
 | V25 | **Headers do not choose claims.** A request carrying `request.jwt.claims` and `X-Tenant-Id` headers for tenant B, with a token for tenant A, returned tenant A's rows. | [VERIFIED] |
 | V26 | `authenticated` **can** call `set_config('request.jwt.claims', ...)` in raw SQL. The trust model therefore assumes clients have no raw-SQL path (7.5.3). | [VERIFIED] |
+
+| V27 | **PUBLIC execute default.** Postgres grants `EXECUTE` on new functions to `PUBLIC`, and a per-schema `alter default privileges ... in schema app revoke execute ... from public` did not remove it (9 of 9 functions stayed executable by `anon`). A global `alter default privileges for role postgres revoke execute on functions from public` did. The foundations migration uses the global form. | [VERIFIED] (found by `00_catalog`) |
+| V28 | **`SET ROLE` follows the session user.** `authenticated` and `anon` are not members of `service_role` or `postgres`, but the PostgREST login role `authenticator` is a member of `service_role` (not of `postgres`). A test that tried `set role service_role` from inside a `set local role authenticated` block succeeded because the session user was `postgres`; it was invalid and was replaced by membership checks (`30_write_denial`). An escalation by SQL is therefore prevented only by the absence of any raw-SQL path (7.5.3). | [VERIFIED] |
+| V29 | **Tenant-level rows and fail-closed claims.** With the first `can_see_location` (`loc is null` returns true before looking at the claim), a member with an absent or empty `location_ids` still saw tenant-level rows (null location). The helper was tightened: tenant-level rows are visible only with an explicit `null` or a non-empty well-formed list; an absent key, an empty list or any malformed list sees no row of a location-scoped table. | [VERIFIED] (found by `20_location`) |
+| V30 | **`session_replication_role = replica` works under `pg_prove`** for `postgres`, so the data-driven isolation matrix (`10_isolation`) runs on the real 40-table schema. Mutation checks (dropping the `sale_ticket` policy, widening `import_issue` to tenant-only, widening `pending_change` to tenant-only) were detected by the matrix. | [VERIFIED] |
+| V31 | **pg_graphql is not enabled on the local stack** (`pg_graphql extension is not enabled`). GraphQL exposure could not be tested; the test reports itself as skipped. | [VERIFIED] limitation |
+| V32 | **PostgREST embedding.** `import_batch?select=*,raw_file(*)` and the other relationships into class X tables return no data. An ambiguous relationship (`app_user?select=*,import_batch(*)`) returns `300` before any permission check; a hinted one returns `403`. The OpenAPI document lists 30 tables plus `/` (the 10 class X tables are absent). | [VERIFIED] |
+| V33 | **Staleness guards work.** Appending a line to a migration fails `test_generator_hash`; adding a column in the database fails `test_generator_fresh`, `test_models_match_db` and `gen_db_models --check`. | [VERIFIED] |
+| V34 | **Python version.** Without a pin, `uv` selected Python 3.14 for the package; `.python-version` pins 3.12 as in `CLAUDE.md`. | [VERIFIED] |
 
 Not yet verified (carry these into the implementation's first phases; list in section 16): behaviour of the whole schema under `supabase db reset`; `pg_prove` permitting `session_replication_role` (V15 ran in `psql`); CHECK/trigger interactions in the data-driven fixture generator; PostgREST embedding for self-referencing composite FKs; the partial unique index under real apply ordering; the multi-mode `app.secure_table` function; the generator's output on the real schema; production JWT signing-key custody.
 
@@ -303,6 +312,7 @@ Both columns are nullable, because a given report may give only one of them. The
 | `alert / price_suggestion` (one row in `09` §2.5) | two tables, `alert` and `price_suggestion` | `09` writes them as one row with a slash; `03` lists them as separate entities. `price_suggestion` adds `suggested_price bigint` and `rationale_code`. The split is a design reading, not a documented requirement. [AUTHOR, 12.1 A4] |
 | `item_sales_agg.business_date (or period)` | `period_from date`, `period_to date` | Check `period_from <= period_to`; a single-day row has both equal. [AUTHOR, 12.1 A2] |
 | `import_batch` (no `location_id`) | adds nullable `location_id` | `09` §2.6 defines `slice_key = (location_id, ...)`; the location filter needs a column. [AUTHOR, 12.1 A3] |
+| `recipe.version` | `recipe.recipe_version` | `09` §2 gives every table a `version` column for optimistic concurrency and §2.4 also names the recipe revision `version`; the revision is stored as `recipe_version`. [AUTHOR, 12.1 A21, C18] |
 | `alert`, `price_suggestion`, `report_run` (no `location_id`) | add nullable `location_id` | `get_cost_alerts(location_id?)` (`09` §4.1) and `build_weekly_report(location_id, period)` (`08`) take a location. [AUTHOR, 12.1 A3] |
 
 ### 5.7 Table inventory
@@ -420,7 +430,7 @@ For each table: (a) who writes it, (b) who is documented to read it and how, (c)
 | Class | Meaning | Policy and grants | Tables |
 |---|---|---|---|
 | **T** tenant-wide | Any member of the active tenant may read, whatever their locations. | `SELECT` to `authenticated`; policy `tenant_id = (select app.current_tenant_id())`. (`tenant` root: `id = ...`.) | 14 |
-| **L** location-scoped | Tenant plus location authorization. | As T, plus `and app.can_see_location(<location column>)`. Rows whose location column is null are tenant-level and visible to every member. | 13 |
+| **L** location-scoped | Tenant plus location authorization. | As T, plus `and app.can_see_location(<location column>)`. Rows whose location column is null are tenant-level: visible with an explicit all-locations scope or a non-empty list, not with an absent, empty or malformed claim (V29). | 13 |
 | **LP** location inherited from a parent | Child of a located row; no own location column. | As T, plus `exists (select 1 from <parent> p where p.tenant_id = child.tenant_id and p.id = child.<fk>)`; the parent's RLS applies inside the subquery (V19). | 1 |
 | **F** full-tenant members only | Tenant-wide data with no location column that may reveal other locations; readable only by members whose claim is explicit JSON `null` for `location_ids` ("all locations"). | As T, plus `and app.has_all_locations()` (V21). | 2 |
 | **X** backend-only | No client session reads it directly. | RLS enabled, **no policy**, no grants to `anon` or `authenticated`. Only `service_role` (and, in MR-14, the hook role for `membership`) accesses it. | 10 |
@@ -443,7 +453,7 @@ Documented operation = what the architecture says reads or writes the table. "Ba
 | `source` | L (col) | `get_data_status` reads "last batch per source" (`09` §4.1 #11), so clients need to read it; `location_id` is documented (`09` §2.1); `config` and `api_key_hash` hold secrets by purpose. | `can_see_location(location_id)`; column grant excludes `config`, `api_key_hash` (V22) |
 | `import_batch` | L | Read by `get_data_status`; location is part of `slice_key` (`09` §2.6); one uploader per branch (`05` risk 3). Column added (5.6). | `can_see_location(location_id)` |
 | `menu_item_price`, `sale_ticket`, `sale_line`, `payment`, `item_sales_agg`, `daily_sales_agg`, `dish_cost_snapshot`, `daily_location_metrics` | L | `location_id` documented in `09` §2.3, §2.5 (`09` D1 puts it on every fact row); read by RPCs 1-6, 8-10 as the user (`09` §4.1). | `can_see_location(location_id)` |
-| `alert`, `price_suggestion` | L | `get_cost_alerts(since, location_id?)` returns them (`09` §4.1 #10). Null location = tenant-level (e.g. ingredient price jumps), visible to all members. | `can_see_location(location_id)` |
+| `alert`, `price_suggestion` | L | `get_cost_alerts(since, location_id?)` returns them (`09` §4.1 #10). Null location = tenant-level (e.g. ingredient price jumps), visible to members who have at least one location or all of them (V29). | `can_see_location(location_id)` |
 | `import_issue` | LP | "Shown to the manager in Spanish" (`09` §2.2); the manager is scoped to the batch's location (`12` §4d). Today the backend composes those messages; full detail in the dashboard comes "later" (`03` B.5). The issue has no location of its own, so it follows its batch (V19). | parent `import_batch` visibility |
 | `pending_change` | F | **Ambiguous** (7.2.3, AMB-1). Dashboard lists changes "filter by location" (`09` §5.3); approvals are role-based with no location dimension (`09` §5.1); `diff` and `payload` can mention several locations; the row has no location column. | `has_all_locations()` |
 | `audit_log` | F | **Ambiguous** (AMB-1). Dashboard "full audit view" (`09` §5.3); `before`/`after` can mention any location; no location column. Append-only (`09` §2.5). | `has_all_locations()` + immutability (8) |
@@ -531,10 +541,13 @@ $$;
 
 create function app.can_see_location(loc uuid) returns boolean language sql stable set search_path = '' as $$
   select case
-    when loc is null then true
     when auth.jwt() is null then false
     when jsonb_typeof(auth.jwt()->'location_ids') = 'null' then true
-    when jsonb_typeof(auth.jwt()->'location_ids') = 'array' then (auth.jwt()->'location_ids') ? loc::text
+    when jsonb_typeof(auth.jwt()->'location_ids') = 'array' then
+      jsonb_array_length(auth.jwt()->'location_ids') > 0
+      and not exists (select 1 from jsonb_array_elements(auth.jwt()->'location_ids') e
+                      where jsonb_typeof(e) <> 'string')
+      and (loc is null or (auth.jwt()->'location_ids') ? loc::text)
     else false end
 $$;
 
@@ -543,7 +556,7 @@ create function app.has_all_locations() returns boolean language sql stable set 
 $$;
 ```
 
-Behaviour verified: missing claim, malformed `tenant_id`, no claims, empty array, wrong type and absent `location_ids` all yield no rows; explicit `null` yields the whole tenant (V10, V20, V21). A malformed claim never raises an error; it denies. Policies call `current_tenant_id()` as `(select app.current_tenant_id())` so Postgres evaluates it once per statement (`09` §6, [EXT]). A null location column is visible to every member of the tenant (V22).
+Behaviour verified: missing claim, malformed `tenant_id`, no claims, empty array, wrong type and absent `location_ids` all yield no rows; explicit `null` yields the whole tenant (V10, V20, V21). A malformed claim never raises an error; it denies. Policies call `current_tenant_id()` as `(select app.current_tenant_id())` so Postgres evaluates it once per statement (`09` §6, [EXT]). A null location column (tenant-level row) is visible to members with an explicit `null` or a non-empty well-formed list, and to nobody else (V22, V29).
 
 `app.secure_table(rel regclass, mode text, loc_col text default null)`: one function that applies a class to a table in the same migration that creates it (`mode` is one of `tenant`, `location`, `full`, `backend`, with `parent` and `tenant_root` written explicitly in the migration). It enables RLS, revokes everything from `anon` and `authenticated`, applies the grants and the policy of the class, and sets the `rls_class` table comment. The class behaviours were verified one by one in the PoC (V10, V19-V22); **the combined multi-mode function is new and unverified** until implementation phase 3.
 
@@ -575,7 +588,7 @@ Never issuers: any client; the LLM; tool arguments; WhatsApp message content; `u
 | any claim | The Data API exposes only `public` and `graphql_public`, and `public` holds no functions, so a client cannot reach `set_config` or any function that sets claims. | V7, V24 |
 | privileged role | The `role` claim picks the Postgres role. A user token must carry `authenticated`; the issuer sets it, the client cannot. | V13, V14 |
 
-Assumption the model rests on: **clients have no raw-SQL path.** `authenticated` can call `set_config('request.jwt.claims', ...)` in raw SQL (V26). Therefore: no function that sets `request.jwt.*` settings may ever be exposed in `public` or any exposed schema; no RPC or tool may run caller-supplied SQL; MR-10 keeps `public` free of functions and the catalog test fails otherwise. `authenticated` cannot `set role service_role` (tested in `30_write_denial`).
+Assumption the model rests on: **clients have no raw-SQL path.** `authenticated` can call `set_config('request.jwt.claims', ...)` in raw SQL (V26). Therefore: no function that sets `request.jwt.*` settings may ever be exposed in `public` or any exposed schema; no RPC or tool may run caller-supplied SQL; MR-10 keeps `public` free of functions and the catalog test fails otherwise. `SET ROLE` is decided by the session user, and the PostgREST login role `authenticator` is a member of `service_role` (V28), so the absence of a raw-SQL path is the only barrier; `30_write_denial` pins the memberships the database does guarantee (`authenticated` and `anon` are not members of `service_role` or `postgres`).
 
 #### 7.5.4 `role` (Postgres) versus `app_role` (application)
 
@@ -682,6 +695,7 @@ Views over these tables must be created `with (security_invoker = true)`, otherw
 | C13 | External docs say a minted JWT cannot go in the `apikey` header; the local stack accepted it (V17). | Not MR-10's concern; recorded for MR-14/27. |
 | C14 | `03` says `ingredient_price.source` includes `ocr_note`; `09` says `nota`. | `09` is canonical (`03` states this itself). |
 | C15 | `09` §6 requires an "additional location filter" without saying which tables; `09` §5.1/§5.3 give no location rule for approvals or the audit view. | Resolved per table in 7.2; the ambiguous cases are AMB-1 to AMB-7 and need approval. |
+| C18 | `09` §2 gives every table a `version` column (optimistic concurrency) and §2.4 names the recipe revision `version` too. | Revision stored as `recipe_version` (5.6, A21). |
 | C17 | `09` §2.1: `membership.location_ids` null means all locations, so a NULL by default or by omission widens access. | Explicit `all_locations` flag and an empty-list default (5.7, A19). |
 | C16 | `09` §2.2 `import_issue` is "shown to the manager", yet the only documented reader is the backend; `03` B.5 says full detail in the dashboard "later". | Class LP (AMB-3). |
 
@@ -791,11 +805,11 @@ All tests run in a transaction and roll back. Helpers (a `try_as(role, claims, s
 | `00_catalog.test.sql` | all | Exactly the 40 expected tables in `public` (a hard-coded list in the test, equal to 7.2.2); no other table; **no function in `public`**; RLS enabled on all; the `rls_class` comment of each table equals the class in 7.2.2; per class: T/L/F tables have exactly one `SELECT` policy and no write policy, LP has the parent-`exists` policy, X tables have no policy and no client grant; `source` column grants exclude `config` and `api_key_hash`; `audit_log` privileges; no table has `FORCE`; `anon` has no privilege on any `public` table; default privileges for `anon`/`authenticated` are revoked; every function in `app` has no `PUBLIC`/`anon` `EXECUTE`; helper-schema grants; roles' `rolbypassrls`; enum labels equal 5.3; unit tags present on every money/price/quantity/percent column; the license notice is present in the `uuid_v7` migration. |
 | `10_isolation.test.sql` | policy + privilege | Data-driven over every T, L, LP and F table: with `session_replication_role = replica` insert one dummy row per tenant (L tables: one row per location), then as `authenticated`: tenant A sees its rows, tenant B sees its rows, no `tenant_id` claim sees 0, malformed claim sees 0, `anon` is denied, `postgres` and `service_role` see all. X tables: `authenticated` denied at the privilege layer. |
 | `20_location.test.sql` | policy | `can_see_location` and `has_all_locations`: explicit `null` sees the whole tenant; one-element array sees that location; empty array, wrong type and **absent key** see none; null location column visible to all members. Checked on `location`, `import_batch`, `sale_ticket`, `daily_sales_agg`. LP: `import_issue` follows its batch (Centro-only sees Centro issues). F: `pending_change` and `audit_log` visible only with explicit `null`. Column grants: `select *` on `source` fails; safe columns work. |
-| `30_write_denial.test.sql` | privilege, policy, privileged role | For each client role (`anon`, `authenticated`) and each of `INSERT/UPDATE/DELETE/TRUNCATE`: denied at the **privilege layer** (`permission denied for table X`). A scratch table with a grant and no policy shows the **RLS layer** (`new row violates row-level security policy`). `service_role` writes succeed on class T/L tables (privileged role). `audit_log`: `service_role` blocked by privileges; `postgres` blocked by the trigger; `INSERT` allowed. `authenticated` cannot `set role service_role`. The V23 pattern (a definer with `EXECUTE` only for `service_role`) is exercised on a scratch function. |
+| `30_write_denial.test.sql` | privilege, policy, privileged role | For each client role (`anon`, `authenticated`) and each of `INSERT/UPDATE/DELETE/TRUNCATE`: denied at the **privilege layer** (`permission denied for table X`). A scratch table with a grant and no policy shows the **RLS layer** (`new row violates row-level security policy`). `service_role` writes succeed on class T/L tables (privileged role). `audit_log`: `service_role` blocked by privileges; `postgres` blocked by the trigger; `INSERT` allowed. Role memberships (V28). The V23 pattern (a definer with `EXECUTE` only for `service_role`) is exercised on a scratch function. |
 | `50_exposure.test.sql` | all | Indirect paths (7.2.5): zero views and zero functions in `public`; no function in `public` or `app` references `set_config` with `request.jwt`; every FK from a client-readable table to a class X table is listed and has no client privilege on the target; `source` column privileges for `authenticated` exclude `config` and `api_key_hash`; `membership` has the `all_locations` check and an insert without scope yields an empty list and `all_locations = false`; an insert with `location_ids = null` and `all_locations = false` fails; every `text` column of `public` has the not-blank check; `audit_log` privileges are exactly `SELECT` (`authenticated`, `service_role`) and `INSERT` (`service_role`). |
 | `40_integrity.test.sql` | integrity | Cross-tenant composite-FK inserts fail for `postgres` and `service_role`; `touch_row` bumps `version` and `updated_at`; a `tenant_id` change fails; `uuid_v7` properties (10,000 values: version 7, variant, unique, zero inversions, timestamp round-trip); membership `location_ids` validation; partial unique index on applied batches; `num_nonnulls` checks; nullability spot-checks. |
 
-Fallback if the data-driven generator in `10_isolation` meets a CHECK or trigger it cannot satisfy on the real schema: add explicit per-table fixtures only for those tables, keeping the loop for the rest. [OPEN, risk R1]
+The data-driven generator in `10_isolation` needed no per-table fixtures beyond three pinned columns (`recipe.menu_item_id`, `recipe_line.ingredient_id`, `import_issue.batch_id`); replica mode works under `pg_prove` (V30). Mutation checks confirmed that the matrix detects weakened policies.
 
 ### 10.5 Commands
 
@@ -867,6 +881,15 @@ Owner decisions of 2026-10-18 on these calls are in 2.3: A1, A12, A13, A14, A2, 
 | A19 | `membership.all_locations boolean not null default false`, `location_ids` default `'{}'`, check `all_locations = (location_ids is null)`. | Recommended; added for the A12 condition ("membership expressly authorizes full scope"). Deviation from `09` §2.1, which says only "null = all". | `09` §2.1; a tool or ORM that sends `None` for an unspecified scope would otherwise grant all locations. Verified behaviour of the claim side: V20, V21. The CHECK and default are not yet run (16.4). | Without the flag, a default NULL grants everything; the issuer cannot tell "all" from "forgot to set". |
 | A20 | `app.add_text_checks(rel)` adds a not-blank check to every `text`/`varchar` column. | Recommended; added for the A8 condition ("do not skip integrity validations because a column is text"). | A8; no value list is introduced. Not yet run (16.4). | Blank strings could be stored where the doc implies a value. |
 
+Implementation findings that need the owner's attention (found by the tests, section 17):
+
+| # | Call | Status | Evidence | If rejected or changed |
+|---|---|---|---|---|
+| A21 | `recipe.recipe_version` replaces `recipe.version` (C18). | Recommended, **Approval** (column name) | `09` §2 and §2.4 use the same name for two meanings. | Keep `version` for the revision and rename the concurrency column on that table only, which breaks the shared trigger. |
+| A22 | Tenant-level rows (null location) are hidden from absent, empty and malformed `location_ids` claims (V29). | Recommended, **Approval** (refines the approved fail-closed rule) | The owner's A12: absent or malformed claim means no location, an empty list means none. A first version leaked tenant-level rows to those claims. | Showing tenant-level rows to empty-list members is simpler but contradicts "empty list: no location". |
+| A23 | Global revoke of `PUBLIC` execute for functions created by `postgres` (V27). | Recommended | V27; secure default for every future function. | Each future function must revoke `PUBLIC` explicitly; the catalog test would still catch a miss. |
+| A24 | `pg_graphql` is not enabled locally, so GraphQL exposure is untested; hosted Supabase projects normally enable it. | **Approval** for a follow-up | V31. The architecture uses the Data API and RPCs only. | Leave as is and rely on identical privileges and policies, which is unverified for GraphQL. Recommended follow-up: confirm the extension state on the hosted project and consider `drop extension pg_graphql` there. |
+
 ### 12.2 Open items not resolved here
 
 | # | Item | Evidence | Recommendation and consequence |
@@ -876,6 +899,7 @@ Owner decisions of 2026-10-18 on these calls are in 2.3: A1, A12, A13, A14, A2, 
 | O4 | **Corte Z and report formats are unverified** (`01`). The provisional types of 10.1 depend on the pilot samples (`11` E1, E2, E5, E7). | `01` §2, `03` B. | Revise before MR-15/MR-23; additive changes only. |
 | O5 | **GitHub issues** #10, #11, #13, #14 mention `packages/contracts` for migrations. | Section 11. | Edit after the PR opens. |
 | O6 | **`public` reserved**: any non-domain table (for example Procrastinate's) breaks `00_catalog`. | Approved. | The Procrastinate ticket sets `search_path` on its connector to a dedicated schema ([EXT]: Procrastinate supports a custom schema through connector options). |
+| O7 | **GraphQL surface (A24).** Untested because `pg_graphql` is off locally. | V31 | Check the hosted project and disable the extension if unused; run `test_graphql_*` on a stack where it is enabled. |
 | AMB-1..4 | Location handling of `pending_change`, `audit_log`, `raw_file`, `membership`; see 7.2.3. | `09` §5.1, §5.3, §6. | Recommended in 12.1 (A1, A13). Needs your decision. |
 
 ## 13. Implementation order (single branch, single PR)
@@ -940,19 +964,37 @@ Table list and columns (`09` §2.1-2.5); batch lifecycle (§2.6); `NormalizedBat
 
 Approved on 2026-10-18 (2.3): A1, A2, A4 (split kept), A5, A8, A10, A12, A13, A14. Kept as recommended because consistent with the canonical documents: A3, A6, A7, A9, A11, A15, A16, A17, A18. Added for the approval conditions and awaiting the owner's review of the final PR: A19, A20. AMB-1 to AMB-4 follow the approved classes; AMB-7, `sub` and key custody stay as documented dependencies.
 
-### 16.4 Technical verifications not yet run
+### 16.4 Technical verifications
 
-- The whole schema under `supabase db reset`, and `supabase test db` over all five files.
-- `pg_prove` with `session_replication_role = replica` (V15 ran in `psql`).
-- The data-driven fixture generator against the real CHECKs, triggers and L-class location columns.
-- The combined `app.secure_table` function and the `rls_class` comment check.
-- PostgREST embedding through a self-referencing composite FK.
-- The partial unique index "one applied batch per slice" under real apply ordering.
-- `touch_row`, the membership location trigger and the `uuid_v7` test inside pgTAP.
-- The generator's mapping output and its determinism on the real schema.
-- Whether `supabase db lint` is useful (not exercised).
-- Production behaviour: key custody, the Supabase Auth hook, token lifetime, backend issuer behaviour (7.6; out of MR-10).
+Ran and passed on 2026-10-18 (section 17): whole schema under `supabase db reset` from an empty database; all six pgTAP files (219 tests) including the 40-table isolation matrix under `pg_prove` with replica mode; `touch_row`, the membership trigger, `uuid_v7` (10,000 values), the partial unique index and the composite foreign keys; the generator, its determinism, the hash and freshness guards and `--check`; the `NormalizedBatch` contract tests (86 without a database); 22 REST exposure tests through PostgREST including embedding, hidden columns, OpenAPI and forged tokens; `ruff check`, `ruff format --check` and `mypy` on the package.
+
+Not run, with the reason:
+- **GraphQL exposure**: `pg_graphql` is not enabled on the local stack (V31).
+- **`supabase db lint`**: not part of the acceptance set (not exercised).
+- **PostgREST embedding through a self-referencing composite foreign key** (`sale_line.parent_line_id`, `menu_category.parent_id`, `recipe_line.sub_recipe_id`): the plain composite case is verified (V13); the self-referencing case was not exercised through the API.
+- **The partial unique index under a real apply sequence**: only the constraint itself is tested; the apply functions do not exist yet (MR-16).
+- **Production behaviour**: key custody, the Supabase Auth hook, token lifetime, the backend issuer (7.6; out of MR-10), and the hosted project's extensions and default grants.
+- **Repo CI**: no CI exists yet (MR-9); `.claude/skills/check/check.sh` ran and reported pgTAP PASS and Python checks skipped (no root `pyproject.toml`), so the Python checks were run directly with `uv`, `uvx ruff` and `uvx mypy`.
 
 ### 16.5 Validations that need real pilot samples
 
 From `11` §2.2 and `01`: the "Productos vendidos" export (E1) for `ItemSalesIn`, `MenuItemIn` and the period question; the Corte Z or "Ventas por día" export (E2) for `DailySalesIn`, cancellation granularity and `payment_mix`; "Formas de pago" (E5); the recipes exports (E7) for `RecipeIn`; SR 10/11/12 layout differences, modifiers and branch fields (`05` risk 4); whether CFDI XML arrives over WhatsApp (`03` C.3, `04`). None of the types or columns that depend on these has been validated against a real file.
+
+## 17. Verification record (2026-10-18, local stack only)
+
+Run from a clean state: `supabase stop --no-backup`, `supabase start -x ...`, `supabase db reset`. Supabase CLI 2.121.0, Postgres 17.11, Python 3.12.12, `uv` 0.12.5, `ruff` 0.17.1. No remote or shared database was used.
+
+| Command | Result |
+|---|---|
+| `supabase db reset` | 8 migrations applied from an empty database, no error |
+| `supabase test db` | 6 files, 219 tests, PASS |
+| `cd packages/contracts && uv run pytest` | 86 passed (no database) |
+| `MERMIA_DB_URL=... uv run pytest -m db -k 'not rest_exposure'` | 5 passed |
+| `MERMIA_DB_URL=... MERMIA_API_URL=... MERMIA_JWT_SECRET=... MERMIA_API_KEY=... uv run pytest -m rest -rs` | 22 passed, 1 skipped (GraphQL: `pg_graphql` not enabled) |
+| `uv run python -m mermia_contracts.tools.gen_db_models --check` | `db/models.py` is up to date |
+| `uvx ruff check .` and `uvx ruff format --check .` (package) | passed |
+| `uvx --with pydantic --with psycopg mypy src` | no issues in 8 source files |
+| `bash .claude/skills/check/check.sh` | pgTAP PASS; Python checks skipped (no root `pyproject.toml`) |
+
+Findings the tests produced while building (all fixed or recorded): V27, V28, V29, V30, V31, V32, V33, V34, C18, the invalid `SET ROLE` test replaced by membership checks, and a first version of `can_see_location` that leaked tenant-level rows.
+
