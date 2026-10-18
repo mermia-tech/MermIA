@@ -119,5 +119,42 @@ select throws_ok($$insert into public.import_issue (tenant_id, batch_id, severit
   values ('bbbbbbbb-0000-7000-8000-000000000002', 'ba7c0000-0000-7000-8000-000000000001', 'info', 'ok', 'y')$$,
   '23503', null, 'an issue cannot point at another tenant''s batch');
 
+-- catalog and sales (spec 5.7) ---------------------------------------------------------------------------
+insert into public.staff (id, tenant_id, display_name) values ('57aff000-0000-7000-8000-000000000001', 'aaaaaaaa-0000-7000-8000-000000000001', 'Juan');
+insert into public.menu_item (id, tenant_id, name) values ('3e100000-0000-7000-8000-000000000001', 'aaaaaaaa-0000-7000-8000-000000000001', 'Taco al pastor');
+insert into public.sale_ticket (id, tenant_id, location_id, source_id, batch_id, external_id, business_date, status, subtotal, total)
+  values ('71c4e700-0000-7000-8000-000000000001', 'aaaaaaaa-0000-7000-8000-000000000001', 'a1a1a1a1-0000-7000-8000-000000000001',
+          '5c5c5c5c-0000-7000-8000-00000000000a', 'ba7c0000-0000-7000-8000-000000000001', 'T-1', '2026-10-12', 'paid', 10000, 11600);
+select lives_ok($$insert into public.sale_line (tenant_id, ticket_id, location_id, source_id, batch_id, menu_item_id, qty, unit_price, net)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '71c4e700-0000-7000-8000-000000000001', 'a1a1a1a1-0000-7000-8000-000000000001',
+          '5c5c5c5c-0000-7000-8000-00000000000a', 'ba7c0000-0000-7000-8000-000000000001', '3e100000-0000-7000-8000-000000000001', 2, 5000, 10000)$$,
+  'a line in its ticket''s location');
+select throws_ok($$insert into public.sale_line (tenant_id, ticket_id, location_id, source_id, batch_id, menu_item_id, qty, unit_price, net)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '71c4e700-0000-7000-8000-000000000001', 'a2a2a2a2-0000-7000-8000-000000000002',
+          '5c5c5c5c-0000-7000-8000-00000000000a', 'ba7c0000-0000-7000-8000-000000000001', '3e100000-0000-7000-8000-000000000001', 1, 5000, 5000)$$,
+  '23503', null, 'a line cannot carry a different location than its ticket');
+select throws_ok($$insert into public.payment (tenant_id, ticket_id, location_id, source_id, batch_id, method, amount)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '71c4e700-0000-7000-8000-000000000001', 'a2a2a2a2-0000-7000-8000-000000000002',
+          '5c5c5c5c-0000-7000-8000-00000000000a', 'ba7c0000-0000-7000-8000-000000000001', 'cash', 11600)$$,
+  '23503', null, 'a payment cannot carry a different location than its ticket');
+select throws_ok($$insert into public.sale_line (tenant_id, ticket_id, location_id, source_id, batch_id, menu_item_id, qty, unit_price, net)
+  values ('bbbbbbbb-0000-7000-8000-000000000002', '71c4e700-0000-7000-8000-000000000001', 'b1b1b1b1-0000-7000-8000-000000000001',
+          '5c5c5c5c-0000-7000-8000-00000000000b', 'ba7c0000-0000-7000-8000-000000000001', '3e100000-0000-7000-8000-000000000001', 1, 5000, 5000)$$,
+  '23503', null, 'a line cannot attach to another tenant''s ticket');
+select throws_ok($$update public.sale_ticket set currency = 'mxn' where id = '71c4e700-0000-7000-8000-000000000001'$$,
+  '23514', null, 'currency must be three upper-case letters');
+select throws_ok($$insert into public.menu_item_price (tenant_id, menu_item_id, location_id, price_gross, effective_from, effective_to)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '3e100000-0000-7000-8000-000000000001', 'a1a1a1a1-0000-7000-8000-000000000001', 5000, '2026-10-12', '2026-10-01')$$,
+  '23514', null, 'a price cannot end before it starts');
+select throws_ok($$insert into public.item_sales_agg (tenant_id, location_id, source_id, batch_id, menu_item_id, period_from, period_to, units, gross, discount, net)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', 'a1a1a1a1-0000-7000-8000-000000000001', '5c5c5c5c-0000-7000-8000-00000000000a', 'ba7c0000-0000-7000-8000-000000000001',
+          '3e100000-0000-7000-8000-000000000001', '2026-10-12', '2026-10-11', 1, 1, 0, 1)$$,
+  '23514', null, 'a period cannot end before it starts');
+select lives_ok($$insert into public.daily_sales_agg (tenant_id, location_id, source_id, batch_id, business_date, net_sales, cancellations_count)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', 'a1a1a1a1-0000-7000-8000-000000000001', '5c5c5c5c-0000-7000-8000-00000000000a', 'ba7c0000-0000-7000-8000-000000000001',
+          '2026-10-12', 3188000, 2)$$,
+  'a daily row may report the cancellation count without the amount');
+select is((select cancellations_amount from public.daily_sales_agg limit 1), null, 'an unreported amount stays null, not zero');
+
 select * from finish();
 rollback;
