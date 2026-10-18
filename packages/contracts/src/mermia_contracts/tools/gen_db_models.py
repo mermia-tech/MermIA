@@ -16,6 +16,7 @@ import hashlib
 import keyword
 import os
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -126,7 +127,7 @@ def introspect(conn: psycopg.Connection) -> Schema:
     enums = tuple(
         EnumType(name, tuple(labels)) for name, labels in conn.execute(ENUMS_SQL)
     )
-    table_comments = dict(conn.execute(TABLES_SQL).fetchall())
+    table_comments: dict[str, str | None] = dict(conn.execute(TABLES_SQL).fetchall())
     columns: dict[str, list[Column]] = {name: [] for name in table_comments}
     for rel, name, typ, typtype, sql_type, elem, not_null, comment in conn.execute(
         COLUMNS_SQL
@@ -242,7 +243,7 @@ def render(schema: Schema, migrations_hash: str) -> str:
     return "\n".join(header) + "\n\n".join(groups) + "\n" + "\n".join(body) + "\n"
 
 
-def import_line(module: str, names: list[str]) -> str:
+def import_line(module: str, names: Sequence[str]) -> str:
     """One import statement, wrapped the way `ruff format` wraps it."""
     line = f"from {module} import {', '.join(names)}"
     if len(line) <= 88:

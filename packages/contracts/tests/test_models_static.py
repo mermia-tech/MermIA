@@ -34,9 +34,14 @@ def test_forty_rows_and_twenty_four_enums() -> None:
 
 def test_rows_are_frozen_and_reject_unknown_columns() -> None:
     row = models.LocationRow(
-        id=ID, tenant_id=ID, name="Centro", timezone="America/Mexico_City",
-        created_at=NOW, updated_at=NOW, version=1,
-    )  # fmt: skip
+        id=ID,
+        tenant_id=ID,
+        name="Centro",
+        timezone="America/Mexico_City",
+        created_at=NOW,
+        updated_at=NOW,
+        version=1,
+    )
     with pytest.raises(ValidationError):
         row.name = "x"  # type: ignore[misc]
     with pytest.raises(ValidationError):
@@ -47,9 +52,14 @@ def test_required_columns_are_required_and_nullable_ones_default_to_none() -> No
     with pytest.raises(ValidationError):
         models.LocationRow(id=ID)  # type: ignore[call-arg]
     row = models.LocationRow(
-        id=ID, tenant_id=ID, name="Centro", timezone="x",
-        created_at=NOW, updated_at=NOW, version=1,
-    )  # fmt: skip
+        id=ID,
+        tenant_id=ID,
+        name="Centro",
+        timezone="x",
+        created_at=NOW,
+        updated_at=NOW,
+        version=1,
+    )
     assert row.address is None and row.sr_version is None
 
 
@@ -64,18 +74,32 @@ def test_membership_scope_columns() -> None:
     assert fields["all_locations"].is_required()
     assert not fields["location_ids"].is_required()
     row = models.MembershipRow(
-        id=ID, tenant_id=ID, user_id=ID, role="owner", all_locations=True,
-        location_ids=None, can_approve=[], created_at=NOW, updated_at=NOW, version=1,
-    )  # fmt: skip
+        id=ID,
+        tenant_id=ID,
+        user_id=ID,
+        role="owner",
+        all_locations=True,
+        location_ids=None,
+        can_approve=[],
+        created_at=NOW,
+        updated_at=NOW,
+        version=1,
+    )
     assert row.role is models.MemberRole.owner and row.location_ids is None
 
 
 def test_money_is_integer_centavos_and_unit_prices_keep_six_decimals() -> None:
     price = models.IngredientPriceRow(
-        id=ID, tenant_id=ID, ingredient_id=ID, unit_price_net=Decimal("0.220000"),
-        effective_from=dt.date(2026, 10, 12), source="manual",
-        created_at=NOW, updated_at=NOW, version=1,
-    )  # fmt: skip
+        id=ID,
+        tenant_id=ID,
+        ingredient_id=ID,
+        unit_price_net=Decimal("0.220000"),
+        effective_from=dt.date(2026, 10, 12),
+        source="manual",
+        created_at=NOW,
+        updated_at=NOW,
+        version=1,
+    )
     assert price.unit_price_net == Decimal("0.22")
     with pytest.raises(ValidationError):
         models.IngredientPriceRow(

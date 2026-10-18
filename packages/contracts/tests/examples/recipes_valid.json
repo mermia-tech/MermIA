@@ -1,0 +1,15 @@
+{
+  "contract_version": 1,
+  "parser": "sr.example_recipes@v1",
+  "source_kind": "sr_report",
+  "period": {"from": "2026-10-12", "to": "2026-10-12"},
+  "grain": "catalog",
+  "totals": {"lines": 2},
+  "recipes": [
+    {"menu_item_name": "Taco al pastor", "yield_qty": "1.000000",
+     "lines": [
+       {"ingredient_name": "Carne al pastor", "qty_base": "60.000000", "unit": "g", "yield_override_pct": "85.5000"},
+       {"ingredient_name": "Tortilla", "qty_base": "2.000000", "unit": "pza"}
+     ]}
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "contract_version": 1,
+  "parser": "sr.example_daily@v1",
+  "source_kind": "sr_corte_email",
+  "quality": "file",
+  "period": {"from": "2026-10-12", "to": "2026-10-12"},
+  "grain": "daily",
+  "totals": {"net_sales": 3188000, "lines": 1},
+  "daily_sales": [
+    {"business_date": "2026-10-12", "net_sales": 3188000, "tax": 440000, "tickets": 96, "guests": null,
+     "discounts": 21000, "cancellations_amount": null, "cancellations_count": 2,
+     "payment_mix": {"cash": 1200000, "card": 1988000}, "tips": 150000}
+  ]
+}

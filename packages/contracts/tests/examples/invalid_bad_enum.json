@@ -1,0 +1,56 @@
+{
+  "contract_version": 1,
+  "parser": "sr.example_item_report@v1",
+  "source_kind": "excel",
+  "location_hint": "Centro",
+  "period": {
+    "from": "2026-10-12",
+    "to": "2026-10-12"
+  },
+  "grain": "item_daily",
+  "totals": {
+    "net_sales": 3188000,
+    "units": "612.000000",
+    "lines": 2
+  },
+  "menu_items": [
+    {
+      "external_id": "P001",
+      "name": "Taco al pastor",
+      "category": "Tacos",
+      "kind": "dish",
+      "price_gross": 5000,
+      "tax_rate": "0.1600"
+    }
+  ],
+  "item_sales": [
+    {
+      "item_external_id": "P001",
+      "item_name": "Taco al pastor",
+      "period_from": "2026-10-12",
+      "period_to": "2026-10-12",
+      "units": "500.000000",
+      "gross": 2500000,
+      "discount": 0,
+      "net": 2500000
+    },
+    {
+      "item_external_id": "P002",
+      "item_name": "Agua de horchata",
+      "period_from": "2026-10-12",
+      "period_to": "2026-10-12",
+      "units": 112.5,
+      "gross": 700000,
+      "discount": 12000,
+      "net": 688000
+    }
+  ],
+  "issues": [
+    {
+      "severity": "warning",
+      "code": "period_mismatch",
+      "message_es": "El periodo del archivo no coincide con el dia esperado.",
+      "row_ref": "Hoja1!A3"
+    }
+  ]
+}
