@@ -42,7 +42,7 @@ if [ -f pyproject.toml ] && command -v uv >/dev/null 2>&1; then
   fi
 
   if has_tool mypy; then
-    run "mypy" uv run mypy .
+    run "mypy" uv run mypy
   else
     skipped+=("mypy (not a dev dependency yet)")
   fi

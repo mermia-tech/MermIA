@@ -7,7 +7,8 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Cancel superseded PR runs only; every commit on main gets a full result.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   python:
@@ -44,12 +45,13 @@ jobs:
       - name: Find Supabase project
         id: find
         run: |
-          config=$(find . -path ./node_modules -prune -o -path '*/supabase/config.toml' -print -quit)
-          if [ -z "$config" ]; then
-            echo "No supabase/config.toml yet (added in MR-10/MR-14); skipping pgTAP."
+          # Same rule as .claude/skills/check/check.sh: run once pgTAP tests exist.
+          test_file=$(find . \( -path ./node_modules -o -path ./.venv \) -prune -o -path '*/supabase/tests/*.sql' -print -quit)
+          if [ -z "$test_file" ]; then
+            echo "No supabase/tests yet (added in MR-14); skipping pgTAP."
             echo "workdir=" >> "$GITHUB_OUTPUT"
           else
-            echo "workdir=$(dirname "$(dirname "$config")")" >> "$GITHUB_OUTPUT"
+            echo "workdir=${test_file%%/supabase/*}" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: supabase/setup-cli@v1
