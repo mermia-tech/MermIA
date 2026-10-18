@@ -67,5 +67,57 @@ insert into public.channel_identity (user_id, channel, external_id) values ('111
 select throws_ok($$insert into public.channel_identity (user_id, channel, external_id) values ('22222222-2222-4222-8222-222222222222', 'whatsapp', '5215500000001')$$,
   '23505', null, 'a sender id maps to one user per channel');
 
+-- ingestion (spec 5.7) ---------------------------------------------------------------------------------
+insert into public.source (id, tenant_id, location_id, kind) values
+  ('5c5c5c5c-0000-7000-8000-00000000000a', 'aaaaaaaa-0000-7000-8000-000000000001', 'a1a1a1a1-0000-7000-8000-000000000001', 'sr_report'),
+  ('5c5c5c5c-0000-7000-8000-00000000000b', 'bbbbbbbb-0000-7000-8000-000000000002', 'b1b1b1b1-0000-7000-8000-000000000001', 'sr_report');
+insert into public.raw_file (tenant_id, storage_path, sha256)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', 'raw/a1.xlsx', repeat('a', 64));
+select throws_ok($$insert into public.raw_file (tenant_id, storage_path, sha256) values ('aaaaaaaa-0000-7000-8000-000000000001', 'raw/a2.xlsx', repeat('a', 64))$$,
+  '23505', null, 'the same file twice in one tenant is rejected');
+select lives_ok($$insert into public.raw_file (tenant_id, storage_path, sha256) values ('bbbbbbbb-0000-7000-8000-000000000002', 'raw/b1.xlsx', repeat('a', 64))$$,
+  'the same file in another tenant is allowed');
+select throws_ok($$insert into public.raw_file (tenant_id, storage_path, sha256) values ('aaaaaaaa-0000-7000-8000-000000000001', 'raw/a3.xlsx', 'not-a-hash')$$,
+  '23514', null, 'sha256 must be 64 lowercase hex characters');
+select throws_ok($$insert into public.raw_file (tenant_id, storage_path, sha256, size) values ('aaaaaaaa-0000-7000-8000-000000000001', 'raw/a4.xlsx', repeat('b', 64), -1)$$,
+  '23514', null, 'size cannot be negative');
+
+select lives_ok($$insert into public.import_batch (tenant_id, source_id, location_id, parser, slice_key, status)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '5c5c5c5c-0000-7000-8000-00000000000a', 'a1a1a1a1-0000-7000-8000-000000000001', 'sr.productos_vendidos@v1', 'slice-1', 'applied')$$,
+  'first applied batch of a slice');
+select throws_ok($$insert into public.import_batch (tenant_id, source_id, location_id, parser, slice_key, status)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '5c5c5c5c-0000-7000-8000-00000000000a', 'a1a1a1a1-0000-7000-8000-000000000001', 'sr.productos_vendidos@v1', 'slice-1', 'applied')$$,
+  '23505', null, 'a second applied batch for the same slice is rejected');
+select lives_ok($$insert into public.import_batch (tenant_id, source_id, location_id, parser, slice_key, status)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '5c5c5c5c-0000-7000-8000-00000000000a', 'a1a1a1a1-0000-7000-8000-000000000001', 'sr.productos_vendidos@v1', 'slice-1', 'superseded')$$,
+  'superseded batches of the same slice are allowed');
+select lives_ok($$insert into public.import_batch (tenant_id, source_id, location_id, parser, slice_key, status)
+  values ('bbbbbbbb-0000-7000-8000-000000000002', '5c5c5c5c-0000-7000-8000-00000000000b', 'b1b1b1b1-0000-7000-8000-000000000001', 'sr.productos_vendidos@v1', 'slice-1', 'applied')$$,
+  'the same slice key in another tenant is independent');
+select throws_ok($$insert into public.import_batch (tenant_id, source_id, parser, slice_key)
+  values ('bbbbbbbb-0000-7000-8000-000000000002', '5c5c5c5c-0000-7000-8000-00000000000a', 'sr.productos_vendidos@v1', 'slice-x')$$,
+  '23503', null, 'a batch cannot use another tenant''s source (composite FK)');
+select throws_ok($$insert into public.import_batch (tenant_id, source_id, parser, slice_key)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '5c5c5c5c-0000-7000-8000-00000000000a', 'Not A Parser', 'slice-y')$$,
+  '23514', null, 'parser must look like name@vN');
+select throws_ok($$insert into public.import_batch (tenant_id, source_id, parser, slice_key, status)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '5c5c5c5c-0000-7000-8000-00000000000a', 'sr.x@v1', 'slice-z', 'archived')$$,
+  '22P02', null, 'an unknown batch status is rejected');
+
+insert into public.import_batch (id, tenant_id, source_id, location_id, parser, slice_key)
+  values ('ba7c0000-0000-7000-8000-000000000001', 'aaaaaaaa-0000-7000-8000-000000000001', '5c5c5c5c-0000-7000-8000-00000000000a', 'a1a1a1a1-0000-7000-8000-000000000001', 'sr.x@v1', 'slice-issue');
+select lives_ok($$insert into public.import_issue (tenant_id, batch_id, severity, code, message_es)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', 'ba7c0000-0000-7000-8000-000000000001', 'warning', 'period_mismatch', 'El periodo no coincide.')$$,
+  'a valid import issue');
+select throws_ok($$insert into public.import_issue (tenant_id, batch_id, severity, code, message_es)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', 'ba7c0000-0000-7000-8000-000000000001', 'fatal', 'x', 'y')$$,
+  '22P02', null, 'severity is info, warning or error');
+select throws_ok($$insert into public.import_issue (tenant_id, batch_id, severity, code, message_es)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', 'ba7c0000-0000-7000-8000-000000000001', 'error', 'Bad Code', 'y')$$,
+  '23514', null, 'issue code format');
+select throws_ok($$insert into public.import_issue (tenant_id, batch_id, severity, code, message_es)
+  values ('bbbbbbbb-0000-7000-8000-000000000002', 'ba7c0000-0000-7000-8000-000000000001', 'info', 'ok', 'y')$$,
+  '23503', null, 'an issue cannot point at another tenant''s batch');
+
 select * from finish();
 rollback;
