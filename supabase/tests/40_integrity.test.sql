@@ -12,5 +12,60 @@ select ok(abs(extract(epoch from now()) - extract(epoch from to_timestamp(('x' |
 select is(substr(replace(app.uuid_v7('2026-01-01 00:00:00+00'::timestamptz)::text, '-', ''), 1, 12), lpad(to_hex((extract(epoch from '2026-01-01 00:00:00+00'::timestamptz) * 1000)::bigint), 12, '0'), 'uuid_v7: explicit timestamp argument is honoured');
 select ok(obj_description('app.uuid_v7(timestamptz)'::regprocedure, 'pg_proc') like '%PostgreSQL License%', 'uuid_v7: license is recorded on the function');
 
+-- fixtures used by the integrity checks below (inserted as postgres, which bypasses RLS)
+insert into public.tenant (id, name) values
+  ('aaaaaaaa-0000-7000-8000-000000000001', 'Tenant A'), ('bbbbbbbb-0000-7000-8000-000000000002', 'Tenant B');
+insert into public.location (tenant_id, id, name, timezone) values
+  ('aaaaaaaa-0000-7000-8000-000000000001', 'a1a1a1a1-0000-7000-8000-000000000001', 'Centro', 'America/Mexico_City'),
+  ('aaaaaaaa-0000-7000-8000-000000000001', 'a2a2a2a2-0000-7000-8000-000000000002', 'Polanco', 'America/Mexico_City'),
+  ('bbbbbbbb-0000-7000-8000-000000000002', 'b1b1b1b1-0000-7000-8000-000000000001', 'B uno', 'America/Mexico_City');
+insert into public.app_user (id, name) values
+  ('11111111-1111-4111-8111-111111111111', 'Laura'), ('22222222-2222-4222-8222-222222222222', 'Carlos');
+
+-- row triggers --------------------------------------------------------------------------
+update public.location set name = 'Centro 2', updated_at = '2000-01-01' where id = 'a1a1a1a1-0000-7000-8000-000000000001';
+select is((select version from public.location where id = 'a1a1a1a1-0000-7000-8000-000000000001'), 2, 'touch_row increments version');
+select is((select updated_at from public.location where id = 'a1a1a1a1-0000-7000-8000-000000000001'), now(), 'touch_row sets updated_at to now()');
+select throws_ok($$update public.location set tenant_id = 'bbbbbbbb-0000-7000-8000-000000000002' where id = 'a1a1a1a1-0000-7000-8000-000000000001'$$,
+  '42501', 'tenant_id is immutable', 'tenant_id cannot change');
+
+-- text integrity (spec 5.1) ----------------------------------------------------------------
+select throws_ok($$insert into public.tenant (name) values ('   ')$$, '23514', null, 'blank required text is rejected');
+select throws_ok($$insert into public.tenant (name, plan) values ('X', '')$$, '23514', null, 'blank optional text is rejected');
+select lives_ok($$insert into public.tenant (name, plan) values ('X', null)$$, 'null optional text is allowed');
+select throws_ok($$insert into public.app_user (name, phone_e164) values ('P', '5512345678')$$, '23514', null, 'phone must be E.164');
+select lives_ok($$insert into public.app_user (name, phone_e164) values ('P', '+5215512345678')$$, 'valid E.164 phone');
+
+-- membership scope (spec 5.7, 7.5.10) ---------------------------------------------------------
+insert into public.membership (tenant_id, user_id, role)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'manager');
+select is((select location_ids from public.membership where user_id = '11111111-1111-4111-8111-111111111111'), '{}'::uuid[], 'a membership without a stated scope has an empty location list');
+select is((select all_locations from public.membership where user_id = '11111111-1111-4111-8111-111111111111'), false, 'a membership without a stated scope is not all-locations');
+select throws_ok($$insert into public.membership (tenant_id, user_id, role, location_ids)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '22222222-2222-4222-8222-222222222222', 'owner', null)$$,
+  '23514', null, 'a null scope without the explicit flag is rejected');
+select throws_ok($$insert into public.membership (tenant_id, user_id, role, location_ids, all_locations)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '22222222-2222-4222-8222-222222222222', 'owner', array['a1a1a1a1-0000-7000-8000-000000000001']::uuid[], true)$$,
+  '23514', null, 'the all-locations flag with a list is rejected');
+select lives_ok($$insert into public.membership (tenant_id, user_id, role, location_ids, all_locations)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '22222222-2222-4222-8222-222222222222', 'owner', null, true)$$,
+  'explicit full scope needs both the null and the flag');
+select throws_ok($$update public.membership set location_ids = array['b1b1b1b1-0000-7000-8000-000000000001']::uuid[]
+  where user_id = '11111111-1111-4111-8111-111111111111'$$,
+  '23514', null, 'a location of another tenant is rejected');
+select throws_ok($$update public.membership set location_ids = array[null]::uuid[]
+  where user_id = '11111111-1111-4111-8111-111111111111'$$,
+  '23514', null, 'a null element in the list is rejected');
+select lives_ok($$update public.membership set location_ids = array['a1a1a1a1-0000-7000-8000-000000000001']::uuid[]
+  where user_id = '11111111-1111-4111-8111-111111111111'$$, 'a location of the same tenant is accepted');
+select throws_ok($$insert into public.membership (tenant_id, user_id, role)
+  values ('aaaaaaaa-0000-7000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'support')$$,
+  '23505', null, 'one membership per user and tenant');
+
+-- identity uniqueness ---------------------------------------------------------------------------
+insert into public.channel_identity (user_id, channel, external_id) values ('11111111-1111-4111-8111-111111111111', 'whatsapp', '5215500000001');
+select throws_ok($$insert into public.channel_identity (user_id, channel, external_id) values ('22222222-2222-4222-8222-222222222222', 'whatsapp', '5215500000001')$$,
+  '23505', null, 'a sender id maps to one user per channel');
+
 select * from finish();
 rollback;
