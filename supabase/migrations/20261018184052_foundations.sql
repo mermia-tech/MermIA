@@ -63,16 +63,21 @@ as $$
   end
 $$;
 
--- Fail-closed: only an explicit JSON null (all locations) or a list containing the location
--- grants access. An absent key, an empty list or any other type grants none.
+-- Fail-closed. An explicit JSON null (all locations) or a list of location ids grants access; an
+-- absent key, any other type, or a list with non-string elements grants nothing, not even
+-- tenant-level rows (loc is null). A well-formed list that is empty grants no location and no
+-- tenant-level row either: a member with no location sees no location-scoped data.
 create function app.can_see_location(loc uuid) returns boolean
 language sql stable set search_path = ''
 as $$
   select case
-    when loc is null then true
     when auth.jwt() is null then false
     when jsonb_typeof(auth.jwt() -> 'location_ids') = 'null' then true
-    when jsonb_typeof(auth.jwt() -> 'location_ids') = 'array' then (auth.jwt() -> 'location_ids') ? loc::text
+    when jsonb_typeof(auth.jwt() -> 'location_ids') = 'array' then
+      jsonb_array_length(auth.jwt() -> 'location_ids') > 0
+      and not exists (select 1 from jsonb_array_elements(auth.jwt() -> 'location_ids') e
+                      where jsonb_typeof(e) <> 'string')
+      and (loc is null or (auth.jwt() -> 'location_ids') ? loc::text)
     else false
   end
 $$;
