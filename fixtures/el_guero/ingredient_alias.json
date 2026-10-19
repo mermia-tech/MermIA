@@ -1,0 +1,422 @@
+[
+ {
+  "id": "99e0fcf9-af8b-5a98-9cad-ef20edd9f92e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "CARNE AL PASTOR (ADOBADA)",
+  "ingredient_id": "356dfff4-d912-542b-b8b0-8ae42068eb7e"
+ },
+ {
+  "id": "7d949974-c730-5dfc-a794-637080ea1392",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "BISTEC DE RES",
+  "ingredient_id": "087dcd5c-41dc-5c06-986e-6d558ac6e593"
+ },
+ {
+  "id": "adbf9370-c731-5e31-aff3-56346652cff6",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "SUADERO",
+  "ingredient_id": "02e0d236-956a-5fb2-a6fb-c4d1f4630a53"
+ },
+ {
+  "id": "1fccbd93-8a58-5557-a4e9-17339ff5cafd",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "LONGANIZA",
+  "ingredient_id": "fbec1c62-0a4e-5537-9b17-5f57eab8e610"
+ },
+ {
+  "id": "a34d9725-3940-5c5a-8bf4-a4975d05ffde",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "CHORIZO",
+  "ingredient_id": "0a7f7079-08bc-585b-8800-01e2b40ddb90"
+ },
+ {
+  "id": "dd243375-7e47-53ec-ab31-f9198cd91650",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "PECHUGA DE POLLO",
+  "ingredient_id": "2517481f-d12d-53bf-903f-f2126568e12e"
+ },
+ {
+  "id": "45152f62-f20c-58b0-8e10-52f32ef9c753",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "COSTILLA DE RES",
+  "ingredient_id": "cb6b06f4-fbbb-5bb7-b12c-c12600d4c19c"
+ },
+ {
+  "id": "9f16240c-b0ff-56ed-a70a-48e50d275f6c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "CABEZA DE RES",
+  "ingredient_id": "2e957c8c-8bed-5e8b-815a-68d743c4ba7e"
+ },
+ {
+  "id": "c07f73ff-6447-5f73-ba45-15d2c66bcb9f",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "TRIPA DE RES",
+  "ingredient_id": "f90e5549-e6a0-5cbe-8421-19f13b72606e"
+ },
+ {
+  "id": "3d1fb68f-64e4-5058-8a6b-820424722024",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "LENGUA DE RES",
+  "ingredient_id": "864b56bd-fd75-5ca4-b3cd-3f0f14504741"
+ },
+ {
+  "id": "bc9a6338-fa56-5ba2-a28f-e187703527df",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "CHICHARRÓN PRENSADO",
+  "ingredient_id": "e8c60d48-e84b-5822-b2e8-0e730af56a34"
+ },
+ {
+  "id": "8f268ebf-0c73-58ad-a3dd-36d6a0da5e06",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "QUESO OAXACA",
+  "ingredient_id": "5268568b-3d45-535f-9197-4b2f1873700e"
+ },
+ {
+  "id": "7790b811-07ad-5bdc-b978-0a420b0ae56a",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "QUESO FRESCO",
+  "ingredient_id": "affa5040-ab63-5092-b0a3-30bc0ef36e9b"
+ },
+ {
+  "id": "52f4daf3-bbbc-5ca3-9582-6c43d2a8a54a",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "CREMA",
+  "ingredient_id": "7b040746-ab43-57dc-b6cc-bdb01f8ce4a4"
+ },
+ {
+  "id": "63294392-5b9d-5089-a486-98dcdcda7f43",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "LECHE ENTERA",
+  "ingredient_id": "8909ca22-343d-594f-beb4-71f74ba0b761"
+ },
+ {
+  "id": "ed610be3-00e3-53b2-8501-b18183c27990",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "source_text": "HUEVO",
+  "ingredient_id": "ee6a58ea-5d52-52f8-8b8a-c4dd42d40664"
+ },
+ {
+  "id": "ca82d423-4ff6-5466-9bda-7dca886e26e2",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "PIÑA",
+  "ingredient_id": "67e4cdcb-88ac-57a5-b3c1-b9ad3061e2b3"
+ },
+ {
+  "id": "04139c3e-3d8e-51e3-b277-b434247063f0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "CEBOLLA BLANCA",
+  "ingredient_id": "9342bb49-51d8-55b9-843f-f010e898da4f"
+ },
+ {
+  "id": "0da675b8-0c6c-5360-87eb-73d32d3e99ac",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "CILANTRO",
+  "ingredient_id": "2818d398-da2f-5c39-af3b-d3e406add87a"
+ },
+ {
+  "id": "c6a910e5-9ad8-57c1-bf40-91f348ede44a",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "LIMÓN",
+  "ingredient_id": "55f1c327-0de1-591c-bbaf-a5a164927de9"
+ },
+ {
+  "id": "56e93f66-4fbd-5f00-a24d-07428b289385",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "AGUACATE HASS",
+  "ingredient_id": "d01b40d2-85f2-58c9-93b5-e4ab08393eba"
+ },
+ {
+  "id": "ce5e2f46-47af-5322-ac8c-54b13f7417ed",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "JITOMATE",
+  "ingredient_id": "8c27e5de-1640-53f0-9fab-3466c4e78776"
+ },
+ {
+  "id": "8320b6fa-4296-5e0a-b93b-e1a2e69620df",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "CHILE SERRANO",
+  "ingredient_id": "2529744b-b90f-57db-ac4a-eb149e332981"
+ },
+ {
+  "id": "96146d91-f2f8-5071-9ba1-9f920161be68",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "CHILE JALAPEÑO",
+  "ingredient_id": "2ca97cb8-4ef7-5ca7-a6c5-312498ca22d9"
+ },
+ {
+  "id": "803ee9cf-da5f-502c-963e-6836b709d74b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "TOMATE VERDE",
+  "ingredient_id": "ad1a9ba8-e842-5bc2-ad0e-a4a138c9f26e"
+ },
+ {
+  "id": "a7ddeea8-5d13-58c6-a9ca-2c0c6ec15547",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "NOPAL",
+  "ingredient_id": "e997926d-dcbb-5923-92f6-46b200d936be"
+ },
+ {
+  "id": "27755639-4207-5a9c-a482-fdc5674d77d1",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "PAPA",
+  "ingredient_id": "54ff2f60-a54a-5c37-931e-8de4b2f85893"
+ },
+ {
+  "id": "0a39e7b1-4a19-589d-9657-97244375e3af",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "LECHUGA",
+  "ingredient_id": "72477b66-a81f-59be-883e-30df73f0199f"
+ },
+ {
+  "id": "dd9307ea-0a45-5dea-8a54-958d0f9dc1c1",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "RÁBANO",
+  "ingredient_id": "40174ca4-381e-57bd-96d5-e37e01ab90e0"
+ },
+ {
+  "id": "ec0d9e5b-a65c-5879-9d41-d633b2a94554",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "PEPINO",
+  "ingredient_id": "47da474e-1dcc-5606-a1ab-9415ea614f0a"
+ },
+ {
+  "id": "f33a49ac-9d15-5732-b77f-89f36b79c2a3",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "AJO",
+  "ingredient_id": "cab62455-739d-5ec2-8275-a309ff1d8f5c"
+ },
+ {
+  "id": "9cb0dd7f-2e69-5899-b888-aeb281f766fd",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "CHAMPIÑÓN",
+  "ingredient_id": "9128b056-675f-543e-95ed-85ad474650f3"
+ },
+ {
+  "id": "0ad7bbc6-9c18-55de-860a-c3ecd2b38000",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "FLOR DE CALABAZA",
+  "ingredient_id": "ecfe604f-5b40-59f7-a7d3-1cc0657ebd94"
+ },
+ {
+  "id": "42927a80-7db4-555b-8b1e-e158b751d19e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "CHILE GUAJILLO",
+  "ingredient_id": "7b0e7a0a-a8e8-5ea5-ac11-34a7e67ac48e"
+ },
+ {
+  "id": "e6ecee81-a0fb-5a1a-a4a9-f299a0668edb",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "CHILE DE ÁRBOL",
+  "ingredient_id": "ca1fb78f-d95b-5355-8177-42033e80cf07"
+ },
+ {
+  "id": "53f675d7-946e-533a-a005-ed2280cc6596",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "FRIJOL NEGRO",
+  "ingredient_id": "e87d09c0-72fa-54cc-bb9b-e0704866b6d3"
+ },
+ {
+  "id": "17363abb-1f3c-5bdc-bc2e-d862adc85274",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "ARROZ",
+  "ingredient_id": "f747c253-9031-5db2-9e92-0b35fc01a882"
+ },
+ {
+  "id": "2a4ed71f-86a0-5a09-968b-e308ad76d233",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "TORTILLA DE MAÍZ",
+  "ingredient_id": "7b6c4dc1-74f9-5ffe-a630-221f9af958ae"
+ },
+ {
+  "id": "317fee7c-f3a0-5f97-91f9-fa3566a019b6",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "TORTILLA DE HARINA",
+  "ingredient_id": "315e696c-f493-569a-83e8-5d6a34493d55"
+ },
+ {
+  "id": "fa730712-70b2-5932-8f28-274dbb440bb3",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "PAN TELERA",
+  "ingredient_id": "e4c2d3c2-6d19-5e32-ba7d-af9cc7b2bfb5"
+ },
+ {
+  "id": "142f45d8-6887-5ad8-8f0d-4e422f24fd7d",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "TOTOPOS",
+  "ingredient_id": "c14e1bec-89df-5965-86f2-66bc0a8d7acf"
+ },
+ {
+  "id": "ad6770f1-1522-5e9f-b02e-fc056e1bbabe",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "MASA DE MAÍZ",
+  "ingredient_id": "26099fe1-626d-504d-8ddb-90d5343f7d5b"
+ },
+ {
+  "id": "5fe4edca-a65d-5003-a4bb-13a2dc36b4ba",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "ACEITE VEGETAL",
+  "ingredient_id": "f9e587e5-4209-5899-b406-06ede6de6666"
+ },
+ {
+  "id": "d88cec6a-cca6-5dfa-9a4c-6a936d3be003",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "MANTECA DE CERDO",
+  "ingredient_id": "bc7fdf07-bdac-5476-a080-91912ca41a7c"
+ },
+ {
+  "id": "7f3a6663-05dd-5872-8b0b-1ed7df1283ae",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "SAL",
+  "ingredient_id": "1fdb4337-7b5f-5479-bd3e-91dbb768d1ae"
+ },
+ {
+  "id": "3e2e4e0b-b456-5237-ba22-13b0d8798800",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "AZÚCAR",
+  "ingredient_id": "31c9177d-9581-50c2-bed4-01574d0c7e74"
+ },
+ {
+  "id": "4cb96034-e8e0-5eb0-aed5-819612aa4897",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "CANELA EN RAJA",
+  "ingredient_id": "77f6ba37-c15c-50f5-8179-97228293e7ad"
+ },
+ {
+  "id": "9feb5522-0d13-5537-b436-2c29187755ea",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "FLOR DE JAMAICA",
+  "ingredient_id": "538b9bf6-509f-5e3a-aa92-a3b558dfe939"
+ },
+ {
+  "id": "da0b3343-bd38-5137-b120-1cecee1e3b97",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "TAMARINDO",
+  "ingredient_id": "0ddbf198-43ef-5d07-ae1b-95a8bf8296b1"
+ },
+ {
+  "id": "50114f9d-eb38-5529-b424-b8f0593f6a87",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "CAFÉ MOLIDO",
+  "ingredient_id": "bd3c1e92-0067-5d57-9753-33a50b290a93"
+ },
+ {
+  "id": "551a5dee-3aed-52a0-90d2-457983bbadd0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "PILONCILLO",
+  "ingredient_id": "f4fbc176-37d8-5a07-9501-99a968d2b3d4"
+ },
+ {
+  "id": "f4265fda-067c-587a-ab17-edbc4e21fa02",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "source_text": "LECHE CONDENSADA (397 G)",
+  "ingredient_id": "08070855-cf5a-52cb-a16e-21d859a83272"
+ },
+ {
+  "id": "918bc26e-115f-5de2-ac02-bbfef7364cf9",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "e3287b40-c0d7-5297-93e1-f7beb8943507",
+  "source_text": "COCA-COLA 355 ML",
+  "ingredient_id": "8c83a82c-bff4-5d10-8b4e-b1cf466e76f2"
+ },
+ {
+  "id": "020cce7e-c0d7-5607-8b47-fc4cefb7c467",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "e3287b40-c0d7-5297-93e1-f7beb8943507",
+  "source_text": "COCA-COLA LIGHT 355 ML",
+  "ingredient_id": "44bf41b0-7b5c-5c56-bc54-9312d595d117"
+ },
+ {
+  "id": "6dbc1488-bfcb-5d08-8429-327af67fed17",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "e3287b40-c0d7-5297-93e1-f7beb8943507",
+  "source_text": "SPRITE 355 ML",
+  "ingredient_id": "04919410-127d-5378-890f-2ee8c0dcfdb3"
+ },
+ {
+  "id": "5f178589-494b-5e91-828e-5fa251cc9fe0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "e3287b40-c0d7-5297-93e1-f7beb8943507",
+  "source_text": "AGUA MINERAL 355 ML",
+  "ingredient_id": "62698f5a-fb38-5b1d-837d-a03cd88da9cc"
+ },
+ {
+  "id": "9ee53fdc-7f4f-5fff-b216-c1139cb3faa9",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "e3287b40-c0d7-5297-93e1-f7beb8943507",
+  "source_text": "AGUA NATURAL 600 ML",
+  "ingredient_id": "54d78ad2-e6c4-5c46-bb07-e275d7918715"
+ },
+ {
+  "id": "3781ae16-37e6-5036-9b29-ec286c76c2ef",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "e3287b40-c0d7-5297-93e1-f7beb8943507",
+  "source_text": "CERVEZA CORONA 355 ML",
+  "ingredient_id": "405d9377-6443-5ab1-85a2-5db694b6430c"
+ },
+ {
+  "id": "07a1810b-5478-5f90-afe8-358da06a4996",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "e3287b40-c0d7-5297-93e1-f7beb8943507",
+  "source_text": "CERVEZA VICTORIA 355 ML",
+  "ingredient_id": "53a3bc76-13f3-5c6b-a16c-0f1159d7cbef"
+ },
+ {
+  "id": "4b8dacdf-341e-5886-8099-13e86a0e00d7",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "e3287b40-c0d7-5297-93e1-f7beb8943507",
+  "source_text": "CLAMATO 946 ML",
+  "ingredient_id": "230db20a-30e2-5a96-87a0-6e2a2e9eed6c"
+ }
+]

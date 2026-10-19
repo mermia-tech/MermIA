@@ -1,0 +1,58 @@
+[
+ {
+  "id": "17a9e69d-b08b-521a-af6d-b0759813d5da",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "display_name": "Ana",
+  "role": "mesero"
+ },
+ {
+  "id": "dbb718d9-4eb5-56a8-bce4-8f9a9be38fa0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "display_name": "Luis",
+  "role": "mesero"
+ },
+ {
+  "id": "8bc4ea7d-9e26-5d03-8998-7f22411da5fe",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "display_name": "Marta",
+  "role": "mesero"
+ },
+ {
+  "id": "8cf4f013-5aa5-5f5c-aec4-7b265f5aeabf",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "display_name": "Pepe",
+  "role": "mesero"
+ },
+ {
+  "id": "6a2a7ce2-b8a6-5961-8953-89ed746ba468",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "display_name": "Sofía",
+  "role": "mesero"
+ },
+ {
+  "id": "25b36908-46be-538c-9f2e-72369cfbbdb8",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "display_name": "Diego",
+  "role": "mesero"
+ },
+ {
+  "id": "2d9d7118-3839-5391-8837-aacf363c4cb4",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "display_name": "Carla",
+  "role": "mesero"
+ },
+ {
+  "id": "6be0186a-ee7c-504d-ab3c-c0658ec79de1",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "display_name": "Toño",
+  "role": "mesero"
+ }
+]

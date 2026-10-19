@@ -1,0 +1,45 @@
+[
+ {
+  "id": "80df9375-a2e4-54d9-bcd3-429332d9bc22",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "user_id": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "role": "owner",
+  "location_ids": null,
+  "all_locations": true,
+  "can_approve": [
+   "ingredient_price.set",
+   "recipe.upsert",
+   "menu_item_price.set",
+   "import_batch.approve",
+   "import_batch.rollback"
+  ]
+ },
+ {
+  "id": "80db0ee2-38bf-5944-9d35-d56b372e6589",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "user_id": "240e45f0-ef48-5654-a835-8fbc70de15bc",
+  "role": "manager",
+  "location_ids": [
+   "705e8e51-376b-5785-adbb-405eff4e2a22"
+  ],
+  "all_locations": false,
+  "can_approve": [
+   "import_batch.approve",
+   "import_batch.rollback"
+  ]
+ },
+ {
+  "id": "ef558e9a-eb02-52e4-8281-df2a9b997993",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "user_id": "23f18862-2ab3-5684-be6f-db47265e5ff9",
+  "role": "manager",
+  "location_ids": [
+   "fdda5e3b-6bcd-5c48-a6de-f524be37463e"
+  ],
+  "all_locations": false,
+  "can_approve": [
+   "import_batch.approve",
+   "import_batch.rollback"
+  ]
+ }
+]

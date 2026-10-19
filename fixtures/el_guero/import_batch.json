@@ -1,0 +1,3362 @@
+[
+ {
+  "id": "330d9077-6764-5d57-ae3e-cde2c3d856ef",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-08-17",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-18T09:00:00-06:00"
+ },
+ {
+  "id": "fa38190e-fe77-5f3c-81fd-cb404adcf244",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-08-17",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-18T09:00:00-06:00"
+ },
+ {
+  "id": "6597441a-db23-5c9c-bb4f-305de7401b01",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-08-18",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-19T09:00:00-06:00"
+ },
+ {
+  "id": "b52da6f9-b031-5b10-a39b-11c8d97de3cf",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-08-18",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-19T09:00:00-06:00"
+ },
+ {
+  "id": "011f221e-0f81-578e-8249-d1b72daf2f21",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-08-19",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-20T09:00:00-06:00"
+ },
+ {
+  "id": "547cd113-33b7-552c-b2c3-5bb99df41f44",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-08-19",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-20T09:00:00-06:00"
+ },
+ {
+  "id": "e43b5328-af15-5087-bf56-285c5a5a66de",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-08-20",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-21T09:00:00-06:00"
+ },
+ {
+  "id": "f6f0d3f7-2227-5fd7-83d2-454743f26315",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-08-20",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-21T09:00:00-06:00"
+ },
+ {
+  "id": "012c9ca5-1154-5e85-84e4-a9575f397424",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-08-21",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-22T09:00:00-06:00"
+ },
+ {
+  "id": "4e8e33e5-292b-55ee-aff8-dfa2084ebdb5",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-08-21",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-22T09:00:00-06:00"
+ },
+ {
+  "id": "00116b7f-9d07-5194-9ee0-44ea53a03d94",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-08-22",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-23T09:00:00-06:00"
+ },
+ {
+  "id": "f4887650-99e1-577f-90f1-b49e581e5c46",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-08-22",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-23T09:00:00-06:00"
+ },
+ {
+  "id": "6720cf99-e9da-59d3-bc67-1dd1f44901cb",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-08-23",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-24T09:00:00-06:00"
+ },
+ {
+  "id": "202216a3-b3cc-5b1d-8025-823348049d02",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-08-23",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-24T09:00:00-06:00"
+ },
+ {
+  "id": "3860f9b2-9821-5dc5-9f13-48eb75096343",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-08-24",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-25T09:00:00-06:00"
+ },
+ {
+  "id": "9f34412b-0863-5908-b332-b399fe788ae4",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-08-24",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-25T09:00:00-06:00"
+ },
+ {
+  "id": "e8315016-15bf-5698-be28-a20ab4634fd3",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-08-25",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-26T09:00:00-06:00"
+ },
+ {
+  "id": "394840c0-da65-5279-9a98-7c2fdd5fb86c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-08-25",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-26T09:00:00-06:00"
+ },
+ {
+  "id": "af26cfdc-c62a-5d37-959d-087c659b4ee0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-08-26",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-27T09:00:00-06:00"
+ },
+ {
+  "id": "5ea31bc8-2c8f-58b0-88ce-1e345579717b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-08-26",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-27T09:00:00-06:00"
+ },
+ {
+  "id": "dcae45ee-1157-5f7d-838b-42878d833083",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-08-27",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-28T09:00:00-06:00"
+ },
+ {
+  "id": "94fbe9e8-ac10-583c-a530-921886b0b797",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-08-27",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-28T09:00:00-06:00"
+ },
+ {
+  "id": "28e732bc-85cf-5848-9af7-09ad7918477d",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-08-28",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-29T09:00:00-06:00"
+ },
+ {
+  "id": "7f5f89a8-2000-505f-8a38-dc5fde3a70cd",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-08-28",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-29T09:00:00-06:00"
+ },
+ {
+  "id": "c71c347f-15b3-5d82-846c-5ea59df72380",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-08-29",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-30T09:00:00-06:00"
+ },
+ {
+  "id": "27ff88fd-f7c3-5744-8f26-5cc41b79baa6",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-08-29",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-30T09:00:00-06:00"
+ },
+ {
+  "id": "6d7f91e7-38b8-55bf-bb27-1deeeb838525",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-08-30",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-31T09:00:00-06:00"
+ },
+ {
+  "id": "5acdbef5-7826-509e-b343-ab29d1ca29d2",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-08-30",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-31T09:00:00-06:00"
+ },
+ {
+  "id": "b56ab335-462f-5f71-ba33-ea37fd94f97a",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-08-31",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-01T09:00:00-06:00"
+ },
+ {
+  "id": "b847c1b2-17f9-525d-b5d4-4c8b9713968e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-08-31",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-01T09:00:00-06:00"
+ },
+ {
+  "id": "2d1846b4-20ac-5e50-919f-847efa98969b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-01",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-02T09:00:00-06:00"
+ },
+ {
+  "id": "ddc75e4c-5b5f-5e3b-ac73-94b9d6b3a06a",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-01",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-02T09:00:00-06:00"
+ },
+ {
+  "id": "4c66ae1b-1ab7-570d-8d0c-1ea9800396ef",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-02",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-03T09:00:00-06:00"
+ },
+ {
+  "id": "b92da6f2-355d-582c-bf76-d2eeb358dd03",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-02",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-03T09:00:00-06:00"
+ },
+ {
+  "id": "51827f19-890a-5573-a403-6aa51c041f08",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-03",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-04T09:00:00-06:00"
+ },
+ {
+  "id": "bc0cfc65-3092-5da8-9c4e-404c408b6d15",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-03",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-04T09:00:00-06:00"
+ },
+ {
+  "id": "db3a87b4-659c-5261-85ed-be5f92e035f0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-04",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-05T09:00:00-06:00"
+ },
+ {
+  "id": "1caa5a96-66fe-545b-84a4-03f5ed7b81fc",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-04",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-05T09:00:00-06:00"
+ },
+ {
+  "id": "744524f4-90cc-57a5-bc63-589d9b03116e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-05",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-06T09:00:00-06:00"
+ },
+ {
+  "id": "cb1a9b9b-b38a-5c70-ab62-1b00660499a3",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-05",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-06T09:00:00-06:00"
+ },
+ {
+  "id": "c29b2bee-99d5-5e22-8e4c-28f7f2be6230",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-06",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-07T09:00:00-06:00"
+ },
+ {
+  "id": "955f5bcb-b835-5bd4-bc8c-9fb39166a72f",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-06",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-07T09:00:00-06:00"
+ },
+ {
+  "id": "8beda371-f904-5005-842f-86b78bb4976e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-07",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-08T09:00:00-06:00"
+ },
+ {
+  "id": "9e7a4f4b-edaa-5468-84b0-88da5f14b2bf",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-07",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-08T09:00:00-06:00"
+ },
+ {
+  "id": "7baf55ae-4cda-5110-bedf-a5687fe214fd",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-08",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-09T09:00:00-06:00"
+ },
+ {
+  "id": "2c76fb57-f56a-5347-8866-4908029e340c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-08",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-09T09:00:00-06:00"
+ },
+ {
+  "id": "de879aa1-2e29-5329-976b-fec8fc68c4a8",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-09",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-10T09:00:00-06:00"
+ },
+ {
+  "id": "8a48c412-cde3-58ad-8a95-c841d8a42356",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-09",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-10T09:00:00-06:00"
+ },
+ {
+  "id": "2dc39e5c-7aa9-5f01-a98f-092932bf954a",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-10",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-11T09:00:00-06:00"
+ },
+ {
+  "id": "7f59ec2e-cb92-5302-8d25-4775f4e601c7",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-10",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-11T09:00:00-06:00"
+ },
+ {
+  "id": "26608174-c5a8-5c1a-921b-3924c8dd6423",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-11",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-12T09:00:00-06:00"
+ },
+ {
+  "id": "d762d18b-423a-5bca-a855-3f73ac2f0dd8",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-11",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-12T09:00:00-06:00"
+ },
+ {
+  "id": "38ed6785-88d4-5fc3-8f91-ccd2ddc075da",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-12",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-13T09:00:00-06:00"
+ },
+ {
+  "id": "1385736c-dee1-5f1a-a121-c0853d601c76",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-12",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-13T09:00:00-06:00"
+ },
+ {
+  "id": "c516ac07-95e5-5b5e-bbd5-77efcced278e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-13",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-14T09:00:00-06:00"
+ },
+ {
+  "id": "58a561be-5794-53cf-bee5-5ce926d117ab",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-13",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-14T09:00:00-06:00"
+ },
+ {
+  "id": "7980e146-ba2f-505a-b087-ff3a32e20bf0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-14",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-15T09:00:00-06:00"
+ },
+ {
+  "id": "9a32ddfb-7d5b-54b3-ab2b-97fd7bebedad",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-14",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-15T09:00:00-06:00"
+ },
+ {
+  "id": "b9392c28-61b2-5d5e-be99-39ca412e65d6",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-15",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-16T09:00:00-06:00"
+ },
+ {
+  "id": "4600ce43-32c9-52da-99a3-5badb679b85c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-15",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-16T09:00:00-06:00"
+ },
+ {
+  "id": "5650f1eb-8561-54bc-80d7-edaa123e23d8",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-16",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-17T09:00:00-06:00"
+ },
+ {
+  "id": "01c05f04-9947-52d5-9b36-381d617004df",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-16",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-17T09:00:00-06:00"
+ },
+ {
+  "id": "ccd838e0-206f-5122-933d-3667905edf33",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-17",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-18T09:00:00-06:00"
+ },
+ {
+  "id": "ce6de807-a2a0-5822-b319-c24b51236d02",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-17",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-18T09:00:00-06:00"
+ },
+ {
+  "id": "29a96447-1b33-55df-8b70-7f94f36905f8",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-18",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-19T09:00:00-06:00"
+ },
+ {
+  "id": "84360fd7-98b4-5e74-9e44-f5f9c44ec41c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-18",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-19T09:00:00-06:00"
+ },
+ {
+  "id": "054ab82c-a06a-592e-919d-f62f699a3ec1",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-19",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-20T09:00:00-06:00"
+ },
+ {
+  "id": "29aa4dcd-330d-5b04-bf32-d3529f1cdbd0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-19",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-20T09:00:00-06:00"
+ },
+ {
+  "id": "4bf92d5f-6568-5bba-8981-e83fcfa3a97c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-20",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-21T09:00:00-06:00"
+ },
+ {
+  "id": "c680834c-9b0e-530b-bbde-931048146458",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-20",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-21T09:00:00-06:00"
+ },
+ {
+  "id": "421a9bf1-ba02-559c-b178-9183d91e5957",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-21",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-22T09:00:00-06:00"
+ },
+ {
+  "id": "d6c89980-e8dc-5638-b84b-5826fe684ec9",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-21",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-22T09:00:00-06:00"
+ },
+ {
+  "id": "ae032326-2c68-5f07-b19c-7b573068caf7",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-22",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-23T09:00:00-06:00"
+ },
+ {
+  "id": "baf09b62-a549-5b7d-b3c7-55503ace5471",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-22",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-23T09:00:00-06:00"
+ },
+ {
+  "id": "849a7b50-80bf-5580-80e9-8cbf01ac890a",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-23",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-24T09:00:00-06:00"
+ },
+ {
+  "id": "4f8e9a30-d0e9-54ff-a8ce-561aeff21cc8",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-23",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-24T09:00:00-06:00"
+ },
+ {
+  "id": "578ab274-763c-5c3c-8aec-a423d3122177",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-24",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-25T09:00:00-06:00"
+ },
+ {
+  "id": "cc59b34a-28dc-597f-a07e-331b3dc08765",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-24",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-25T09:00:00-06:00"
+ },
+ {
+  "id": "64db11d3-3e92-5121-904b-010f1b327bb4",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-25",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-26T09:00:00-06:00"
+ },
+ {
+  "id": "87ca3f87-c210-5193-a4e9-29bcd8bae6d9",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-25",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-26T09:00:00-06:00"
+ },
+ {
+  "id": "29baa6c9-d6dd-5f1e-80ae-99574a51f15c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-26",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-27T09:00:00-06:00"
+ },
+ {
+  "id": "3e4b3f97-0aba-5a4b-a568-13bec8c1cea3",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-26",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-27T09:00:00-06:00"
+ },
+ {
+  "id": "2aa1a9ce-5248-5c38-b1ad-307f7fb27ce0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-27",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-28T09:00:00-06:00"
+ },
+ {
+  "id": "373e2622-94a9-521b-b534-431dccb04435",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-27",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-28T09:00:00-06:00"
+ },
+ {
+  "id": "1ce4f468-91e6-5ed2-a0c2-ebd608f408ef",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-28",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-29T09:00:00-06:00"
+ },
+ {
+  "id": "c1de81fb-ce6e-5e83-948c-5b09a1632a08",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-28",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-29T09:00:00-06:00"
+ },
+ {
+  "id": "e486cd2c-4a5d-5fa0-a3e0-e96ebed41d67",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-29",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-30T09:00:00-06:00"
+ },
+ {
+  "id": "3f01cf98-eff5-592d-b483-0fdf4a85205e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-29",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-30T09:00:00-06:00"
+ },
+ {
+  "id": "6e76907c-a29e-56c7-bf4e-76b56784a338",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-09-30",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-01T09:00:00-06:00"
+ },
+ {
+  "id": "791604a1-547e-59e5-a501-9a5bac82c5c2",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-09-30",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-01T09:00:00-06:00"
+ },
+ {
+  "id": "f0797733-c219-5ac1-a57d-a26ec528aa0e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-10-01",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-02T09:00:00-06:00"
+ },
+ {
+  "id": "c1401a3b-5d73-5ccd-b86b-1d571ca46a21",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-10-01",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-02T09:00:00-06:00"
+ },
+ {
+  "id": "c2dd263e-4985-51c5-9578-d6ae19f35e1e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-10-02",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-03T09:00:00-06:00"
+ },
+ {
+  "id": "b689ce18-1f80-58a4-83cd-b925a9044eb2",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-10-02",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-03T09:00:00-06:00"
+ },
+ {
+  "id": "ab952a97-0638-593b-9907-a613c9a31c4d",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-10-03",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-04T09:00:00-06:00"
+ },
+ {
+  "id": "e920478e-2996-5fba-a23a-8bebbaba5194",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-10-03",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-04T09:00:00-06:00"
+ },
+ {
+  "id": "358402a9-b2ba-514a-93e9-a148215bb352",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-10-04",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-05T09:00:00-06:00"
+ },
+ {
+  "id": "b1521a60-a4a3-5955-9471-b8d4644988f1",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-10-04",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-05T09:00:00-06:00"
+ },
+ {
+  "id": "ac8c74cb-7f25-5e8f-8547-4c1ec5d7d288",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-10-05",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-06T09:00:00-06:00"
+ },
+ {
+  "id": "9b18f774-2207-58a6-bf23-2b8ef4f93913",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-10-05",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-06T09:00:00-06:00"
+ },
+ {
+  "id": "7876f45b-8e4d-5308-8e2d-63ee5200986c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-10-06",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-07T09:00:00-06:00"
+ },
+ {
+  "id": "e2f1b6d6-1120-5399-9f65-9bf0032da21e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-10-06",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-07T09:00:00-06:00"
+ },
+ {
+  "id": "149cbd33-ee27-58a0-b302-675671b67e14",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-10-07",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-08T09:00:00-06:00"
+ },
+ {
+  "id": "432af301-a1f9-5dd9-99ca-d397a5234669",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-10-07",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-08T09:00:00-06:00"
+ },
+ {
+  "id": "141b0cb1-9808-59f0-8eb5-e3c4c9726d14",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-10-08",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-09T09:00:00-06:00"
+ },
+ {
+  "id": "7667d670-13fb-512e-bfa9-30b2c0b0559c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-10-08",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-09T09:00:00-06:00"
+ },
+ {
+  "id": "bc4eed10-02aa-5dff-8819-03fd73352e75",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-10-09",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-10T09:00:00-06:00"
+ },
+ {
+  "id": "5765f543-15b5-54fa-831f-fb88cb79125b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-10-09",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-10T09:00:00-06:00"
+ },
+ {
+  "id": "4984177d-6f3e-53d4-bf06-6eaa5d4525bd",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-10-10",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-11T09:00:00-06:00"
+ },
+ {
+  "id": "457fc738-6486-51ef-9924-b9d066a40af4",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-10-10",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-11T09:00:00-06:00"
+ },
+ {
+  "id": "18005b12-2cda-54d0-a6d4-08900bd031ae",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L1:items:2026-10-11",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-12T09:00:00-06:00"
+ },
+ {
+  "id": "d82c2511-4372-5715-9b0e-c214d9f19546",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L1:daily:2026-10-11",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-12T09:00:00-06:00"
+ },
+ {
+  "id": "7df870b3-fbff-5e5b-abf0-3cf71feab7be",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-08-17",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-18T09:00:00-06:00"
+ },
+ {
+  "id": "2752a022-afe0-5741-a9b4-ba5ffa3ef3a8",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-08-17",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-18T09:00:00-06:00"
+ },
+ {
+  "id": "62d7ceed-4b38-579a-b55c-c946066c8f41",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-08-18",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-19T09:00:00-06:00"
+ },
+ {
+  "id": "352f644c-316f-5460-8e47-fc02b7bd94d2",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-08-18",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-19T09:00:00-06:00"
+ },
+ {
+  "id": "333dec11-436b-5a98-9505-2c856240c614",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-08-19",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-20T09:00:00-06:00"
+ },
+ {
+  "id": "b1533542-e457-577c-ae0e-023d61deea8d",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-08-19",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-20T09:00:00-06:00"
+ },
+ {
+  "id": "87b19d6b-3e49-56c9-84e4-b8531e74b9e1",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-08-20",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-21T09:00:00-06:00"
+ },
+ {
+  "id": "df222503-9e67-5c6e-a633-4b0379ff68c5",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-08-20",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-21T09:00:00-06:00"
+ },
+ {
+  "id": "a8bed47f-5a56-50d0-8812-42ac261fa88b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-08-21",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-22T09:00:00-06:00"
+ },
+ {
+  "id": "9a78f7ea-4bd3-5ffa-9593-c2c929c2d327",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-08-21",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-22T09:00:00-06:00"
+ },
+ {
+  "id": "6cd8f532-60f2-5320-9582-9f7a4e236cdd",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-08-22",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-23T09:00:00-06:00"
+ },
+ {
+  "id": "7a18ea9f-ea64-58b3-8112-fa347bf16c14",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-08-22",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-23T09:00:00-06:00"
+ },
+ {
+  "id": "7c31a2c2-ad94-5f8b-b432-b917cc7cf797",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-08-23",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-24T09:00:00-06:00"
+ },
+ {
+  "id": "f3beeafc-a2f8-5354-9b70-a76572c3f892",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-08-23",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-24T09:00:00-06:00"
+ },
+ {
+  "id": "c26db9c4-2cc5-5273-b81f-39a04ea278eb",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-08-24",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-25T09:00:00-06:00"
+ },
+ {
+  "id": "addf96b6-0680-5e32-80dd-4f3ce4fb51bc",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-08-24",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-25T09:00:00-06:00"
+ },
+ {
+  "id": "eda9d76f-457d-5f16-9a72-db84ae683234",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-08-25",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-26T09:00:00-06:00"
+ },
+ {
+  "id": "5960f0e0-c319-59bf-aa41-95b190414007",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-08-25",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-26T09:00:00-06:00"
+ },
+ {
+  "id": "5bb5bae3-f259-5a1d-b9fd-3bf8e93db4e0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-08-26",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-27T09:00:00-06:00"
+ },
+ {
+  "id": "3167b978-2370-5ee8-8411-1c6108a53fd0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-08-26",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-27T09:00:00-06:00"
+ },
+ {
+  "id": "91986c9a-81a9-54be-acdd-403368ff0158",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-08-27",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-28T09:00:00-06:00"
+ },
+ {
+  "id": "38db6095-67a0-502d-9442-615846d95253",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-08-27",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-28T09:00:00-06:00"
+ },
+ {
+  "id": "8aa44a84-fa40-5ac7-80f6-93f220a25e37",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-08-28",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-29T09:00:00-06:00"
+ },
+ {
+  "id": "7bc40869-270f-5077-8492-999a6a798d23",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-08-28",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-29T09:00:00-06:00"
+ },
+ {
+  "id": "ce6b33a2-6f11-543a-a84d-352436c4d8f5",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-08-29",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-30T09:00:00-06:00"
+ },
+ {
+  "id": "0ec3ad2a-744c-5b44-83ee-dbb3e38f3889",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-08-29",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-30T09:00:00-06:00"
+ },
+ {
+  "id": "5631d650-edf1-5b69-b559-6a7b047720e8",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-08-30",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-31T09:00:00-06:00"
+ },
+ {
+  "id": "f4bc0f80-3bac-579e-9f2a-a23ea9e0bb16",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-08-30",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-08-31T09:00:00-06:00"
+ },
+ {
+  "id": "d588f5a2-62bd-55fb-a277-98cdfede6fb6",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-08-31",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-01T09:00:00-06:00"
+ },
+ {
+  "id": "ddbab050-bd7f-5e7a-a996-47e79f23b634",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-08-31",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-01T09:00:00-06:00"
+ },
+ {
+  "id": "32409c3f-059a-5254-b79d-a52c7284149f",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-01",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-02T09:00:00-06:00"
+ },
+ {
+  "id": "228ac58d-11f8-5f71-809e-fc10e79263a2",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-01",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-02T09:00:00-06:00"
+ },
+ {
+  "id": "a46385bd-884c-54b5-b33a-2c5d7e64bd81",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-02",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-03T09:00:00-06:00"
+ },
+ {
+  "id": "ad155f57-f9c1-55b8-a951-7217ad33d156",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-02",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-03T09:00:00-06:00"
+ },
+ {
+  "id": "74e7f974-3c0c-5a20-b3ce-111f5059f176",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-03",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-04T09:00:00-06:00"
+ },
+ {
+  "id": "945c7bab-0eed-593d-8f9a-fdc0597dc013",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-03",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-04T09:00:00-06:00"
+ },
+ {
+  "id": "c43fcd28-d0ce-5092-992b-0a39ece2161d",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-04",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-05T09:00:00-06:00"
+ },
+ {
+  "id": "cc504f94-edf8-5eaa-9b45-7f25b99f8289",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-04",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-05T09:00:00-06:00"
+ },
+ {
+  "id": "fcd66b3f-2a3e-573c-8ab1-0e9a3d40a275",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-05",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-06T09:00:00-06:00"
+ },
+ {
+  "id": "42c3eb53-a82b-52fe-b79a-9dcbdb565023",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-05",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-06T09:00:00-06:00"
+ },
+ {
+  "id": "9e115f54-aba8-5cc0-90a9-c0c8836129bc",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-06",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-07T09:00:00-06:00"
+ },
+ {
+  "id": "ea0d44ed-c1bb-56c1-92bd-d39beb7e2399",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-06",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-07T09:00:00-06:00"
+ },
+ {
+  "id": "7584f97b-c5bc-57c1-9407-3e37c752de96",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-07",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-08T09:00:00-06:00"
+ },
+ {
+  "id": "eb859254-f479-5a62-877f-49f03b9d7d1e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-07",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-08T09:00:00-06:00"
+ },
+ {
+  "id": "650e2f25-cb54-588b-8f4f-650e310ec5d6",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-08",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-09T09:00:00-06:00"
+ },
+ {
+  "id": "29c7a32d-572a-54dc-b8aa-f0d1c5d51afc",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-08",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-09T09:00:00-06:00"
+ },
+ {
+  "id": "01ca12ac-dde5-5a53-abcb-78bfb0cfcba0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-09",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-10T09:00:00-06:00"
+ },
+ {
+  "id": "51729d6f-395b-5dbe-acf5-5519052f3f43",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-09",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-10T09:00:00-06:00"
+ },
+ {
+  "id": "da3b88cb-e077-5ea8-998f-e070807ac7ba",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-10",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-11T09:00:00-06:00"
+ },
+ {
+  "id": "ccd1098c-2540-58e4-a5a6-8e98e8d6d52a",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-10",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-11T09:00:00-06:00"
+ },
+ {
+  "id": "7a0c7c47-8515-5b9f-893f-927e549e4cbf",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-11",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-12T09:00:00-06:00"
+ },
+ {
+  "id": "2e2c5012-7ec2-58c6-8cf8-79cf4ac9f8a0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-11",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-12T09:00:00-06:00"
+ },
+ {
+  "id": "ac1d7aef-214f-56eb-a6ac-76dddccbbc8f",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-12",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-13T09:00:00-06:00"
+ },
+ {
+  "id": "f063e927-9f99-5471-a826-bf356b1d5957",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-12",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-13T09:00:00-06:00"
+ },
+ {
+  "id": "869b447d-8960-5773-b1ef-a4d962f9168b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-13",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-14T09:00:00-06:00"
+ },
+ {
+  "id": "5faeaf87-a76c-58ec-b3bc-2fff0440049e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-13",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-14T09:00:00-06:00"
+ },
+ {
+  "id": "5e0cfac9-0e02-55d8-94ef-6e36a6254249",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-14",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-15T09:00:00-06:00"
+ },
+ {
+  "id": "c340fb09-281b-5858-bc2e-ff5b53134ad5",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-14",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-15T09:00:00-06:00"
+ },
+ {
+  "id": "305bc69f-ada7-5470-9aa3-7ad539d35aba",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-15",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-16T09:00:00-06:00"
+ },
+ {
+  "id": "a1c00f04-92f8-58b4-b066-3d259608058c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-15",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-16T09:00:00-06:00"
+ },
+ {
+  "id": "0c2dae7f-2294-512c-a427-93296f6c6bea",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-16",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-17T09:00:00-06:00"
+ },
+ {
+  "id": "3c447464-8f88-503a-947b-92de0e40c7cf",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-16",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-17T09:00:00-06:00"
+ },
+ {
+  "id": "856ef755-9f75-5a3e-af29-431bf29f6d48",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-17",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-18T09:00:00-06:00"
+ },
+ {
+  "id": "a4d90b81-6789-5292-89c9-fc4469cbe8f8",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-17",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-18T09:00:00-06:00"
+ },
+ {
+  "id": "a1953c5b-ec81-5939-937d-d2c192508e12",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-18",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-19T09:00:00-06:00"
+ },
+ {
+  "id": "c027f331-bf47-5f74-84f2-84c3701e8ba0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-18",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-19T09:00:00-06:00"
+ },
+ {
+  "id": "ac0f44ec-cd11-5f3a-967f-ae7c3ece9ac7",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-19",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-20T09:00:00-06:00"
+ },
+ {
+  "id": "2f3bd90e-a428-591f-bdd1-2a7b46470064",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-19",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-20T09:00:00-06:00"
+ },
+ {
+  "id": "7fb05e59-3f2e-572c-b849-739dfe3ad255",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-20",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-21T09:00:00-06:00"
+ },
+ {
+  "id": "86618c9c-ad6b-5689-a818-970d93904e62",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-20",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-21T09:00:00-06:00"
+ },
+ {
+  "id": "c0e0cae9-67d4-5c47-9cd9-00aa535b4908",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-21",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-22T09:00:00-06:00"
+ },
+ {
+  "id": "b8fa7ab7-1f5f-5bf1-8984-276f580fee67",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-21",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-22T09:00:00-06:00"
+ },
+ {
+  "id": "9bf1f952-0eac-5881-b691-ae2dbbce51df",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-22",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-23T09:00:00-06:00"
+ },
+ {
+  "id": "302abae2-8d2f-543a-bec9-fccb0df1ed66",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-22",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-23T09:00:00-06:00"
+ },
+ {
+  "id": "4c550ab8-ea42-5d90-9956-a8b466e688d4",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-23",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-24T09:00:00-06:00"
+ },
+ {
+  "id": "53b8fea0-7fb4-56b0-9ac7-5a61609759cf",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-23",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-24T09:00:00-06:00"
+ },
+ {
+  "id": "19a9d38d-f047-54e1-922d-84a9c5e4f5a5",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-24",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-25T09:00:00-06:00"
+ },
+ {
+  "id": "23b5c35e-0ea9-5113-83a8-2363e9bd927f",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-24",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-25T09:00:00-06:00"
+ },
+ {
+  "id": "d1da3583-c0d0-5244-aede-bd207f76d370",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-25",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-26T09:00:00-06:00"
+ },
+ {
+  "id": "f6798e4f-07ac-5d41-871d-c0ab2e6c573c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-25",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-26T09:00:00-06:00"
+ },
+ {
+  "id": "5a88b7a7-50d3-54b3-816d-fe2f9a2f1c64",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-26",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-27T09:00:00-06:00"
+ },
+ {
+  "id": "925c3a98-6ddd-51c3-b05d-7e016551f3c4",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-26",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-27T09:00:00-06:00"
+ },
+ {
+  "id": "c818c3bf-ec63-5209-a7a0-ff4afb7cd51f",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-27",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-28T09:00:00-06:00"
+ },
+ {
+  "id": "221ede11-d11d-53bf-803a-4793ac573733",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-27",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-28T09:00:00-06:00"
+ },
+ {
+  "id": "811697e1-69ed-57b0-952f-873abd255655",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-28",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-29T09:00:00-06:00"
+ },
+ {
+  "id": "69c71ecb-9744-548c-b187-3171788982a1",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-28",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-29T09:00:00-06:00"
+ },
+ {
+  "id": "8783412e-4d6d-58b2-b0f7-93c07085389d",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-29",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-30T09:00:00-06:00"
+ },
+ {
+  "id": "07225f32-0551-5a78-8b92-4a8c457d1c1b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-29",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-09-30T09:00:00-06:00"
+ },
+ {
+  "id": "bb6c2607-cce2-57e5-aa82-05b51a1971d0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-09-30",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-01T09:00:00-06:00"
+ },
+ {
+  "id": "b1ddad61-72a9-54ee-a6ea-02f04749eb0f",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-09-30",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-01T09:00:00-06:00"
+ },
+ {
+  "id": "aaba97d0-a282-5690-92cb-46a9abfe6ae0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-10-01",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-02T09:00:00-06:00"
+ },
+ {
+  "id": "5c4c7027-e023-5293-bca3-80ab7d94580b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-10-01",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-02T09:00:00-06:00"
+ },
+ {
+  "id": "2c525510-a62f-5514-b187-b12d6f57595e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-10-02",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-03T09:00:00-06:00"
+ },
+ {
+  "id": "78d5c7de-91f2-55ab-b3dc-8a6d3c1f718c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-10-02",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-03T09:00:00-06:00"
+ },
+ {
+  "id": "e472183f-e70b-5af5-a0a2-69a1ed89925e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-10-03",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-04T09:00:00-06:00"
+ },
+ {
+  "id": "b1a4bb96-3306-5cdc-9ab3-463fa0d70a40",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-10-03",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-04T09:00:00-06:00"
+ },
+ {
+  "id": "81a754de-8a7f-57f1-b70b-54ec8d1579b5",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-10-04",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-05T09:00:00-06:00"
+ },
+ {
+  "id": "4990147a-c2b5-5c4a-8c32-2126cd9a236b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-10-04",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-05T09:00:00-06:00"
+ },
+ {
+  "id": "6b4b7a00-0473-5518-ab03-b1a844d53d11",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-10-05",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-06T09:00:00-06:00"
+ },
+ {
+  "id": "0e850737-5576-5737-a2ab-6b6527419193",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-10-05",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-06T09:00:00-06:00"
+ },
+ {
+  "id": "ceee44b1-63a3-5d66-bee8-5cd35c771554",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-10-06",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-07T09:00:00-06:00"
+ },
+ {
+  "id": "69d15cee-8b19-58ae-8612-e39009d20d8f",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-10-06",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-07T09:00:00-06:00"
+ },
+ {
+  "id": "2e3edb23-73a1-5e67-822a-3ae565e33e89",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-10-07",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-08T09:00:00-06:00"
+ },
+ {
+  "id": "37922071-0002-5eea-8b4f-e91331f402ee",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-10-07",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-08T09:00:00-06:00"
+ },
+ {
+  "id": "1ddbb9d8-2c34-54c6-84b9-17ad460d7571",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-10-08",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-09T09:00:00-06:00"
+ },
+ {
+  "id": "5767b788-5921-5be7-91c3-b8c48d7a1387",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-10-08",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-09T09:00:00-06:00"
+ },
+ {
+  "id": "6f5dc1c0-8495-5f08-8068-95e56b17866c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-10-09",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-10T09:00:00-06:00"
+ },
+ {
+  "id": "89b7ced4-f557-5e1f-b61b-7fa4f8f4fd4d",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-10-09",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-10T09:00:00-06:00"
+ },
+ {
+  "id": "c22bc768-422c-5519-9d6c-3db83003ba45",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-10-10",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-11T09:00:00-06:00"
+ },
+ {
+  "id": "30eade7c-b085-5b33-9cfd-3617a4452598",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-10-10",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-11T09:00:00-06:00"
+ },
+ {
+  "id": "4b4b8775-5532-5804-ae7c-e60822d1857d",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.productos_vendidos@v1",
+  "slice_key": "L2:items:2026-10-11",
+  "status": "applied",
+  "stats": {
+   "lines": 41
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-12T09:00:00-06:00"
+ },
+ {
+  "id": "4c1a738a-a5bd-55d6-a29e-bda916bdbe3b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
+  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "parser": "sr.ventas_por_dia@v1",
+  "slice_key": "L2:daily:2026-10-11",
+  "status": "applied",
+  "stats": {
+   "lines": 1
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-12T09:00:00-06:00"
+ }
+]

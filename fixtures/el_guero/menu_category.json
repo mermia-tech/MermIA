@@ -1,0 +1,27 @@
+[
+ {
+  "id": "33589ce1-08e9-5064-ab33-b83cbe696c3b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Tacos"
+ },
+ {
+  "id": "29b56d1d-380e-5c60-beed-bc5ad33c3956",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Especialidades"
+ },
+ {
+  "id": "d51afedf-b895-5810-852e-209224a851cc",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Bebidas"
+ },
+ {
+  "id": "9e0802da-c71a-573c-86bb-27e0d24219cc",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Postres"
+ },
+ {
+  "id": "052ecb26-8d67-567b-a180-d90edff8a848",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Extras"
+ }
+]

@@ -1,1 +1,4 @@
 packages/contracts/src/mermia_contracts/db/models.py linguist-generated=true
+supabase/seed.sql linguist-generated=true
+fixtures/el_guero/*.json linguist-generated=true
+fixtures/sr/synthetic/* linguist-generated=true

@@ -1,0 +1,494 @@
+{
+ "today": "2026-10-12",
+ "notes": [
+  "Money is centavos. Sales net = gross - discount, IVA included (13 H3 quotes it so).",
+  "margin_pct_of_gross = (price_gross - cost) / price_gross, as 13 H3 example 4."
+ ],
+ "weekly_net_sales": {
+  "L1": {
+   "2026-08-17": 16685600,
+   "2026-08-24": 16779725,
+   "2026-08-31": 16902225,
+   "2026-09-07": 17019000,
+   "2026-09-14": 17483250,
+   "2026-09-21": 17931000,
+   "2026-09-28": 17190500,
+   "2026-10-05": 18432050
+  },
+  "L2": {
+   "2026-08-17": 14973820,
+   "2026-08-24": 15208080,
+   "2026-08-31": 15561740,
+   "2026-09-07": 15922660,
+   "2026-09-14": 15932360,
+   "2026-09-21": 16023580,
+   "2026-09-28": 16161960,
+   "2026-10-05": 16092080
+  }
+ },
+ "daily_net_sales": {
+  "L1": {
+   "2026-08-17": 1627500,
+   "2026-08-18": 1828600,
+   "2026-08-19": 1910500,
+   "2026-08-20": 2283000,
+   "2026-08-21": 2688500,
+   "2026-08-22": 3384000,
+   "2026-08-23": 2963500,
+   "2026-08-24": 1670000,
+   "2026-08-25": 1831225,
+   "2026-08-26": 1975000,
+   "2026-08-27": 2281000,
+   "2026-08-28": 2826500,
+   "2026-08-29": 3414000,
+   "2026-08-30": 2782000,
+   "2026-08-31": 1696000,
+   "2026-09-01": 1843725,
+   "2026-09-02": 1986500,
+   "2026-09-03": 2291500,
+   "2026-09-04": 2804000,
+   "2026-09-05": 3463000,
+   "2026-09-06": 2817500,
+   "2026-09-07": 1732500,
+   "2026-09-08": 1829500,
+   "2026-09-09": 2077000,
+   "2026-09-10": 2307000,
+   "2026-09-11": 2798500,
+   "2026-09-12": 3391000,
+   "2026-09-13": 2883500,
+   "2026-09-14": 1742500,
+   "2026-09-15": 1840250,
+   "2026-09-16": 2048500,
+   "2026-09-17": 2362500,
+   "2026-09-18": 2894000,
+   "2026-09-19": 3577000,
+   "2026-09-20": 3018500,
+   "2026-09-21": 1814000,
+   "2026-09-22": 1902500,
+   "2026-09-23": 2042500,
+   "2026-09-24": 2267000,
+   "2026-09-25": 2902000,
+   "2026-09-26": 3759500,
+   "2026-09-27": 3243500,
+   "2026-09-28": 1818000,
+   "2026-09-29": 1923700,
+   "2026-09-30": 2139500,
+   "2026-10-01": 2456000,
+   "2026-10-02": 2990000,
+   "2026-10-03": 3676000,
+   "2026-10-04": 2187300,
+   "2026-10-05": 1716000,
+   "2026-10-06": 1917025,
+   "2026-10-07": 2176000,
+   "2026-10-08": 2357000,
+   "2026-10-09": 2885500,
+   "2026-10-10": 3629000,
+   "2026-10-11": 3751525
+  },
+  "L2": {
+   "2026-08-17": 1481100,
+   "2026-08-18": 1610820,
+   "2026-08-19": 1698400,
+   "2026-08-20": 2041700,
+   "2026-08-21": 2479700,
+   "2026-08-22": 2868600,
+   "2026-08-23": 2793500,
+   "2026-08-24": 1570100,
+   "2026-08-25": 1668180,
+   "2026-08-26": 1787800,
+   "2026-08-27": 2061500,
+   "2026-08-28": 2378600,
+   "2026-08-29": 3124800,
+   "2026-08-30": 2617100,
+   "2026-08-31": 1563400,
+   "2026-09-01": 1698340,
+   "2026-09-02": 1823800,
+   "2026-09-03": 2081900,
+   "2026-09-04": 2642100,
+   "2026-09-05": 3071700,
+   "2026-09-06": 2680500,
+   "2026-09-07": 1583800,
+   "2026-09-08": 1732260,
+   "2026-09-09": 1866300,
+   "2026-09-10": 2057100,
+   "2026-09-11": 2578000,
+   "2026-09-12": 3265000,
+   "2026-09-13": 2840200,
+   "2026-09-14": 1600000,
+   "2026-09-15": 1724660,
+   "2026-09-16": 1843300,
+   "2026-09-17": 2128200,
+   "2026-09-18": 2650100,
+   "2026-09-19": 3115600,
+   "2026-09-20": 2870500,
+   "2026-09-21": 1653300,
+   "2026-09-22": 1728780,
+   "2026-09-23": 1918200,
+   "2026-09-24": 2096600,
+   "2026-09-25": 2743300,
+   "2026-09-26": 3203100,
+   "2026-09-27": 2680300,
+   "2026-09-28": 1544700,
+   "2026-09-29": 1651260,
+   "2026-09-30": 2003200,
+   "2026-10-01": 2184200,
+   "2026-10-02": 2720600,
+   "2026-10-03": 3281700,
+   "2026-10-04": 2776300,
+   "2026-10-05": 1654200,
+   "2026-10-06": 1776980,
+   "2026-10-07": 1905100,
+   "2026-10-08": 2143400,
+   "2026-10-09": 2655400,
+   "2026-10-10": 3197100,
+   "2026-10-11": 2759900
+  }
+ },
+ "top_dishes_this_month_by_units": {
+  "L1": [
+   {
+    "code": "P001",
+    "name": "Tacos al pastor (orden de 3)",
+    "units": 656
+   },
+   {
+    "code": "P043",
+    "name": "Coca-Cola",
+    "units": 452
+   },
+   {
+    "code": "P047",
+    "name": "Agua natural",
+    "units": 361
+   },
+   {
+    "code": "P002",
+    "name": "Tacos de bistec (orden de 3)",
+    "units": 304
+   },
+   {
+    "code": "P040",
+    "name": "Agua de horchata",
+    "units": 291
+   }
+  ],
+  "L2": [
+   {
+    "code": "P001",
+    "name": "Tacos al pastor (orden de 3)",
+    "units": 552
+   },
+   {
+    "code": "P043",
+    "name": "Coca-Cola",
+    "units": 360
+   },
+   {
+    "code": "P002",
+    "name": "Tacos de bistec (orden de 3)",
+    "units": 254
+   },
+   {
+    "code": "P040",
+    "name": "Agua de horchata",
+    "units": 238
+   },
+   {
+    "code": "P003",
+    "name": "Tacos de suadero (orden de 3)",
+    "units": 204
+   }
+  ],
+  "all": [
+   {
+    "code": "P001",
+    "name": "Tacos al pastor (orden de 3)",
+    "units": 1208
+   },
+   {
+    "code": "P043",
+    "name": "Coca-Cola",
+    "units": 812
+   },
+   {
+    "code": "P002",
+    "name": "Tacos de bistec (orden de 3)",
+    "units": 558
+   },
+   {
+    "code": "P040",
+    "name": "Agua de horchata",
+    "units": 529
+   },
+   {
+    "code": "P003",
+    "name": "Tacos de suadero (orden de 3)",
+    "units": 467
+   }
+  ]
+ },
+ "dish_costs_today": [
+  {
+   "code": "P001",
+   "name": "Tacos al pastor (orden de 3)",
+   "location": "L1",
+   "cost": 1840,
+   "price_gross": 6500,
+   "margin_pct_of_gross": "71.7"
+  },
+  {
+   "code": "P001",
+   "name": "Tacos al pastor (orden de 3)",
+   "location": "L2",
+   "cost": 1840,
+   "price_gross": 7200,
+   "margin_pct_of_gross": "74.4"
+  },
+  {
+   "code": "P002",
+   "name": "Tacos de bistec (orden de 3)",
+   "location": "L1",
+   "cost": 2532,
+   "price_gross": 7500,
+   "margin_pct_of_gross": "66.2"
+  },
+  {
+   "code": "P002",
+   "name": "Tacos de bistec (orden de 3)",
+   "location": "L2",
+   "cost": 2532,
+   "price_gross": 8300,
+   "margin_pct_of_gross": "69.5"
+  },
+  {
+   "code": "P003",
+   "name": "Tacos de suadero (orden de 3)",
+   "location": "L1",
+   "cost": 2343,
+   "price_gross": 7000,
+   "margin_pct_of_gross": "66.5"
+  },
+  {
+   "code": "P003",
+   "name": "Tacos de suadero (orden de 3)",
+   "location": "L2",
+   "cost": 2343,
+   "price_gross": 7700,
+   "margin_pct_of_gross": "69.6"
+  },
+  {
+   "code": "P004",
+   "name": "Tacos campechanos (orden de 3)",
+   "location": "L1",
+   "cost": 2085,
+   "price_gross": 7500,
+   "margin_pct_of_gross": "72.2"
+  },
+  {
+   "code": "P004",
+   "name": "Tacos campechanos (orden de 3)",
+   "location": "L2",
+   "cost": 2085,
+   "price_gross": 8300,
+   "margin_pct_of_gross": "74.9"
+  },
+  {
+   "code": "P005",
+   "name": "Tacos de longaniza (orden de 3)",
+   "location": "L1",
+   "cost": 1614,
+   "price_gross": 6500,
+   "margin_pct_of_gross": "75.2"
+  },
+  {
+   "code": "P005",
+   "name": "Tacos de longaniza (orden de 3)",
+   "location": "L2",
+   "cost": 1614,
+   "price_gross": 7200,
+   "margin_pct_of_gross": "77.6"
+  },
+  {
+   "code": "P009",
+   "name": "Gringa de pastor",
+   "location": "L1",
+   "cost": 3155,
+   "price_gross": 8500,
+   "margin_pct_of_gross": "62.9"
+  },
+  {
+   "code": "P009",
+   "name": "Gringa de pastor",
+   "location": "L2",
+   "cost": 3155,
+   "price_gross": 9400,
+   "margin_pct_of_gross": "66.4"
+  },
+  {
+   "code": "P010",
+   "name": "Volcán de pastor",
+   "location": "L1",
+   "cost": 1462,
+   "price_gross": 4500,
+   "margin_pct_of_gross": "67.5"
+  },
+  {
+   "code": "P010",
+   "name": "Volcán de pastor",
+   "location": "L2",
+   "cost": 1462,
+   "price_gross": 5000,
+   "margin_pct_of_gross": "70.8"
+  },
+  {
+   "code": "P020",
+   "name": "Quesadilla de queso",
+   "location": "L1",
+   "cost": 1101,
+   "price_gross": 4500,
+   "margin_pct_of_gross": "75.5"
+  },
+  {
+   "code": "P020",
+   "name": "Quesadilla de queso",
+   "location": "L2",
+   "cost": 1101,
+   "price_gross": 5000,
+   "margin_pct_of_gross": "78.0"
+  },
+  {
+   "code": "P023",
+   "name": "Alambre de res",
+   "location": "L1",
+   "cost": 6136,
+   "price_gross": 14500,
+   "margin_pct_of_gross": "57.7"
+  },
+  {
+   "code": "P023",
+   "name": "Alambre de res",
+   "location": "L2",
+   "cost": 6136,
+   "price_gross": 16000,
+   "margin_pct_of_gross": "61.6"
+  },
+  {
+   "code": "P025",
+   "name": "Torta de pastor",
+   "location": "L1",
+   "cost": 3449,
+   "price_gross": 8000,
+   "margin_pct_of_gross": "56.9"
+  },
+  {
+   "code": "P025",
+   "name": "Torta de pastor",
+   "location": "L2",
+   "cost": 3449,
+   "price_gross": 8800,
+   "margin_pct_of_gross": "60.8"
+  },
+  {
+   "code": "P040",
+   "name": "Agua de horchata",
+   "location": "L1",
+   "cost": 517,
+   "price_gross": 3500,
+   "margin_pct_of_gross": "85.2"
+  },
+  {
+   "code": "P040",
+   "name": "Agua de horchata",
+   "location": "L2",
+   "cost": 517,
+   "price_gross": 3900,
+   "margin_pct_of_gross": "86.7"
+  },
+  {
+   "code": "P041",
+   "name": "Agua de jamaica",
+   "location": "L1",
+   "cost": 314,
+   "price_gross": 3500,
+   "margin_pct_of_gross": "91.0"
+  },
+  {
+   "code": "P041",
+   "name": "Agua de jamaica",
+   "location": "L2",
+   "cost": 314,
+   "price_gross": 3900,
+   "margin_pct_of_gross": "91.9"
+  },
+  {
+   "code": "P043",
+   "name": "Coca-Cola",
+   "location": "L1",
+   "cost": 1400,
+   "price_gross": 3000,
+   "margin_pct_of_gross": "53.3"
+  },
+  {
+   "code": "P043",
+   "name": "Coca-Cola",
+   "location": "L2",
+   "cost": 1400,
+   "price_gross": 3300,
+   "margin_pct_of_gross": "57.6"
+  },
+  {
+   "code": "P046",
+   "name": "Agua mineral",
+   "location": "L1",
+   "cost": 1200,
+   "price_gross": 3000,
+   "margin_pct_of_gross": "60.0"
+  },
+  {
+   "code": "P046",
+   "name": "Agua mineral",
+   "location": "L2",
+   "cost": 1200,
+   "price_gross": 3300,
+   "margin_pct_of_gross": "63.6"
+  },
+  {
+   "code": "P048",
+   "name": "Cerveza Corona",
+   "location": "L1",
+   "cost": 1800,
+   "price_gross": 4500,
+   "margin_pct_of_gross": "60.0"
+  },
+  {
+   "code": "P048",
+   "name": "Cerveza Corona",
+   "location": "L2",
+   "cost": 1800,
+   "price_gross": 5000,
+   "margin_pct_of_gross": "64.0"
+  }
+ ],
+ "cancellation_saturday": {
+  "location": "L1",
+  "date": "2026-10-10",
+  "count": 17,
+  "amount": 289000
+ },
+ "price_jumps": [
+  {
+   "ingredient": "Carne al pastor (adobada)",
+   "from_date": "2026-09-21",
+   "before": "170.00",
+   "after": "195.00",
+   "unit": "kg"
+  },
+  {
+   "ingredient": "Aguacate Hass",
+   "from_date": "2026-09-28",
+   "before": "55.00",
+   "after": "89.00",
+   "unit": "kg"
+  }
+ ]
+}

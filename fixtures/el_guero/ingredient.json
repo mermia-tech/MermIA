@@ -1,0 +1,551 @@
+[
+ {
+  "id": "356dfff4-d912-542b-b8b0-8ae42068eb7e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Carne al pastor (adobada)",
+  "base_unit": "g",
+  "category": "carnes",
+  "default_yield_pct": "92.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "087dcd5c-41dc-5c06-986e-6d558ac6e593",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Bistec de res",
+  "base_unit": "g",
+  "category": "carnes",
+  "default_yield_pct": "88.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "02e0d236-956a-5fb2-a6fb-c4d1f4630a53",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Suadero",
+  "base_unit": "g",
+  "category": "carnes",
+  "default_yield_pct": "85.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "fbec1c62-0a4e-5537-9b17-5f57eab8e610",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Longaniza",
+  "base_unit": "g",
+  "category": "carnes",
+  "default_yield_pct": "90.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "0a7f7079-08bc-585b-8800-01e2b40ddb90",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Chorizo",
+  "base_unit": "g",
+  "category": "carnes",
+  "default_yield_pct": "90.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "2517481f-d12d-53bf-903f-f2126568e12e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Pechuga de pollo",
+  "base_unit": "g",
+  "category": "carnes",
+  "default_yield_pct": "90.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "cb6b06f4-fbbb-5bb7-b12c-c12600d4c19c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Costilla de res",
+  "base_unit": "g",
+  "category": "carnes",
+  "default_yield_pct": "70.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "2e957c8c-8bed-5e8b-815a-68d743c4ba7e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Cabeza de res",
+  "base_unit": "g",
+  "category": "carnes",
+  "default_yield_pct": "80.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "f90e5549-e6a0-5cbe-8421-19f13b72606e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Tripa de res",
+  "base_unit": "g",
+  "category": "carnes",
+  "default_yield_pct": "75.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "864b56bd-fd75-5ca4-b3cd-3f0f14504741",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Lengua de res",
+  "base_unit": "g",
+  "category": "carnes",
+  "default_yield_pct": "80.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "e8c60d48-e84b-5822-b2e8-0e730af56a34",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Chicharrón prensado",
+  "base_unit": "g",
+  "category": "carnes",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "5268568b-3d45-535f-9197-4b2f1873700e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Queso Oaxaca",
+  "base_unit": "g",
+  "category": "lácteos",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "affa5040-ab63-5092-b0a3-30bc0ef36e9b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Queso fresco",
+  "base_unit": "g",
+  "category": "lácteos",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "7b040746-ab43-57dc-b6cc-bdb01f8ce4a4",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Crema",
+  "base_unit": "ml",
+  "category": "lácteos",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "8909ca22-343d-594f-beb4-71f74ba0b761",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Leche entera",
+  "base_unit": "ml",
+  "category": "lácteos",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "ee6a58ea-5d52-52f8-8b8a-c4dd42d40664",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Huevo",
+  "base_unit": "pza",
+  "category": "lácteos",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "67e4cdcb-88ac-57a5-b3c1-b9ad3061e2b3",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Piña",
+  "base_unit": "g",
+  "category": "fruta",
+  "default_yield_pct": "60.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "9342bb49-51d8-55b9-843f-f010e898da4f",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Cebolla blanca",
+  "base_unit": "g",
+  "category": "verdura",
+  "default_yield_pct": "90.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "2818d398-da2f-5c39-af3b-d3e406add87a",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Cilantro",
+  "base_unit": "g",
+  "category": "verdura",
+  "default_yield_pct": "70.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "55f1c327-0de1-591c-bbaf-a5a164927de9",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Limón",
+  "base_unit": "g",
+  "category": "fruta",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "d01b40d2-85f2-58c9-93b5-e4ab08393eba",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Aguacate Hass",
+  "base_unit": "g",
+  "category": "fruta",
+  "default_yield_pct": "70.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "8c27e5de-1640-53f0-9fab-3466c4e78776",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Jitomate",
+  "base_unit": "g",
+  "category": "verdura",
+  "default_yield_pct": "95.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "2529744b-b90f-57db-ac4a-eb149e332981",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Chile serrano",
+  "base_unit": "g",
+  "category": "verdura",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "2ca97cb8-4ef7-5ca7-a6c5-312498ca22d9",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Chile jalapeño",
+  "base_unit": "g",
+  "category": "verdura",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "ad1a9ba8-e842-5bc2-ad0e-a4a138c9f26e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Tomate verde",
+  "base_unit": "g",
+  "category": "verdura",
+  "default_yield_pct": "95.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "e997926d-dcbb-5923-92f6-46b200d936be",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Nopal",
+  "base_unit": "g",
+  "category": "verdura",
+  "default_yield_pct": "85.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "54ff2f60-a54a-5c37-931e-8de4b2f85893",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Papa",
+  "base_unit": "g",
+  "category": "verdura",
+  "default_yield_pct": "85.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "72477b66-a81f-59be-883e-30df73f0199f",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Lechuga",
+  "base_unit": "g",
+  "category": "verdura",
+  "default_yield_pct": "75.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "40174ca4-381e-57bd-96d5-e37e01ab90e0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Rábano",
+  "base_unit": "g",
+  "category": "verdura",
+  "default_yield_pct": "85.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "47da474e-1dcc-5606-a1ab-9415ea614f0a",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Pepino",
+  "base_unit": "g",
+  "category": "verdura",
+  "default_yield_pct": "85.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "cab62455-739d-5ec2-8275-a309ff1d8f5c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Ajo",
+  "base_unit": "g",
+  "category": "verdura",
+  "default_yield_pct": "85.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "9128b056-675f-543e-95ed-85ad474650f3",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Champiñón",
+  "base_unit": "g",
+  "category": "verdura",
+  "default_yield_pct": "90.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "ecfe604f-5b40-59f7-a7d3-1cc0657ebd94",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Flor de calabaza",
+  "base_unit": "g",
+  "category": "verdura",
+  "default_yield_pct": "80.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "7b0e7a0a-a8e8-5ea5-ac11-34a7e67ac48e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Chile guajillo",
+  "base_unit": "g",
+  "category": "abarrotes",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "ca1fb78f-d95b-5355-8177-42033e80cf07",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Chile de árbol",
+  "base_unit": "g",
+  "category": "abarrotes",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "e87d09c0-72fa-54cc-bb9b-e0704866b6d3",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Frijol negro",
+  "base_unit": "g",
+  "category": "abarrotes",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "f747c253-9031-5db2-9e92-0b35fc01a882",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Arroz",
+  "base_unit": "g",
+  "category": "abarrotes",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "7b6c4dc1-74f9-5ffe-a630-221f9af958ae",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Tortilla de maíz",
+  "base_unit": "g",
+  "category": "tortillería",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "315e696c-f493-569a-83e8-5d6a34493d55",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Tortilla de harina",
+  "base_unit": "g",
+  "category": "tortillería",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "e4c2d3c2-6d19-5e32-ba7d-af9cc7b2bfb5",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Pan telera",
+  "base_unit": "pza",
+  "category": "panadería",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "c14e1bec-89df-5965-86f2-66bc0a8d7acf",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Totopos",
+  "base_unit": "g",
+  "category": "tortillería",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "26099fe1-626d-504d-8ddb-90d5343f7d5b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Masa de maíz",
+  "base_unit": "g",
+  "category": "tortillería",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "f9e587e5-4209-5899-b406-06ede6de6666",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Aceite vegetal",
+  "base_unit": "ml",
+  "category": "abarrotes",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "bc7fdf07-bdac-5476-a080-91912ca41a7c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Manteca de cerdo",
+  "base_unit": "g",
+  "category": "abarrotes",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "1fdb4337-7b5f-5479-bd3e-91dbb768d1ae",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Sal",
+  "base_unit": "g",
+  "category": "abarrotes",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "31c9177d-9581-50c2-bed4-01574d0c7e74",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Azúcar",
+  "base_unit": "g",
+  "category": "abarrotes",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "77f6ba37-c15c-50f5-8179-97228293e7ad",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Canela en raja",
+  "base_unit": "g",
+  "category": "abarrotes",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "538b9bf6-509f-5e3a-aa92-a3b558dfe939",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Flor de jamaica",
+  "base_unit": "g",
+  "category": "abarrotes",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "0ddbf198-43ef-5d07-ae1b-95a8bf8296b1",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Tamarindo",
+  "base_unit": "g",
+  "category": "abarrotes",
+  "default_yield_pct": "55.0000",
+  "yield_source": "measured"
+ },
+ {
+  "id": "bd3c1e92-0067-5d57-9753-33a50b290a93",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Café molido",
+  "base_unit": "g",
+  "category": "abarrotes",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "f4fbc176-37d8-5a07-9501-99a968d2b3d4",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Piloncillo",
+  "base_unit": "g",
+  "category": "abarrotes",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "08070855-cf5a-52cb-a16e-21d859a83272",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Leche condensada (397 g)",
+  "base_unit": "pza",
+  "category": "abarrotes",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "8c83a82c-bff4-5d10-8b4e-b1cf466e76f2",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Coca-Cola 355 ml",
+  "base_unit": "pza",
+  "category": "bebidas",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "44bf41b0-7b5c-5c56-bc54-9312d595d117",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Coca-Cola Light 355 ml",
+  "base_unit": "pza",
+  "category": "bebidas",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "04919410-127d-5378-890f-2ee8c0dcfdb3",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Sprite 355 ml",
+  "base_unit": "pza",
+  "category": "bebidas",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "62698f5a-fb38-5b1d-837d-a03cd88da9cc",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Agua mineral 355 ml",
+  "base_unit": "pza",
+  "category": "bebidas",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "54d78ad2-e6c4-5c46-bb07-e275d7918715",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Agua natural 600 ml",
+  "base_unit": "pza",
+  "category": "bebidas",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "405d9377-6443-5ab1-85a2-5db694b6430c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Cerveza Corona 355 ml",
+  "base_unit": "pza",
+  "category": "bebidas",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "53a3bc76-13f3-5c6b-a16c-0f1159d7cbef",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Cerveza Victoria 355 ml",
+  "base_unit": "pza",
+  "category": "bebidas",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "230db20a-30e2-5a96-87a0-6e2a2e9eed6c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Clamato 946 ml",
+  "base_unit": "pza",
+  "category": "bebidas",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ },
+ {
+  "id": "e8b1d9a7-4e72-5bfe-b951-f8fd9acd5028",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Salsa verde (preparada)",
+  "base_unit": "g",
+  "category": "preparados",
+  "default_yield_pct": "100.0000",
+  "yield_source": "default"
+ }
+]

@@ -154,7 +154,7 @@ select lives_ok($$insert into public.daily_sales_agg (tenant_id, location_id, so
   values ('aaaaaaaa-0000-7000-8000-000000000001', 'a1a1a1a1-0000-7000-8000-000000000001', '5c5c5c5c-0000-7000-8000-00000000000a', 'ba7c0000-0000-7000-8000-000000000001',
           '2026-10-12', 3188000, 2)$$,
   'a daily row may report the cancellation count without the amount');
-select is((select cancellations_amount from public.daily_sales_agg limit 1), null, 'an unreported amount stays null, not zero');
+select is((select cancellations_amount from public.daily_sales_agg where tenant_id = 'aaaaaaaa-0000-7000-8000-000000000001' limit 1), null, 'an unreported amount stays null, not zero');
 
 -- control tables (spec 5.7, 7.2.6) ---------------------------------------------------------------------------
 select throws_ok($$insert into public.pending_change (tenant_id, kind, proposed_via)
@@ -218,7 +218,7 @@ select throws_ok($$insert into public.ingredient_price (tenant_id, ingredient_id
 select lives_ok($$insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source, pending_change_id)
   values ('aaaaaaaa-0000-7000-8000-000000000001', '1a000000-0000-7000-8000-000000000001', 0.220000, '2026-10-12', 'manual', '9c000000-0000-7000-8000-000000000001')$$,
   'a price from a pending change');
-select is((select unit_price_net from public.ingredient_price limit 1), 0.220000::numeric, 'unit prices keep six decimals (pesos per base unit)');
+select is((select unit_price_net from public.ingredient_price where tenant_id = 'aaaaaaaa-0000-7000-8000-000000000001' limit 1), 0.220000::numeric, 'unit prices keep six decimals (pesos per base unit)');
 select throws_ok($$insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, effective_to, source)
   values ('aaaaaaaa-0000-7000-8000-000000000001', '1a000000-0000-7000-8000-000000000001', 1, '2026-10-12', '2026-10-01', 'manual')$$,
   '23514', null, 'a price cannot end before it starts');

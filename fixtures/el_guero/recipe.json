@@ -1,0 +1,146 @@
+[
+ {
+  "id": "46faac9d-fc08-5876-af8d-6b3b958b52b3",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "produces_ingredient_id": "e8b1d9a7-4e72-5bfe-b951-f8fd9acd5028",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1000.000000",
+  "status": "confirmed"
+ },
+ {
+  "id": "685360b3-e141-5c71-9180-a95eae3076e6",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1.000000",
+  "status": "confirmed"
+ },
+ {
+  "id": "7f6d19fe-4a30-59d3-ada1-d753115a52ca",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1.000000",
+  "status": "confirmed"
+ },
+ {
+  "id": "75c687ec-a6ad-5c54-be29-71f1eb4ca13c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1.000000",
+  "status": "confirmed"
+ },
+ {
+  "id": "2a508446-6ee2-54d6-9226-83018c571922",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "a825d126-082a-5b37-a763-784cbb733ba2",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1.000000",
+  "status": "confirmed"
+ },
+ {
+  "id": "00b095a0-ac42-5b18-bed4-73eeb49e76f6",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "f5fea202-65b8-55a9-81fe-f47369aad159",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1.000000",
+  "status": "confirmed"
+ },
+ {
+  "id": "277a0f98-2ce3-5b42-b9d7-506e65dc6168",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "e6e3bfbc-32bd-5345-aa3b-de89839dd88f",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1.000000",
+  "status": "confirmed"
+ },
+ {
+  "id": "245cecde-3155-5538-94bf-487b8da72d36",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1.000000",
+  "status": "confirmed"
+ },
+ {
+  "id": "cb8e8081-7fad-5959-9aae-c6fe479d92c2",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1.000000",
+  "status": "confirmed"
+ },
+ {
+  "id": "c4f7f87c-35f5-500f-9b96-023031c447c4",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "81404715-16f4-518e-b9e7-07df075161eb",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1.000000",
+  "status": "confirmed"
+ },
+ {
+  "id": "8741b9b2-6027-50fd-b09b-9ccba0544897",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1.000000",
+  "status": "confirmed"
+ },
+ {
+  "id": "07ce714f-e85a-53cf-9b35-43f8c2ba02fa",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "13523ead-5ebf-552d-b723-0701a893c6e4",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1.000000",
+  "status": "confirmed"
+ },
+ {
+  "id": "571b701b-0db8-5d52-a8b9-2d58e87a081a",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "88bab77a-1b10-5d6f-bd92-14f28fddb78d",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1.000000",
+  "status": "confirmed"
+ },
+ {
+  "id": "52294bde-c30b-50e3-a0f1-457e20d7d470",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1.000000",
+  "status": "confirmed"
+ },
+ {
+  "id": "43e6b1f1-770e-58d8-91cd-689f09fdaeae",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "1ea4dd32-cfd7-50b4-bdb0-3fa128bb154a",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1.000000",
+  "status": "confirmed"
+ },
+ {
+  "id": "2e23fe10-0963-58f1-849b-63988a709d71",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "b55371fc-3a78-55c0-8edc-ed56d117914d",
+  "recipe_version": 1,
+  "effective_from": "2026-08-17",
+  "yield_qty": "1.000000",
+  "status": "confirmed"
+ }
+]

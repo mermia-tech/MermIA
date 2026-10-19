@@ -1,0 +1,92 @@
+-- Layer: data. The fixture restaurant in supabase/seed.sql (MR-12; 08 C7, 13 H3) loads and holds
+-- the figures the eval and the RPC tests rely on. Regenerate with `uv run python -m mermia_fixtures`.
+begin;
+select * from no_plan();
+
+create temp table t as select id from public.tenant where name = 'Taquería El Güero';
+create temp table l as
+select x.name, x.id from public.location x join t on t.id = x.tenant_id;
+
+select is((select count(*) from t), 1::bigint, 'the fixture tenant is loaded');
+select is((select count(*) from l), 2::bigint, 'it has two locations');
+select is((select count(*) from public.daily_sales_agg d join t on t.id = d.tenant_id), 112::bigint,
+          'one daily row per location and day for 8 weeks');
+select is((select count(*) from public.item_sales_agg i join t on t.id = i.tenant_id), 4592::bigint,
+          'one item row per location, day and menu item');
+
+-- 13 H3 examples 1 and 2: Centro's last week and the week before
+select is((select sum(net) from public.item_sales_agg i join l on l.id = i.location_id
+           where l.name = 'Centro' and i.period_from between '2026-10-05' and '2026-10-11'),
+          18432050::numeric, 'Centro sold $184,320.50 in 2026-10-05..11 (item grain)');
+select is((select sum(net_sales) from public.daily_sales_agg d join l on l.id = d.location_id
+           where l.name = 'Centro' and d.business_date between '2026-10-05' and '2026-10-11'),
+          18432050::numeric, 'Centro sold $184,320.50 in 2026-10-05..11 (daily grain)');
+select is((select sum(net_sales) from public.daily_sales_agg d join l on l.id = d.location_id
+           where l.name = 'Centro' and d.business_date between '2026-09-28' and '2026-10-04'),
+          17190500::numeric, 'Centro sold $171,905.00 in 2026-09-28..10-04');
+
+select is((select count(*) from public.daily_sales_agg d
+           join (select location_id, period_from, sum(net) as net from public.item_sales_agg
+                 group by 1, 2) i on i.location_id = d.location_id and i.period_from = d.business_date
+           join t on t.id = d.tenant_id
+           where i.net <> d.net_sales), 0::bigint,
+          'every day''s net_sales equals the sum of its item nets');
+select is((select count(*) from public.daily_sales_agg d join t on t.id = d.tenant_id
+           where d.payment_mix->>'cash' is null
+              or ((d.payment_mix->>'cash')::bigint + (d.payment_mix->>'card')::bigint
+                  + (d.payment_mix->>'transfer')::bigint) <> d.net_sales), 0::bigint,
+          'every day''s payment mix adds up to its net_sales');
+
+-- 13 H3 example 7: the cancellation-heavy Saturday is the worst day by far
+select is((select d.business_date from public.daily_sales_agg d join l on l.id = d.location_id
+           order by d.cancellations_count desc limit 1), '2026-10-10'::date,
+          'Saturday 2026-10-10 has the most cancellations');
+
+-- 13 H3 example 4: tacos al pastor cost $18.40 from recipe and prices in effect on 2026-10-12.
+-- cost = sum(qty * price per base unit * 100 / yield), sub-recipes per unit of their yield;
+-- rounded once, half away from zero.
+create temp table price_on as
+select p.ingredient_id, p.unit_price_net
+from public.ingredient_price p join t on t.id = p.tenant_id
+where p.effective_from <= '2026-10-12' and (p.effective_to is null or p.effective_to >= '2026-10-12');
+create temp table salsa_per_g as
+select r.id as recipe_id, sum(rl.qty_base * pr.unit_price_net * 100 / i.default_yield_pct) / r.yield_qty as cost
+from public.recipe r
+join public.recipe_line rl on rl.recipe_id = r.id
+join public.ingredient i on i.id = rl.ingredient_id
+join price_on pr on pr.ingredient_id = i.id
+where r.produces_ingredient_id is not null
+group by r.id, r.yield_qty;
+select is((
+  select round(100 * sum(case
+    when rl.sub_recipe_id is not null then rl.qty_base * s.cost
+    else rl.qty_base * pr.unit_price_net * 100 / i.default_yield_pct end))
+  from public.menu_item m
+  join public.recipe r on r.menu_item_id = m.id
+  join public.recipe_line rl on rl.recipe_id = r.id
+  left join public.ingredient i on i.id = rl.ingredient_id
+  left join price_on pr on pr.ingredient_id = rl.ingredient_id
+  left join salsa_per_g s on s.recipe_id = rl.sub_recipe_id
+  join t on t.id = m.tenant_id
+  where m.external_id = 'P001'), 1840::numeric, 'tacos al pastor cost $18.40 today');
+select is((select p.price_gross from public.menu_item_price p join public.menu_item m on m.id = p.menu_item_id
+           join l on l.id = p.location_id where l.name = 'Centro' and m.external_id = 'P001'),
+          6500::bigint, 'and sell for $65.00 at Centro');
+
+-- the two price jumps (08 C7): pastor meat and avocado each have a before and an after price
+select is((select count(*) from public.ingredient_price p join public.ingredient i on i.id = p.ingredient_id
+           join t on t.id = i.tenant_id where i.name in ('Carne al pastor (adobada)', 'Aguacate Hass')),
+          4::bigint, 'two ingredients have a price jump');
+
+-- the seed's own memberships work with RLS: a Centro manager sees Centro and nothing of Polanco
+select set_config('request.jwt.claims', json_build_object(
+  'role', 'authenticated', 'tenant_id', (select id from t),
+  'location_ids', json_build_array((select id from l where name = 'Centro')))::text, true);
+set local role authenticated;
+select is((select count(distinct location_id) from public.item_sales_agg), 1::bigint,
+          'a Centro manager sees one location');
+select is((select count(*) from public.item_sales_agg), 2296::bigint, 'and all of its item rows');
+reset role;
+
+select * from finish();
+rollback;
