@@ -107,6 +107,33 @@ select is(pg_temp.rpc(:OWNER, format('api.get_sales_summary(%L, %L)', '"last_wee
           'and its day shows as missing');
 rollback to savepoint whole_day;
 
+-- coverage counts only the days it expects (up to yesterday); a day loaded early adds sales only
+savepoint early_day;
+update public.import_batch b set status = 'rolled_back'
+where b.id in (select d.batch_id from public.daily_sales_agg d where d.location_id = :'CENTRO' and d.business_date = '2026-10-07'
+               union select a.batch_id from public.item_sales_agg a where a.location_id = :'CENTRO' and a.period_from = '2026-10-07');
+select is(pg_temp.rpc(:OWNER, format('api.get_sales_summary(%L)', '"this_week"'), '2026-10-11') #>> '{flags,0,code}', 'missing_days',
+          'today''s early upload does not hide a missing day');
+select is(pg_temp.rpc(:OWNER, format('api.get_sales_summary(%L)', '"this_week"'), '2026-10-11') #>> '{meta,coverage_pct}', '91.7',
+          'coverage: 11 of 12 expected location-days');
+rollback to savepoint early_day;
+select is(pg_temp.rpc(:OWNER, format('api.get_sales_summary(%L)', '{"from":"2026-10-10","to":"2026-10-11"}'), '2026-10-11') #>> '{meta,coverage_pct}', '100',
+          'coverage never goes over 100');
+
+-- two applied batches with item rows for the same location and day count once (the latest)
+savepoint dup_items;
+insert into public.import_batch (id, tenant_id, source_id, location_id, parser, slice_key, status, applied_at)
+select 'dddddddd-0000-7000-8000-000000000001', b.tenant_id, b.source_id, b.location_id, b.parser, 'dup-test', 'applied', b.applied_at + interval '1 hour'
+from public.import_batch b where b.id = (select a.batch_id from public.item_sales_agg a where a.location_id = :'CENTRO' and a.period_from = '2026-10-11' limit 1);
+insert into public.item_sales_agg (tenant_id, location_id, source_id, batch_id, period_from, period_to, menu_item_id, units, gross, discount, net)
+select a.tenant_id, a.location_id, a.source_id, 'dddddddd-0000-7000-8000-000000000001', a.period_from, a.period_to, a.menu_item_id, a.units, a.gross, a.discount, a.net
+from public.item_sales_agg a where a.location_id = :'CENTRO' and a.period_from = '2026-10-11';
+select is(pg_temp.rpc(:OWNER, format('api.get_top_dishes(%L, %L, location_id => %L)', '"yesterday"', 'units', :'CENTRO')) #> '{data,rows,0,value,raw}',
+          (select to_jsonb(trim_scale(a.units)) from public.item_sales_agg a join public.menu_item m on m.id = a.menu_item_id
+           where m.external_id = 'P001' and a.location_id = :'CENTRO' and a.period_from = '2026-10-11' and a.batch_id <> 'dddddddd-0000-7000-8000-000000000001'),
+          'a re-sent item report does not double the units');
+rollback to savepoint dup_items;
+
 -- compare_periods -------------------------------------------------------------------------
 select is(pg_temp.rpc(:OWNER, format('api.compare_periods(%L, %L, %L, %L)', 'net_sales', '"last_week"', '"prev_week"', :'POLANCO')) -> 'data',
           '{"metric": "net_sales", "period_a": {"from": "2026-10-05", "to": "2026-10-11"}, "period_b": {"from": "2026-09-28", "to": "2026-10-04"},

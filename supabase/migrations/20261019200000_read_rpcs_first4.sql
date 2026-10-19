@@ -183,31 +183,51 @@ as $$
 $$;
 
 -- Sales over a range ------------------------------------------------------------------------
+-- Item sales of applied batches, single-day rows only, joined to the dish cost of that day. Like
+-- daily rows, a location and day takes its rows from one batch: the most recently applied one.
+create function app.item_rows(locs uuid[], f date, t date)
+returns table (location_id uuid, day date, menu_item_id uuid, units numeric, net bigint, cost bigint)
+language sql stable set search_path = ''
+as $$
+  select x.location_id, x.day, x.menu_item_id, x.units, x.net, x.cost
+  from (
+    select a.location_id, a.period_from as day, a.menu_item_id, a.units, a.net, c.cost,
+           dense_rank() over (partition by a.location_id, a.period_from order by b.applied_at desc, b.id desc) as k
+    from public.item_sales_agg a
+    join public.import_batch b on b.tenant_id = a.tenant_id and b.id = a.batch_id
+    left join public.dish_cost_snapshot c
+      on c.tenant_id = a.tenant_id and c.menu_item_id = a.menu_item_id
+     and c.location_id = a.location_id and c.date = a.period_from
+    where b.status = 'applied' and a.location_id = any (locs)
+      and a.period_from = a.period_to and a.period_from between f and t
+  ) x
+  where x.k = 1
+$$;
+
 -- Daily figures over [f, t] for the locations, from applied batches only. A nullable figure is
--- known only when every covered day reports it (not reported is not zero).
+-- known only when every covered day reports it (not reported is not zero). Coverage compares
+-- like with like: expected_days are the location-days up to yesterday, and expected_covered
+-- counts the covered ones among them (a day loaded early, like today, adds sales, not coverage).
 create function app.sales_totals(locs uuid[], f date, t date)
 returns table (
   net_sales bigint, tickets bigint, guests bigint, discounts bigint, cancellations bigint,
-  covered_days int, item_only_days int, expected_days int
+  covered_days int, item_only_days int, expected_days int, expected_covered int
 )
 language sql stable set search_path = ''
 as $$
-  with d as (
+  with w as (
+    select least(t, app.business_today(locs[1]) - 1) as last_expected
+  ), d as (
     select distinct on (s.location_id, s.business_date) s.*
     from public.daily_sales_agg s
     join public.import_batch b on b.tenant_id = s.tenant_id and b.id = s.batch_id
     where b.status = 'applied' and s.location_id = any (locs) and s.business_date between f and t
     order by s.location_id, s.business_date, b.applied_at desc, s.id desc
   ), i as (
-    select a.location_id, a.period_from as day, sum(a.net) as net
-    from public.item_sales_agg a
-    join public.import_batch b on b.tenant_id = a.tenant_id and b.id = a.batch_id
-    where b.status = 'applied' and a.location_id = any (locs)
-      and a.period_from = a.period_to and a.period_from between f and t
-      and not exists (select 1 from d where d.location_id = a.location_id and d.business_date = a.period_from)
-    group by a.location_id, a.period_from
-  ), e as (
-    select greatest(least(t, app.business_today(locs[1]) - 1) - f + 1, 0) * coalesce(cardinality(locs), 0) as n
+    select r.location_id, r.day, sum(r.net) as net
+    from app.item_rows(locs, f, t) r
+    where not exists (select 1 from d where d.location_id = r.location_id and d.business_date = r.day)
+    group by r.location_id, r.day
   )
   select
     (coalesce((select sum(d.net_sales) from d), 0) + coalesce((select sum(i.net) from i), 0))::bigint,
@@ -221,22 +241,9 @@ as $$
       then (select sum(d.cancellations_amount) from d)::bigint end,
     ((select count(*) from d) + (select count(*) from i))::int,
     (select count(*) from i)::int,
-    (select e.n from e)::int
-$$;
-
--- Item sales of applied batches, single-day rows only, joined to the dish cost of that day.
-create function app.item_rows(locs uuid[], f date, t date)
-returns table (menu_item_id uuid, units numeric, net bigint, cost bigint)
-language sql stable set search_path = ''
-as $$
-  select a.menu_item_id, a.units, a.net, c.cost
-  from public.item_sales_agg a
-  join public.import_batch b on b.tenant_id = a.tenant_id and b.id = a.batch_id
-  left join public.dish_cost_snapshot c
-    on c.tenant_id = a.tenant_id and c.menu_item_id = a.menu_item_id
-   and c.location_id = a.location_id and c.date = a.period_from
-  where b.status = 'applied' and a.location_id = any (locs)
-    and a.period_from = a.period_to and a.period_from between f and t
+    (select greatest(w.last_expected - f + 1, 0) * coalesce(cardinality(locs), 0) from w)::int,
+    ((select count(*) from d, w where d.business_date <= w.last_expected)
+     + (select count(*) from i, w where i.day <= w.last_expected))::int
 $$;
 
 -- The value of a compare_periods metric over [f, t]; null when the data cannot give it.
@@ -283,14 +290,14 @@ begin
   select * into prev from app.sales_totals(locs, p[1], p[2]);
   if prev.covered_days > 0 and prev.net_sales > 0 then
     change := round(100.0 * (s.net_sales - prev.net_sales) / prev.net_sales, 4);
-    if prev.covered_days < prev.expected_days then
+    if prev.expected_covered < prev.expected_days then
       flags := flags || app.flag('previous_partial', 'Faltan días en el periodo anterior: la comparación es aproximada.');
     end if;
   end if;
 
-  if s.covered_days < s.expected_days then
+  if s.expected_covered < s.expected_days then
     flags := flags || app.flag('missing_days',
-      format('Faltan datos de %s de %s días del periodo.', s.expected_days - s.covered_days, s.expected_days));
+      format('Faltan datos de %s de %s días del periodo.', s.expected_days - s.expected_covered, s.expected_days));
   end if;
   if s.tickets is null then missing := missing || 'tickets'::text; end if;
   if s.guests is null then missing := missing || 'comensales'::text; end if;
@@ -314,7 +321,7 @@ begin
         jsonb_build_object('raw', s.cancellations, 'text', app.fmt_money(s.cancellations)) end,
       'change_vs_previous', case when change is not null then
         jsonb_build_object('raw', trim_scale(change), 'text', app.fmt_pct(change, true)) end),
-    locs, flags, 100.0 * s.covered_days / nullif(s.expected_days, 0), r);
+    locs, flags, 100.0 * s.expected_covered / nullif(s.expected_days, 0), r);
 exception when sqlstate '22023' then
   return app.rpc_error('invalid_args', sqlerrm, coalesce(locs, '{}'));
 end
@@ -357,7 +364,7 @@ begin
 
   select * into ca from app.sales_totals(locs, ra[1], ra[2]);
   select * into cb from app.sales_totals(locs, rb[1], rb[2]);
-  if ca.covered_days < ca.expected_days or cb.covered_days < cb.expected_days then
+  if ca.expected_covered < ca.expected_days or cb.expected_covered < cb.expected_days then
     flags := flags || app.flag('missing_days', 'Algún periodo tiene días sin datos: la comparación es aproximada.');
   end if;
 
@@ -372,7 +379,7 @@ begin
       'pct_change', case when b <> 0 then jsonb_build_object(
         'raw', trim_scale(round(100 * (a - b) / b, 4)), 'text', app.fmt_pct(100 * (a - b) / b, true)) end),
     locs, flags,
-    100.0 * (ca.covered_days + cb.covered_days) / nullif(ca.expected_days + cb.expected_days, 0), null);
+    100.0 * (ca.expected_covered + cb.expected_covered) / nullif(ca.expected_days + cb.expected_days, 0), null);
 exception when sqlstate '22023' then
   return app.rpc_error('invalid_args', sqlerrm, coalesce(locs, '{}'));
 end
@@ -451,13 +458,13 @@ begin
     flags := flags || app.flag('uncosted_sales', 'Algunos platillos vendidos no tienen costo y no entran en el ranking.');
   end if;
   select * into s from app.sales_totals(locs, r[1], r[2]);
-  if s.covered_days < s.expected_days then
+  if s.expected_covered < s.expected_days then
     flags := flags || app.flag('missing_days',
-      format('Faltan datos de %s de %s días del periodo.', s.expected_days - s.covered_days, s.expected_days));
+      format('Faltan datos de %s de %s días del periodo.', s.expected_days - s.expected_covered, s.expected_days));
   end if;
 
   return app.rpc_ok(jsonb_build_object('metric', metric, 'rows', rows), locs, flags,
-                    100.0 * s.covered_days / nullif(s.expected_days, 0), r);
+                    100.0 * s.expected_covered / nullif(s.expected_days, 0), r);
 exception when sqlstate '22023' then
   return app.rpc_error('invalid_args', sqlerrm, coalesce(locs, '{}'));
 end
@@ -489,6 +496,7 @@ begin
     select src.kind, max(b.applied_at) filter (where b.status = 'applied') as last_at
     from public.source src
     left join public.import_batch b on b.tenant_id = src.tenant_id and b.source_id = src.id
+      and (b.location_id = any (locs) or b.location_id is null)
     where src.location_id = any (locs) or src.location_id is null
     group by src.kind
   ) k;
@@ -511,7 +519,7 @@ begin
                   where p.ingredient_id = i.id and p.effective_from <= today), '-infinity') < today - 45;
 
   select * into s from app.sales_totals(locs, today - 30, today - 1);
-  coverage := round(100.0 * s.covered_days / nullif(s.expected_days, 0), 4);
+  coverage := round(100.0 * s.expected_covered / nullif(s.expected_days, 0), 4);
 
   return app.rpc_ok(
     jsonb_build_object(
