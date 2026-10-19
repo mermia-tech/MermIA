@@ -99,6 +99,23 @@ def test_cancellation_saturday_stands_out() -> None:
     assert worst.cancellations_count >= 4 * max(others)
 
 
+def test_ticket_money_adds_up() -> None:
+    # ticket grain has the item/daily meaning of net (README Definitions; contract test
+    # test_ticket_money_adds_up on ticket_valid.json checks the same rule)
+    tickets = committed(JSON_DIR / "sale_ticket.json")
+    lines = committed(JSON_DIR / "sale_line.json")
+    assert tickets
+    for t in tickets:
+        own = [x for x in lines if x["ticket_id"] == t["id"]]
+        assert own, t["external_id"]
+        for x in own:
+            assert x["net"] == round(Decimal(x["qty"]) * x["unit_price"]), t["external_id"]
+            assert x["tax"] == b.vat_inside(x["net"]), t["external_id"]
+        assert t["total"] == sum(x["net"] for x in own), t["external_id"]
+        assert t["tax"] == sum(x["tax"] for x in own), t["external_id"]
+        assert t["subtotal"] == t["total"] - t["tax"], t["external_id"]
+
+
 def test_money_is_integer_centavos() -> None:
     for table in ("item_sales_agg", "daily_sales_agg", "menu_item_price"):
         for row in committed(JSON_DIR / f"{table}.json"):
