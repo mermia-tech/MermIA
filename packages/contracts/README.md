@@ -24,22 +24,29 @@ and units, and `docs/superpowers/specs/2026-10-18-mr-10-contracts-schema-design.
   `ok=true` needs `data` and no `error`; `ok=false` needs `error` and no `data`.
 - `agent_tools.py` (C4): the 12 agent tools, derived from C3 plus `propose_change`.
 - `pending.py` (C5): the five `PendingChange` kinds and the typed proposal. `apply_pending_change`
-  is not defined yet (authorization model pending a decision).
+  is the call and its result only (service_role model of MR-10 spec 7.5.7; SQL is MR-32).
 - `agent.py` (C6): `AgentRequest` / `AgentResponse`. `pc:<uuid>:approve|reject|detail` action ids
   are validated; any other id is opaque.
 
 ```bash
 uv run python -m mermia_contracts.tools.export_schemas           # write schemas/*.json (Phase 2 types)
 uv run python -m mermia_contracts.tools.export_schemas --check   # fail if they are stale
-ANTHROPIC_API_KEY=... uv run python -m mermia_contracts.tools.measure_tool_tokens          # write schemas/tool_tokens.json
+ANTHROPIC_API_KEY=... uv run python -m mermia_contracts.tools.measure_tool_tokens          # later, MR-20: write schemas/tool_tokens.json
 ANTHROPIC_API_KEY=... uv run python -m mermia_contracts.tools.measure_tool_tokens --check  # re-measure and compare
 ```
 
-**Token budget.** Each tool may add at most 125 tokens (`agent_tools.TOKEN_LIMIT`). The cost of a
-tool is `count([B, t]) - count([B])` with the Anthropic `count_tokens` API and a fixed baseline
-tool `B`: the API adds tool-use scaffolding once per request, and the difference cancels it. The
-result is committed in `schemas/tool_tokens.json` with the hash of the tool definitions, so
-changing a tool without measuring again fails the offline tests.
+**Token budget: NOT MEASURED YET.** Each tool may add at most 125 tokens (`agent_tools.TOKEN_LIMIT`,
+08 C4); nobody has checked that the current tools fit, and a rough size estimate suggests some do
+not. The measurement is deferred to the LLM eval ticket (proposed: MR-20, the day-5 gate and the
+M3 milestone in `docs/kickoff/07-roadmap.md`). The cost of a tool is `count([B, t]) - count([B])`
+with the Anthropic `count_tokens` API and a fixed baseline tool `B`: the API adds tool-use
+scaffolding once per request, and the difference cancels it.
+
+To run it later: set `ANTHROPIC_API_KEY`, run `measure_tool_tokens` (above; the SDK is a dev
+dependency of this package), review `schemas/tool_tokens.json`, then run `uv run pytest -m tokens`.
+The snapshot stores the hash of the tool definitions, so changing a tool afterwards needs a new
+measurement. If a tool is over 125, decide then how to cut it; the limit itself is not changed
+without the owner's approval.
 
 **Owners.** `.github/CODEOWNERS` requests a review from `@p0sin` and `@campolloram` for this
 package. Owners on one line are alternatives: either one satisfies code-owner review, and `main`
