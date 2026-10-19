@@ -79,9 +79,7 @@ def test_quantities_require_decimal_in_python_mode(bad) -> None:
 
 
 def test_quantity_scale_and_precision_are_enforced() -> None:
-    assert ItemSalesIn(**item_sales(units=Decimal("1.123456"))).units == Decimal(
-        "1.123456"
-    )
+    assert ItemSalesIn(**item_sales(units=Decimal("1.123456"))).units == Decimal("1.123456")
     with pytest.raises(ValidationError):
         ItemSalesIn(**item_sales(units=Decimal("1.1234567")))
     with pytest.raises(ValidationError):

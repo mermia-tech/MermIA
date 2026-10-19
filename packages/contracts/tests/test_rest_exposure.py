@@ -52,7 +52,7 @@ def mint(claims: dict, secret: str | None = None) -> str:
     return f"{head}.{body}.{b64(sig)}"
 
 
-def token(tenant: str = TA, locations: list[str] | None | str = "all") -> str:
+def token(tenant: str = TA, locations: list[str] | str | None = "all") -> str:
     claims: dict = {"role": "authenticated", "tenant_id": tenant}
     if locations != "absent":
         claims["location_ids"] = None if locations == "all" else locations
@@ -130,7 +130,8 @@ def fixtures():
             (
                 (
                     "insert into public.import_batch "
-                    "(id, tenant_id, source_id, raw_file_id, location_id, parser, slice_key, applied_by) values "
+                    "(id, tenant_id, source_id, raw_file_id, location_id, parser, slice_key, "
+                    "applied_by) values "
                     "(%s, %s, %s, %s, %s, 'sr.x@v1', 'rest-centro', %s), "
                     "(%s, %s, %s, null, %s, 'sr.x@v1', 'rest-polanco', null)"
                 ),
@@ -138,8 +139,10 @@ def fixtures():
             ),
             (
                 (
-                    "insert into public.import_issue (tenant_id, batch_id, severity, code, message_es) values "
-                    "(%s, %s, 'info', 'centro_issue', 'Centro'), (%s, %s, 'info', 'polanco_issue', 'Polanco')"
+                    "insert into public.import_issue "
+                    "(tenant_id, batch_id, severity, code, message_es) values "
+                    "(%s, %s, 'info', 'centro_issue', 'Centro'), "
+                    "(%s, %s, 'info', 'polanco_issue', 'Polanco')"
                 ),
                 (TA, B_CENTRO, TA, B_POLANCO),
             ),
@@ -164,21 +167,15 @@ def fixtures():
             "menu_category",
             "location",
         ):
-            conn.execute(
-                f"delete from public.{table} where tenant_id in (%s, %s)", (TA, TB)
-            )
+            conn.execute(f"delete from public.{table} where tenant_id in (%s, %s)", (TA, TB))
         conn.execute("delete from public.app_user where id = %s", (USER,))
         conn.execute("delete from public.tenant where id in (%s, %s)", (TA, TB))
 
 
 def test_forged_and_expired_tokens_are_rejected(fixtures) -> None:
-    forged = mint(
-        {"role": "authenticated", "tenant_id": TA, "location_ids": None}, "x" * 40
-    )
+    forged = mint({"role": "authenticated", "tenant_id": TA, "location_ids": None}, "x" * 40)
     assert call("location?select=name", forged)[0] == 401
-    expired = mint(
-        {"role": "authenticated", "tenant_id": TA, "location_ids": None, "exp": 1}
-    )
+    expired = mint({"role": "authenticated", "tenant_id": TA, "location_ids": None, "exp": 1})
     assert call("location?select=name", expired)[0] == 401
 
 
@@ -215,18 +212,12 @@ def test_embedding_backend_only_or_hidden_data_is_refused(fixtures, embed: str) 
         status,
         body[:200],
     )
-    assert (
-        SECRET_PHONE not in body
-        and SECRET_FILE not in body
-        and SECRET_CONFIG not in body
-    )
+    assert SECRET_PHONE not in body and SECRET_FILE not in body and SECRET_CONFIG not in body
 
 
 def test_embedding_the_readable_columns_of_source_works(fixtures) -> None:
     # positive control: the refusals above are about privileges, not about a broken request
-    status, body = call(
-        "import_batch?select=slice_key,source(id,kind)&order=slice_key", token()
-    )
+    status, body = call("import_batch?select=slice_key,source(id,kind)&order=slice_key", token())
     assert status == 200, body[:200]
     kinds = {r["slice_key"]: r["source"]["kind"] for r in json.loads(body)}
     assert kinds == {"rest-centro": "sr_report", "rest-polanco": "sr_report"}
@@ -322,9 +313,7 @@ def test_graphql_does_not_expose_backend_only_tables_or_secrets(fixtures) -> Non
     # proves anything, so the test is reported as skipped (not run), never as passed.
     status, body = graphql("{ locationCollection { edges { node { name } } } }")
     if status != 200 or "Centro" not in body:
-        pytest.skip(
-            f"GraphQL does not serve data on this stack ({status}: {body[:120]})"
-        )
+        pytest.skip(f"GraphQL does not serve data on this stack ({status}: {body[:120]})")
     _, body = graphql("{ rawFileCollection { edges { node { filename } } } }")
     assert SECRET_FILE not in body
     _, body = graphql("{ sourceCollection { edges { node { config } } } }")
@@ -332,15 +321,9 @@ def test_graphql_does_not_expose_backend_only_tables_or_secrets(fixtures) -> Non
 
 
 def test_a_self_referencing_composite_foreign_key_embeds(fixtures) -> None:
-    status, body = call(
-        "menu_category?select=name,menu_category(name)&order=name", token()
-    )
+    status, body = call("menu_category?select=name,menu_category(name)&order=name", token())
     assert status == 200, body[:200]
-    rows = {
-        r["name"]: [c["name"] for c in r["menu_category"]] for r in json.loads(body)
-    }
+    rows = {r["name"]: [c["name"] for c in r["menu_category"]] for r in json.loads(body)}
     assert rows == {"Aguas": [], "Bebidas": ["Aguas"]}
-    status, body = call(
-        "menu_category?select=name,menu_category(name)", token(tenant=TB)
-    )
+    status, body = call("menu_category?select=name,menu_category(name)", token(tenant=TB))
     assert status == 200 and json.loads(body) == []

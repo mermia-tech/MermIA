@@ -57,9 +57,7 @@ def test_every_enum_has_the_database_labels(db_url: str) -> None:
     modelled = {
         name: cls
         for name, cls in vars(models).items()
-        if isinstance(cls, type)
-        and issubclass(cls, enum.StrEnum)
-        and cls is not enum.StrEnum
+        if isinstance(cls, type) and issubclass(cls, enum.StrEnum) and cls is not enum.StrEnum
     }
     assert len(expected) == len(modelled) == 24
     for name, labels in expected.items():

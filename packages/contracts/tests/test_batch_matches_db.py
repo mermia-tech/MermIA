@@ -155,9 +155,7 @@ def optional(annotation: object) -> bool:
 
 def unit(annotation: object) -> str | None:
     text = str(annotation or "")
-    return (
-        text.split("unit=")[1].split("'")[0].split(")")[0] if "unit=" in text else None
-    )
+    return text.split("unit=")[1].split("'")[0].split(")")[0] if "unit=" in text else None
 
 
 def enum_of(annotation: object) -> object:
@@ -180,15 +178,11 @@ def test_input_fields_map_to_columns(input_type: type) -> None:
         in_unit = unit(in_field.annotation) or unit(in_field.description)
         col_unit = unit(col_field.annotation) or unit(col_field.description)
         if in_unit and col_unit:
-            assert in_unit == col_unit, (
-                f"{input_type.__name__}.{name}: {in_unit} vs {col_unit}"
-            )
+            assert in_unit == col_unit, f"{input_type.__name__}.{name}: {in_unit} vs {col_unit}"
         # enums are the generated ones
         col_enum = enum_of(col_field.annotation)
         if isinstance(col_enum, type) and issubclass(col_enum, enum.StrEnum):
-            assert enum_of(in_field.annotation) is col_enum, (
-                f"{input_type.__name__}.{name}"
-            )
+            assert enum_of(in_field.annotation) is col_enum, f"{input_type.__name__}.{name}"
         # a field the database requires cannot be optional on the input side
         if (
             not optional(col_field.annotation)

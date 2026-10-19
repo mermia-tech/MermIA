@@ -102,9 +102,7 @@ def test_money_is_integer_centavos_and_unit_prices_keep_six_decimals() -> None:
     )
     assert price.unit_price_net == Decimal("0.22")
     with pytest.raises(ValidationError):
-        models.IngredientPriceRow(
-            **{**price.model_dump(), "unit_price_net": Decimal("0.2200001")}
-        )
+        models.IngredientPriceRow(**{**price.model_dump(), "unit_price_net": Decimal("0.2200001")})
     fields = models.DailySalesAggRow.model_fields
     assert fields["net_sales"].annotation is int
     assert fields["net_sales"].description == "unit=centavos"
@@ -135,8 +133,6 @@ def test_documented_jsonb_columns_are_typed_and_the_rest_are_open() -> None:
 
 
 def test_import_batch_stats_totals_reject_floats() -> None:
-    assert ImportBatchStats(totals={"net_sales": 3188000}).totals == {
-        "net_sales": 3188000
-    }
+    assert ImportBatchStats(totals={"net_sales": 3188000}).totals == {"net_sales": 3188000}
     with pytest.raises(ValidationError):
         ImportBatchStats(totals={"net_sales": 1234.56})

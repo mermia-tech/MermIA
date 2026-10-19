@@ -11,9 +11,7 @@ def input_types() -> dict[str, type]:
     return {
         name: cls
         for name, cls in vars(batch).items()
-        if inspect.isclass(cls)
-        and name.endswith("In")
-        and cls.__module__ == batch.__name__
+        if inspect.isclass(cls) and name.endswith("In") and cls.__module__ == batch.__name__
     }
 
 

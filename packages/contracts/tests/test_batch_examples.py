@@ -52,9 +52,7 @@ def test_invalid_examples_fail_for_the_labelled_reason(name: str, reason: str) -
 
 def test_json_schema_snapshot() -> None:
     schema = (
-        json.dumps(
-            NormalizedBatch.model_json_schema(by_alias=True), indent=2, sort_keys=True
-        )
+        json.dumps(NormalizedBatch.model_json_schema(by_alias=True), indent=2, sort_keys=True)
         + "\n"
     )
     if os.environ.get("UPDATE_SNAPSHOT") or not SNAPSHOT.exists():
