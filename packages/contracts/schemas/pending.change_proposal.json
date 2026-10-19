@@ -222,14 +222,13 @@
     },
     "NoPayload": {
       "additionalProperties": false,
-      "description": "Approve and rollback act on the batch the target points to; the why is `reason`.",
+      "description": "No values: the target is the batch.",
       "properties": {},
       "title": "NoPayload",
       "type": "object"
     },
     "RecipeLine": {
       "additionalProperties": false,
-      "description": "PROVISIONAL: whether the \"Recetas\" export carries costs and yields is unverified.",
       "properties": {
         "ingredient_external_id": {
           "anyOf": [
@@ -259,7 +258,7 @@
               "type": "string"
             }
           ],
-          "description": "unit=quantity, greater than zero",
+          "description": "unit=quantity (> 0)",
           "title": "Qty Base"
         },
         "unit": {
@@ -279,7 +278,7 @@
                   "type": "string"
                 }
               ],
-              "description": "unit=percent_points, greater than zero, column limit 999.9999"
+              "description": "unit=percent_points (> 0, max 999.9999)"
             },
             {
               "type": "null"
@@ -299,7 +298,6 @@
     },
     "RecipeUpsert": {
       "additionalProperties": false,
-      "description": "PROVISIONAL: the lines mirror the \"Recetas\" import.",
       "properties": {
         "lines": {
           "items": {
@@ -319,7 +317,7 @@
               "type": "string"
             }
           ],
-          "description": "unit=quantity, greater than zero",
+          "description": "unit=quantity (> 0)",
           "title": "Yield Qty"
         }
       },

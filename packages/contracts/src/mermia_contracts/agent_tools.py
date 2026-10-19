@@ -1,31 +1,56 @@
 """C4: the 12 agent tools in Anthropic tool format, derived from C3 plus propose_change.
 
 Each read tool is the RPC of the same name (rpc.RPCS); `propose_change` is the only write tool.
-Its schema stays flat on purpose (kind, target, values, reason): `values` is checked against
-the kind's payload by the ToolExecutor with pending.ChangeProposal, so the schema the model
-sees stays small. `target` is what the user said (a name); the confirmation service resolves it
-to the id that ChangeProposal.target_id holds.
+Its schema stays flat (kind, target, values, reason), and `values` is typed per kind: one closed
+variant for each payload (VALUES_FOR_KIND), and the variant must be the one of `kind`. Prices are
+what the user said, with a unit of a closed list ("$220 per kg" is 220 and "kg"); the model never
+converts. The confirmation service (MR-37, with the unit conversions of MR-25) converts to pesos
+per base unit, resolves `target` (a name) to ChangeProposal.target_id and stores the typed
+proposal: that conversion is NOT implemented in this package.
 """
 
 import hashlib
 import json
 from typing import Any, Final, TypedDict
 
-from pydantic import JsonValue
+from pydantic import model_validator
 
 from mermia_contracts.batch import Model, Text
-from mermia_contracts.pending import PendingKind
+from mermia_contracts.pending import (
+    IngredientPriceInput,
+    MenuItemPriceSet,
+    NoPayload,
+    PendingKind,
+    RecipeUpsert,
+)
 from mermia_contracts.rpc import RPCS
 
 TOKEN_LIMIT: Final = 125
 """Tokens one tool may add to the request (08 C4); measured by tools/measure_tool_tokens.py."""
 
 
+VALUES_FOR_KIND: Final[dict[PendingKind, type[Model]]] = {
+    PendingKind.ingredient_price_set: IngredientPriceInput,
+    PendingKind.recipe_upsert: RecipeUpsert,
+    PendingKind.menu_item_price_set: MenuItemPriceSet,
+    PendingKind.import_batch_approve: NoPayload,
+    PendingKind.import_batch_rollback: NoPayload,
+}
+"""The payload each kind accepts from the model. Only the ingredient price differs from what is
+stored (a unit instead of a base-unit price); the other four are the stored payloads."""
+
+
 class ProposeChangeArgs(Model):
     kind: PendingKind
     target: Text
-    values: dict[str, JsonValue]
+    values: IngredientPriceInput | MenuItemPriceSet | RecipeUpsert | NoPayload = NoPayload()
     reason: Text | None = None
+
+    @model_validator(mode="after")
+    def _values_match_kind(self) -> "ProposeChangeArgs":
+        if type(self.values) is not VALUES_FOR_KIND[self.kind]:
+            raise ValueError(f"the values do not match kind {self.kind.value}")
+        return self
 
 
 class ToolDef(TypedDict):

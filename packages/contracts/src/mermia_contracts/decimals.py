@@ -92,13 +92,18 @@ PositiveUnitPricePerBaseUnit = Annotated[
         "greater than zero"
     ),
 ]
+PositivePricePerUnit = Annotated[
+    Decimal,
+    _Exact(20, 6, gt=_ZERO),
+    Field(description="pesos per `unit` (> 0)"),
+]
 PositiveQuantity = Annotated[
-    Decimal, _Exact(18, 6, gt=_ZERO), Field(description="unit=quantity, greater than zero")
+    Decimal, _Exact(18, 6, gt=_ZERO), Field(description="unit=quantity (> 0)")
 ]
 PositivePercentPoints = Annotated[
     Decimal,
     _Exact(7, 4, gt=_ZERO),
-    Field(description="unit=percent_points, greater than zero, column limit 999.9999"),
+    Field(description="unit=percent_points (> 0, max 999.9999)"),
 ]
 """Strictly positive twins of the types above, for values that divide or multiply a cost: a
 price, a quantity, a yield. Each keeps the digits of its database column."""

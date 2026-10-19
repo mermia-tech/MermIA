@@ -13,7 +13,7 @@ from mermia_contracts.agent_tools import (
     tool_definitions,
     tools_sha256,
 )
-from mermia_contracts.pending import ChangeProposal
+from mermia_contracts.pending import ChangeProposal, IngredientPriceInput
 from mermia_contracts.rpc import RPCS
 
 TOOLS = tool_definitions()
@@ -60,17 +60,24 @@ def test_hash_is_stable() -> None:
 
 
 def test_tool_input_from_json_loads_becomes_a_typed_proposal() -> None:
-    """What the SDK hands over (floats and ints from json.loads) must validate, exactly."""
+    """What the SDK hands over (floats and ints from json.loads) must validate, exactly.
+
+    The price arrives per the unit the user said ($220 per kg). The proposal that is stored is
+    per base unit (0.22 per g): the confirmation service converts between the two (MR-37 with
+    MR-25), which this package does not do, so the stored price below is written by hand.
+    """
     tool_input = json.loads(
         '{"kind": "ingredient_price.set", "target": "carne al pastor", "reason": "subió",'
-        ' "values": {"unit_price": 0.22, "effective_from": "2026-10-19"}}'
+        ' "values": {"unit_price": 220.00, "unit": "kg", "effective_from": "2026-10-19"}}'
     )
     args = ProposeChangeArgs.model_validate(tool_input)
+    assert isinstance(args.values, IngredientPriceInput)
     resolved: dict[str, Any] = {
         "kind": args.kind,
         "target_id": "0f7a1c52-3b6e-7c1a-9d33-000000000001",  # resolved from args.target
-        "values": args.values,
+        "values": {"unit_price": Decimal("0.22"), "effective_from": args.values.effective_from},
         "reason": args.reason,
     }
     proposal = TypeAdapter(ChangeProposal).validate_python(resolved)
     assert proposal.values.unit_price == Decimal("0.22")  # type: ignore[union-attr]
+    assert str(proposal.values.effective_from) == "2026-10-19"  # type: ignore[union-attr]

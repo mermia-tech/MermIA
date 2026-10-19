@@ -22,6 +22,7 @@ from mermia_contracts.batch import Model, Text
 from mermia_contracts.db.models import IngredientPriceSource, PendingChangeStatus
 from mermia_contracts.decimals import (
     PositivePercentPoints,
+    PositivePricePerUnit,
     PositiveQuantity,
     PositiveUnitPricePerBaseUnit,
 )
@@ -45,6 +46,18 @@ TARGET_TYPE: dict[PendingKind, str] = {
 """`pending_change.target_type` for each kind; `target_id` is that table's id."""
 
 
+PurchaseUnit = Literal["g", "kg", "ml", "l", "pza"]
+"""The closed list of units a user can quote a price in. No free text."""
+
+
+class IngredientPriceInput(Model):
+    """Pesos per `unit`, as the user said it (e.g. $220 per kg)."""
+
+    unit_price: PositivePricePerUnit
+    unit: PurchaseUnit
+    effective_from: dt.date
+
+
 class IngredientPriceSet(Model):
     """Becomes `ingredient_price.unit_price_net`: pesos per BASE unit of the ingredient (g, ml or
     pza), not per purchase unit. "$220 per kg" is 0.22 for an ingredient whose base unit is g;
@@ -58,9 +71,8 @@ class IngredientPriceSet(Model):
 
 # Mirrors batch.RecipeLineIn field for field. Not reused: its strict Decimal fields reject the
 # numbers of a parsed-JSON dict (see decimals.py) and batch.py is out of MR-11's scope.
+# PROVISIONAL: whether the "Recetas" export carries costs and yields is unverified.
 class RecipeLine(Model):
-    """PROVISIONAL: whether the "Recetas" export carries costs and yields is unverified."""
-
     ingredient_name: Text
     ingredient_external_id: Text | None = None
     qty_base: PositiveQuantity
@@ -70,9 +82,8 @@ class RecipeLine(Model):
     because the "Recetas" export that fills it is unverified; limited to the column's 999.9999."""
 
 
+# PROVISIONAL: the lines mirror the "Recetas" import.
 class RecipeUpsert(Model):
-    """PROVISIONAL: the lines mirror the "Recetas" import."""
-
     yield_qty: PositiveQuantity
     lines: Annotated[list[RecipeLine], Field(min_length=1)]
 
@@ -88,7 +99,7 @@ class MenuItemPriceSet(Model):
 
 
 class NoPayload(Model):
-    """Approve and rollback act on the batch the target points to; the why is `reason`."""
+    """No values: the target is the batch."""
 
 
 class _Proposal(Model):

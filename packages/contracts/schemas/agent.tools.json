@@ -768,7 +768,70 @@
     "description": "Propose a change for human approval. Never applies it.",
     "input_schema": {
       "$defs": {
-        "JsonValue": {},
+        "IngredientPriceInput": {
+          "additionalProperties": false,
+          "description": "Pesos per `unit`, as the user said it (e.g. $220 per kg).",
+          "properties": {
+            "effective_from": {
+              "format": "date",
+              "type": "string"
+            },
+            "unit": {
+              "enum": [
+                "g",
+                "kg",
+                "ml",
+                "l",
+                "pza"
+              ],
+              "type": "string"
+            },
+            "unit_price": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "pesos per `unit` (> 0)"
+            }
+          },
+          "required": [
+            "unit_price",
+            "unit",
+            "effective_from"
+          ],
+          "type": "object"
+        },
+        "MenuItemPriceSet": {
+          "additionalProperties": false,
+          "properties": {
+            "effective_from": {
+              "format": "date",
+              "type": "string"
+            },
+            "price_gross": {
+              "description": "unit=centavos, greater than zero",
+              "exclusiveMinimum": 0,
+              "maximum": 9223372036854775807,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "price_gross",
+            "effective_from"
+          ],
+          "type": "object"
+        },
+        "NoPayload": {
+          "additionalProperties": false,
+          "description": "No values: the target is the batch.",
+          "properties": {},
+          "type": "object"
+        },
         "PendingKind": {
           "enum": [
             "ingredient_price.set",
@@ -778,6 +841,98 @@
             "import_batch.rollback"
           ],
           "type": "string"
+        },
+        "RecipeLine": {
+          "additionalProperties": false,
+          "properties": {
+            "ingredient_external_id": {
+              "anyOf": [
+                {
+                  "pattern": "\\S",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "ingredient_name": {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            "qty_base": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "unit=quantity (> 0)"
+            },
+            "unit": {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            "yield_override_pct": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "exclusiveMinimum": 0.0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ],
+                  "description": "unit=percent_points (> 0, max 999.9999)"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "ingredient_name",
+            "qty_base",
+            "unit"
+          ],
+          "type": "object"
+        },
+        "RecipeUpsert": {
+          "additionalProperties": false,
+          "properties": {
+            "lines": {
+              "items": {
+                "$ref": "#/$defs/RecipeLine"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "yield_qty": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "unit=quantity (> 0)"
+            }
+          },
+          "required": [
+            "yield_qty",
+            "lines"
+          ],
+          "type": "object"
         }
       },
       "additionalProperties": false,
@@ -802,16 +957,26 @@
           "type": "string"
         },
         "values": {
-          "additionalProperties": {
-            "$ref": "#/$defs/JsonValue"
-          },
-          "type": "object"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IngredientPriceInput"
+            },
+            {
+              "$ref": "#/$defs/MenuItemPriceSet"
+            },
+            {
+              "$ref": "#/$defs/RecipeUpsert"
+            },
+            {
+              "$ref": "#/$defs/NoPayload"
+            }
+          ],
+          "default": {}
         }
       },
       "required": [
         "kind",
-        "target",
-        "values"
+        "target"
       ],
       "type": "object"
     },
