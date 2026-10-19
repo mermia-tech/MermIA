@@ -1,7 +1,7 @@
 [project]
 name = "mermia-mock-rpc"
 version = "0.1.0"
-description = "MermIA mock RPC server: the 11 read RPCs answered from the fixture restaurant, in the C3 shapes."
+description = "MermIA mock RPC server: the 11 read RPCs answered with the C3 examples."
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
