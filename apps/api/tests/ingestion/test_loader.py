@@ -277,6 +277,6 @@ def test_another_location_s_code_for_another_dish_is_not_reused(
 
 
 def test_negative_quantities_wait_for_review(conn: psycopg.Connection[Any]) -> None:
-    refund = ["P001", "Tacos al pastor (orden de 3)", "Tacos", -1, 65, -65, 0, -65]
+    refund = ["P043", "Coca-Cola", "Bebidas", -1, 30, -30, 0, -30]  # one row per item (MR-15)
     r = load(conn, report("12/10/2026", PASTOR, refund), source_id=CENTRO_ITEMS)
     assert (r.status, [i.code for i in r.issues]) == ("needs_review", ["rows.negative"])
