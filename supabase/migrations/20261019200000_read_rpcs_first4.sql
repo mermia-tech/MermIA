@@ -519,7 +519,7 @@ begin
       'missing_business_days', missing,
       'stale_costs', stale,
       'coverage', jsonb_build_object('raw', trim_scale(coalesce(coverage, 0)), 'text', app.fmt_pct(coalesce(coverage, 0)))),
-    locs, '[]', coverage, null);
+    locs, '[]', null, null);
 end
 $$;
 

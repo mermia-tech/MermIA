@@ -6,6 +6,7 @@ from RPCS. Needs MERMIA_DB_URL and the seed (supabase db start / db reset load i
 """
 
 import json
+from pathlib import Path
 from typing import Any
 
 import psycopg
@@ -107,3 +108,18 @@ def test_invalid_arguments_get_an_invalid_args_envelope(db_url: str) -> None:
     r = call(db_url, "get_top_dishes", {"period": "nope", "metric": "units"}, OWNER)
     TypeAdapter(RpcEnvelope[RPCS["get_top_dishes"].data]).validate_python(r)  # type: ignore[misc,arg-type]
     assert r["ok"] is False and r["error"]["code"] == "invalid_args"
+
+
+EXAMPLES = Path(__file__).parent / "examples" / "rpc"
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["get_sales_summary", "compare_periods", "get_top_dishes", "get_data_status"],
+)
+def test_the_contract_example_is_what_the_rpc_answers(db_url: str, name: str) -> None:
+    """The C3 examples (and so the mock server, MR-13) say what the real RPC says on the seed."""
+    doc = json.loads((EXAMPLES / f"{name}.json").read_text())
+    adapter = TypeAdapter(RpcEnvelope[RPCS[name].data])  # type: ignore[misc,arg-type]
+    live = adapter.validate_python(call(db_url, name, doc["args"], OWNER))
+    assert live == adapter.validate_python(doc["response"])
