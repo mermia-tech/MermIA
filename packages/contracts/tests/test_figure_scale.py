@@ -68,7 +68,7 @@ def test_the_table_pins_the_agreed_units() -> None:
         "margin": "centavos",
         "tickets": "count",
         "guests": "count",
-        "units": "count",
+        "units": "quantity",
         "food_cost_pct": "percent_points",
         "margin_pct": "percent_points",
     }
@@ -93,11 +93,27 @@ def test_the_same_pesos_in_pesos_instead_of_centavos_is_a_fractional_centavo(met
         ComparePeriodsData.model_validate(_compare(metric, "184320.50", 0, "184320.50"))
 
 
-@pytest.mark.parametrize("metric", ["tickets", "guests", "units"])
+@pytest.mark.parametrize("metric", ["tickets", "guests"])
 def test_counts_are_whole_numbers(metric: str) -> None:
     ComparePeriodsData.model_validate(_compare(metric, 15, 1, 14))
     with pytest.raises(ValidationError, match="whole number"):
         ComparePeriodsData.model_validate(_compare(metric, 15.5, 1, 14.5))
+
+
+def test_units_sold_are_a_quantity_with_up_to_six_decimals() -> None:
+    """item_sales_agg.units and sale_line.qty are numeric(18,6): a barbacoa sold by the kilo."""
+    ComparePeriodsData.model_validate(_compare("units", "12.5", 10, "2.5"))
+    ComparePeriodsData.model_validate(_compare("units", "0.000001", 0, "0.000001"))
+    ComparePeriodsData.model_validate(_compare("units", 15, 1, 14))  # whole units still fit
+    with pytest.raises(ValidationError) as info:
+        ComparePeriodsData.model_validate(_compare("units", "0.0000001", 0, "0.0000001"))
+    assert info.value.errors()[0]["type"] == "decimal_max_places"
+
+
+def test_a_change_in_units_sold_is_exact() -> None:
+    """Quantities add up exactly (no rounding), so abs_change is a - b with no tolerance."""
+    with pytest.raises(ValidationError, match="abs_change"):
+        ComparePeriodsData.model_validate(_compare("units", "12.5", 10, "2.500001"))
 
 
 def test_percent_metrics_keep_up_to_four_decimals() -> None:
@@ -153,11 +169,17 @@ def test_top_dishes_money_metrics_are_whole_centavos(metric: str) -> None:
         TopDishesData.model_validate(_dishes(metric, 42000.5))
 
 
-def test_top_dishes_units_are_a_count_and_margin_pct_are_percent_points() -> None:
+def test_top_dishes_units_are_a_quantity_and_margin_pct_are_percent_points() -> None:
     TopDishesData.model_validate(_dishes("units", 640))
+    TopDishesData.model_validate(_dishes("units", "12.5"))  # sold by the kilo
     TopDishesData.model_validate(_dishes("margin_pct", "67.1631"))
-    with pytest.raises(ValidationError, match="whole number"):
-        TopDishesData.model_validate(_dishes("units", 640.5))
+    with pytest.raises(ValidationError) as info:
+        TopDishesData.model_validate(_dishes("units", "12.1234567"))
+    assert info.value.errors()[0]["type"] == "decimal_max_places"
+
+
+def test_compare_locations_units_may_be_fractional() -> None:
+    CompareLocationsData.model_validate(_locations("units", "12.5", "-2.25"))
 
 
 def _example(name: str) -> dict[str, Any]:

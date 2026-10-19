@@ -15,10 +15,17 @@
           "$ref": "#/$defs/Pct"
         },
         "tickets": {
-          "maximum": 2147483647,
-          "minimum": 0,
-          "title": "Tickets",
-          "type": "integer"
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tickets"
         }
       },
       "required": [

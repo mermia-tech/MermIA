@@ -249,14 +249,31 @@
     },
     "PriceSuggestion": {
       "additionalProperties": false,
+      "description": "`price_suggestion` has a free-text `subject` and no dish id or current price, so\n`menu_item_id` and `current_price` are present only when the subject resolves to a dish.",
       "properties": {
         "current_price": {
-          "$ref": "#/$defs/Money"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Money"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "menu_item_id": {
-          "format": "uuid",
-          "title": "Menu Item Id",
-          "type": "string"
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Menu Item Id"
         },
         "name": {
           "pattern": "\\S",
@@ -268,9 +285,7 @@
         }
       },
       "required": [
-        "menu_item_id",
         "name",
-        "current_price",
         "suggested_price"
       ],
       "title": "PriceSuggestion",

@@ -33,6 +33,7 @@ def _pastor(**over: Any) -> dict[str, Any]:
     doc: dict[str, Any] = {
         "match": "resolved",
         "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000001",
+        "location_id": "0f7a1c52-3b6e-7c1a-9d11-000000000001",
         "name": "Tacos al pastor",
         "cost": _money(1840),
         "price_gross": _money(6500),

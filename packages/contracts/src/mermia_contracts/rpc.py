@@ -52,7 +52,7 @@ BreakdownBy = Literal["payment_method", "staff", "hour", "weekday", "channel", "
 CancellationKind = Literal["cancellations", "discounts"]
 
 
-Unit = Literal["centavos", "count", "percent_points"]
+Unit = Literal["centavos", "count", "quantity", "percent_points"]
 
 METRIC_UNIT: Final[dict[str, Unit]] = {
     "net_sales": "centavos",
@@ -61,11 +61,14 @@ METRIC_UNIT: Final[dict[str, Unit]] = {
     "margin": "centavos",
     "tickets": "count",
     "guests": "count",
-    "units": "count",
+    "units": "quantity",
     "food_cost_pct": "percent_points",
     "margin_pct": "percent_points",
 }
 """The unit of `Figure.raw` for each metric of compare_* and get_top_dishes.
+
+`count` is a whole number (tickets, guests); `quantity` is a decimal with up to six places like
+`item_sales_agg.units` (numeric(18,6)), so a dish sold by the kilo can be 12.5.
 
 An amount of money is integer centavos everywhere, so `net_sales` has the same `raw` in
 get_sales_summary (a Money) and in compare_periods (a Figure).
@@ -76,6 +79,7 @@ _PCT_ROUNDING = Decimal("0.0001")  # a Pct keeps four decimals
 _SCALE_ROUNDING: dict[Unit, Decimal] = {
     "centavos": Decimal(1),
     "count": Decimal(0),
+    "quantity": Decimal(0),
     "percent_points": _PCT_ROUNDING,
 }
 
@@ -115,7 +119,8 @@ class Figure(Model):
     """A number whose unit depends on the metric asked for (compare_*, top dishes).
 
     The unit is not a field: it follows from `metric` through METRIC_UNIT. Money is integer
-    centavos (as Money.raw), counts are whole numbers and percentages are percent points.
+    centavos (as Money.raw), counts are whole numbers, units sold are quantities with up to six
+    decimals and percentages are percent points.
     """
 
     raw: FigureRaw
@@ -238,12 +243,16 @@ class GetDataStatusArgs(Model):
 
 
 class SalesSummaryData(Model):
+    """Every figure but `net_sales` is null when the data does not report it: not reported is not
+    zero (`daily_sales_agg` and `daily_location_metrics` allow null). The keys stay required, so a
+    figure that is left out is an error. A real zero is 0."""
+
     net_sales: Money
-    tickets: Count
-    avg_ticket: Money
-    guests: Count
-    discounts: Money
-    cancellations: Money
+    tickets: Count | None
+    avg_ticket: Money | None
+    guests: Count | None
+    discounts: Money | None
+    cancellations: Money | None
     change_vs_previous: Pct | None = None
 
 
@@ -321,7 +330,7 @@ class TopDishesData(Model):
 class BreakdownRow(Model):
     key: Text
     net_sales: Money
-    tickets: Count
+    tickets: Count | None  # null when the source has no ticket count (item-level data has none)
     share: Pct
 
 
@@ -360,6 +369,7 @@ class DishMarginResolved(Model):
 
     match: Literal["resolved"]
     menu_item_id: UUID
+    location_id: UUID  # prices and cost snapshots are per location: the margin is for this one
     name: Text
     cost: Money
     price_gross: PositiveMoney
@@ -396,7 +406,30 @@ class DishMarginAmbiguous(Model):
     candidates: Annotated[list[DishCandidate], Field(min_length=1, max_length=5)]
 
 
-DishMarginData = Annotated[DishMarginResolved | DishMarginAmbiguous, Field(discriminator="match")]
+class LocationRef(Model):
+    location_id: UUID
+    name: Text
+
+
+class DishMarginNeedsLocation(Model):
+    """The dish is known but prices and costs differ by location and none was asked for (or can
+    be told apart). No margin is given: the caller asks again with one of `locations`."""
+
+    match: Literal["needs_location"]
+    menu_item_id: UUID
+    name: Text
+    locations: Annotated[list[LocationRef], Field(min_length=2)]
+
+    @model_validator(mode="after")
+    def _distinct(self) -> DishMarginNeedsLocation:
+        if len({ref.location_id for ref in self.locations}) != len(self.locations):
+            raise ValueError("the locations to choose from must be distinct")
+        return self
+
+
+DishMarginData = Annotated[
+    DishMarginResolved | DishMarginAmbiguous | DishMarginNeedsLocation, Field(discriminator="match")
+]
 
 
 class CategoryFoodCost(Model):
@@ -445,9 +478,12 @@ class TargetBreach(Model):
 
 
 class PriceSuggestion(Model):
-    menu_item_id: UUID
+    """`price_suggestion` has a free-text `subject` and no dish id or current price, so
+    `menu_item_id` and `current_price` are present only when the subject resolves to a dish."""
+
+    menu_item_id: UUID | None = None
     name: Text
-    current_price: Money
+    current_price: Money | None = None
     suggested_price: Money
 
 

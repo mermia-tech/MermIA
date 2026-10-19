@@ -32,7 +32,7 @@
     },
     "Figure": {
       "additionalProperties": false,
-      "description": "A number whose unit depends on the metric asked for (compare_*, top dishes).\n\nThe unit is not a field: it follows from `metric` through METRIC_UNIT. Money is integer\ncentavos (as Money.raw), counts are whole numbers and percentages are percent points.",
+      "description": "A number whose unit depends on the metric asked for (compare_*, top dishes).\n\nThe unit is not a field: it follows from `metric` through METRIC_UNIT. Money is integer\ncentavos (as Money.raw), counts are whole numbers, units sold are quantities with up to six\ndecimals and percentages are percent points.",
       "properties": {
         "raw": {
           "anyOf": [

@@ -179,12 +179,27 @@
     },
     "SalesSummaryData": {
       "additionalProperties": false,
+      "description": "Every figure but `net_sales` is null when the data does not report it: not reported is not\nzero (`daily_sales_agg` and `daily_location_metrics` allow null). The keys stay required, so a\nfigure that is left out is an error. A real zero is 0.",
       "properties": {
         "avg_ticket": {
-          "$ref": "#/$defs/Money"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Money"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "cancellations": {
-          "$ref": "#/$defs/Money"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Money"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "change_vs_previous": {
           "anyOf": [
@@ -198,22 +213,43 @@
           "default": null
         },
         "discounts": {
-          "$ref": "#/$defs/Money"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Money"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "guests": {
-          "maximum": 2147483647,
-          "minimum": 0,
-          "title": "Guests",
-          "type": "integer"
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Guests"
         },
         "net_sales": {
           "$ref": "#/$defs/Money"
         },
         "tickets": {
-          "maximum": 2147483647,
-          "minimum": 0,
-          "title": "Tickets",
-          "type": "integer"
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tickets"
         }
       },
       "required": [

@@ -74,6 +74,43 @@
       "title": "DishMarginAmbiguous",
       "type": "object"
     },
+    "DishMarginNeedsLocation": {
+      "additionalProperties": false,
+      "description": "The dish is known but prices and costs differ by location and none was asked for (or can\nbe told apart). No margin is given: the caller asks again with one of `locations`.",
+      "properties": {
+        "locations": {
+          "items": {
+            "$ref": "#/$defs/LocationRef"
+          },
+          "minItems": 2,
+          "title": "Locations",
+          "type": "array"
+        },
+        "match": {
+          "const": "needs_location",
+          "title": "Match",
+          "type": "string"
+        },
+        "menu_item_id": {
+          "format": "uuid",
+          "title": "Menu Item Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "match",
+        "menu_item_id",
+        "name",
+        "locations"
+      ],
+      "title": "DishMarginNeedsLocation",
+      "type": "object"
+    },
     "DishMarginResolved": {
       "additionalProperties": false,
       "description": "Margin and food cost on the NET price (without IVA), the basis of 03 and 09.\n\nmargin = net_price - cost; margin_pct = margin / net_price x 100; food_cost = cost /\nnet_price x 100, so margin_pct + food_cost = 100. `price_gross` is the menu price with IVA,\nonly to quote it: no percentage here is on it. Cost and prices are rounded to the centavo,\nthe percentages come from the unrounded values (they agree within that rounding).",
@@ -94,6 +131,11 @@
         },
         "food_cost": {
           "$ref": "#/$defs/Pct"
+        },
+        "location_id": {
+          "format": "uuid",
+          "title": "Location Id",
+          "type": "string"
         },
         "margin": {
           "$ref": "#/$defs/Money"
@@ -126,6 +168,7 @@
       "required": [
         "match",
         "menu_item_id",
+        "location_id",
         "name",
         "cost",
         "price_gross",
@@ -164,6 +207,27 @@
         "code"
       ],
       "title": "Flag",
+      "type": "object"
+    },
+    "LocationRef": {
+      "additionalProperties": false,
+      "properties": {
+        "location_id": {
+          "format": "uuid",
+          "title": "Location Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "location_id",
+        "name"
+      ],
+      "title": "LocationRef",
       "type": "object"
     },
     "Meta": {
@@ -349,6 +413,7 @@
           "discriminator": {
             "mapping": {
               "ambiguous": "#/$defs/DishMarginAmbiguous",
+              "needs_location": "#/$defs/DishMarginNeedsLocation",
               "resolved": "#/$defs/DishMarginResolved"
             },
             "propertyName": "match"
@@ -359,6 +424,9 @@
             },
             {
               "$ref": "#/$defs/DishMarginAmbiguous"
+            },
+            {
+              "$ref": "#/$defs/DishMarginNeedsLocation"
             }
           ]
         },
@@ -399,6 +467,6 @@
     "ok",
     "meta"
   ],
-  "title": "RpcEnvelope[Annotated[Union[DishMarginResolved, DishMarginAmbiguous], FieldInfo(annotation=NoneType, required=True, discriminator='match')]]",
+  "title": "RpcEnvelope[Annotated[Union[DishMarginResolved, DishMarginAmbiguous, DishMarginNeedsLocation], FieldInfo(annotation=NoneType, required=True, discriminator='match')]]",
   "type": "object"
 }
