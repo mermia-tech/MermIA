@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # Cancel superseded PR runs only; every commit on main gets a full result.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  python:
+    name: Python (ruff, mypy, pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --all-packages --all-groups
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Ruff format
+        run: uv run ruff format --check .
+
+      - name: Mypy
+        run: uv run mypy
+
+      - name: Pytest
+        run: uv run pytest
+
+  db:
+    name: Database (pgTAP)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find Supabase project
+        id: find
+        run: |
+          # Same rule as .claude/skills/check/check.sh: run once pgTAP tests exist.
+          test_file=$(find . \( -path ./node_modules -o -path ./.venv \) -prune -o -path '*/supabase/tests/*.sql' -print -quit)
+          if [ -z "$test_file" ]; then
+            echo "No supabase/tests yet (added in MR-14); skipping pgTAP."
+            echo "workdir=" >> "$GITHUB_OUTPUT"
+          else
+            echo "workdir=${test_file%%/supabase/*}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: supabase/setup-cli@v1
+        if: steps.find.outputs.workdir != ''
+        with:
+          version: latest
+
+      - name: Start database
+        if: steps.find.outputs.workdir != ''
+        run: supabase db start --workdir "${{ steps.find.outputs.workdir }}"
+
+      - name: Run pgTAP tests
+        if: steps.find.outputs.workdir != ''
+        run: supabase test db --workdir "${{ steps.find.outputs.workdir }}"

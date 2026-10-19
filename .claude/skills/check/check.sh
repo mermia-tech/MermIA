@@ -42,7 +42,7 @@ if [ -f pyproject.toml ] && command -v uv >/dev/null 2>&1; then
   fi
 
   if has_tool mypy; then
-    run "mypy" uv run mypy .
+    run "mypy" uv run mypy
   else
     skipped+=("mypy (not a dev dependency yet)")
   fi
@@ -66,9 +66,12 @@ else
   skipped+=("python checks (no pyproject.toml yet, see MR-9)")
 fi
 
-if find . -path ./node_modules -prune -o -path '*/supabase/tests/*.sql' -print -quit 2>/dev/null | grep -q .; then
+supabase_test=$(find . \( -path ./node_modules -o -path ./.venv \) -prune -o -path '*/supabase/tests/*.sql' -print -quit 2>/dev/null)
+if [ -n "$supabase_test" ]; then
+  # Run from the folder that holds supabase/ (for example packages/db). Needs a local db: `supabase db start`.
+  supabase_workdir=${supabase_test%%/supabase/*}
   if command -v supabase >/dev/null 2>&1; then
-    run "pgTAP" supabase test db
+    run "pgTAP" supabase test db --workdir "$supabase_workdir"
   else
     skipped+=("pgTAP (supabase CLI not installed)")
   fi

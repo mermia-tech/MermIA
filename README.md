@@ -6,10 +6,12 @@ conventions, and `docs/kickoff/` for the research and plan.
 ## Layout
 
 ```
+apps/api/                 The one FastAPI service (uv workspace member)
 supabase/                 Supabase CLI project: migrations (append-only), pgTAP tests
 packages/contracts/       Python package: generated DB row models and the NormalizedBatch contract
 docs/kickoff/             Research, architecture (09) and the 4-week plan (08)
 docs/superpowers/         Design specs and implementation plans
+.github/workflows/ci.yml  CI: ruff, mypy, pytest, pgTAP
 ```
 
 ## Prerequisites
@@ -17,6 +19,26 @@ docs/superpowers/         Design specs and implementation plans
 Docker running, the Supabase CLI (`brew install supabase`; 2.121.0 was used) and `uv`.
 The Supabase CLI finds `supabase/` from any folder inside the repo, so run its commands
 from wherever you are.
+
+## Development
+
+Requires [uv](https://docs.astral.sh/uv/). Python 3.12 is installed by uv from `.python-version`.
+
+```bash
+uv sync --all-packages --all-groups   # install every workspace member and dev tools
+uv run ruff check . && uv run ruff format --check .
+uv run mypy
+uv run pytest
+uv run uvicorn mermia_api.main:app --reload   # local API at http://127.0.0.1:8000/health
+```
+
+Or run all checks at once: `.claude/skills/check/check.sh` (`/check` in Claude Code).
+
+Layout (a `uv` workspace, see `docs/kickoff/09-architecture.md` §1):
+- `apps/api`: the one FastAPI service.
+- `packages/*`: shared code, starting with `packages/contracts` (MR-10) and `packages/db` (MR-14).
+
+CI (`.github/workflows/ci.yml`) runs ruff, mypy and pytest on every PR, plus pgTAP once a `supabase/` project exists.
 
 ## Database
 
