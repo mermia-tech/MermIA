@@ -3,8 +3,9 @@
 -- Facts are insert-only and batch-scoped (09 D3): the loader (apps/api ingestion) inserts a
 -- batch's rows with the batch in status parsed or needs_review, where no view reads them. These
 -- functions only move batch status:
---   apply_batch:    parsed | needs_review -> applied; the applied batch of the same slice ->
---                   superseded, remembered in supersedes_batch_id.
+--   apply_batch:    parsed | needs_review -> applied, and rolled_back -> applied ("restore",
+--                   an undone Deshacer); the applied batch of the same slice -> superseded,
+--                   remembered in supersedes_batch_id.
 --   rollback_batch: applied -> rolled_back; the batch it superseded, if still superseded ->
 --                   applied again ("Deshacer" restores the earlier numbers).
 -- Both are SECURITY DEFINER, executable by service_role only (the backend), and take the acting
@@ -45,8 +46,8 @@ begin
   if not found then
     raise exception 'batch % not found', batch_id using errcode = 'P0002';
   end if;
-  if b.status not in ('parsed', 'needs_review') then
-    raise exception 'batch % is %, only parsed or needs_review batches apply', batch_id, b.status
+  if b.status not in ('parsed', 'needs_review', 'rolled_back') then
+    raise exception 'batch % is %, only parsed, needs_review or rolled_back batches apply', batch_id, b.status
       using errcode = '55000';
   end if;
   perform app.check_batch_actor(b, actor_user_id);

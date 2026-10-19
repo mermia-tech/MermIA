@@ -35,6 +35,7 @@ from mermia_contracts.keys import normalize_name, slice_key
 SUPPORTED = {Grain.item_daily: "item_sales", Grain.daily: "daily_sales"}
 ROW_LISTS = ("menu_items", "item_sales", "daily_sales", "tickets", "purchases", "recipes")
 OPEN = ("parsed", "needs_review", "applied")  # statuses a duplicate is found among
+SLICE = r"^[^:]+:[^:]+:\d{4}-\d{2}-\d{2}:\d{4}-\d{2}-\d{2}$"  # as mermia_contracts.keys builds it
 
 
 @dataclass(frozen=True)
@@ -109,6 +110,12 @@ def _load(
 
     location_id = _location(conn, tenant_id, source_location, batch.location_hint, reject, review)
     key = slice_key(location_id, batch.parser, batch.period) if location_id else None
+    # one load per slice at a time: a file arriving twice at once (email and WhatsApp) must
+    # meet the duplicate check, not the unique index on applied slices
+    conn.execute(
+        "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
+        (f"{tenant_id}:{key or digest}",),
+    )
 
     earlier = conn.execute(
         """select id, status::text from public.import_batch
@@ -130,12 +137,25 @@ def _load(
             )
         )
     _check_rows(batch, reject)
+    # any applied batch of the same report, location and overlapping days: the views take the
+    # latest applied batch per day, so this upload would replace numbers already in use
     if (
-        key is not None
+        location_id is not None
         and conn.execute(
             """select 1 from public.import_batch
-               where tenant_id = %s and slice_key = %s and status = 'applied'""",
-            (tenant_id, key),
+               where tenant_id = %s and location_id = %s and status = 'applied'
+                 and slice_key ~ %s
+                 and split_part(slice_key, ':', 2) = %s
+                 and split_part(slice_key, ':', 3)::date <= %s
+                 and split_part(slice_key, ':', 4)::date >= %s""",
+            (
+                tenant_id,
+                location_id,
+                SLICE,
+                batch.parser.split("@", 1)[0],
+                batch.period.to,
+                batch.period.from_,
+            ),
         ).fetchone()
     ):
         review.append(
@@ -157,6 +177,27 @@ def _load(
                 f"{batch.period.from_:%d/%m/%Y} al {batch.period.to:%d/%m/%Y}.",
             )
         )
+    if any(x.units < 0 or x.net < 0 for x in batch.item_sales) or any(
+        d.net_sales < 0 for d in batch.daily_sales
+    ):
+        review.append(
+            _issue(
+                IssueSeverity.warning,
+                "rows.negative",
+                "Hay cantidades o importes negativos: confirma si son devoluciones.",
+            )
+        )
+    if location_id is not None:
+        for m in batch.menu_items:
+            if _find_item(conn, tenant_id, location_id, m.external_id, m.name)[1] == "code":
+                review.append(
+                    _issue(
+                        IssueSeverity.warning,
+                        "item.code_name_mismatch",
+                        f"La clave {m.external_id} ya es de otro platillo; «{m.name}» se dará "
+                        "de alta aparte. Confirma que es correcto.",
+                    )
+                )
     if any(i.severity == IssueSeverity.error for i in batch.issues):
         review.append(
             _issue(
@@ -266,6 +307,15 @@ def _check_rows(batch: NormalizedBatch, reject: list[IssueIn]) -> None:
         net = sum(x.net for x in batch.item_sales)
         units: Decimal | None = sum((x.units for x in batch.item_sales), Decimal(0))
         outside = sum(1 for x in batch.item_sales if x.period_from < p.from_ or x.period_to > p.to)
+        if any(x.period_from != x.period_to for x in batch.item_sales):
+            reject.append(
+                _issue(
+                    IssueSeverity.error,
+                    "batch.items_multi_day",
+                    "Necesito los productos vendidos de un solo día por archivo; este reporte "
+                    "cubre varios días.",
+                )
+            )
     else:
         lines = len(batch.daily_sales)
         net = sum(x.net_sales for x in batch.daily_sales)
@@ -351,7 +401,7 @@ def _insert_rows(
                     conn, tenant_id, location_id, source_id, batch_id, m.category
                 )
             category_id = categories[m.category]
-        found = _find_item(conn, tenant_id, location_id, m.external_id, m.name)
+        found = _usable_item(conn, tenant_id, location_id, m.external_id, m.name)
         if found is None:
             row = conn.execute(
                 """insert into public.menu_item
@@ -374,7 +424,7 @@ def _insert_rows(
         items[m.external_id or normalize_name(m.name)] = found
 
     for x in batch.item_sales:
-        menu_item_id = items.get(x.item_external_id or normalize_name(x.item_name)) or _find_item(
+        menu_item_id = items.get(x.item_external_id or normalize_name(x.item_name)) or _usable_item(
             conn, tenant_id, location_id, x.item_external_id, x.item_name
         )
         if menu_item_id is None:
@@ -458,14 +508,45 @@ def _find_item(
     location_id: UUID | None,
     external_id: str | None,
     name: str,
-) -> UUID | None:
-    """The catalog item an import line means: same SR code first, then same normalized name."""
+) -> tuple[UUID | None, str | None]:
+    """The catalog item an import line means, and how it matched: "code+name", "name", or
+    "code" (same SR code, another name). SR codes are per install, so in a chain a code alone
+    may be another location's dish: a "code" match is not used, the line gets its own item."""
     row = conn.execute(
-        """select id from public.menu_item
+        """select id, (%s::text is not null and external_id = %s),
+                  normalized_name = %s
+           from public.menu_item
            where tenant_id = %s and (location_id is null or location_id = %s)
              and ((%s::text is not null and external_id = %s) or normalized_name = %s)
-           order by (external_id = %s) desc nulls last, location_id nulls last
+           order by (normalized_name = %s) desc, (external_id = %s) desc nulls last,
+                    location_id nulls last
            limit 1""",
-        (tenant_id, location_id, external_id, external_id, normalize_name(name), external_id),
+        (
+            external_id,
+            external_id,
+            normalize_name(name),
+            tenant_id,
+            location_id,
+            external_id,
+            external_id,
+            normalize_name(name),
+            normalize_name(name),
+            external_id,
+        ),
     ).fetchone()
-    return UUID(str(row[0])) if row else None
+    if row is None:
+        return None, None
+    by_code, by_name = bool(row[1]), bool(row[2])
+    how = "code+name" if by_code and by_name else "name" if by_name else "code"
+    return UUID(str(row[0])), how
+
+
+def _usable_item(
+    conn: psycopg.Connection[Any],
+    tenant_id: UUID,
+    location_id: UUID | None,
+    external_id: str | None,
+    name: str,
+) -> UUID | None:
+    found, how = _find_item(conn, tenant_id, location_id, external_id, name)
+    return found if how != "code" else None

@@ -213,21 +213,70 @@ def test_new_items_are_created_and_existing_ones_are_not_changed(
     assert count == (1,)
 
 
-def test_a_daily_report_over_a_week_replaces_nothing_twice(conn: psycopg.Connection[Any]) -> None:
+def week_net(conn: psycopg.Connection[Any]) -> tuple[Any, ...] | None:
+    return conn.execute(
+        """select sum(net_sales), count(*) from app.v_daily_sales where location_id = %s
+           and business_date between '2026-10-05' and '2026-10-11'""",
+        (CENTRO,),
+    ).fetchone()
+
+
+def test_a_weekly_report_over_loaded_days_waits_for_review(conn: psycopg.Connection[Any]) -> None:
     week = NormalizedBatch.model_validate_json(
         (SR / "ventas_por_dia_L1_2026-10-05.golden.json").read_text()
     )
-    before = conn.execute(
-        "select sum(net_sales) from app.v_daily_sales where location_id = %s "
-        "and business_date between '2026-10-05' and '2026-10-11'",
-        (CENTRO,),
-    ).fetchone()
-    r = load(conn, week, source_id=CENTRO_DAILY)
-    assert r.status == "applied"
-    after = conn.execute(
-        "select sum(net_sales), count(*) from app.v_daily_sales where location_id = %s "
-        "and business_date between '2026-10-05' and '2026-10-11'",
-        (CENTRO,),
-    ).fetchone()
-    assert after == (before[0] if before else None, 7)
-    assert before is not None and before[0] == Decimal(18432050)
+    first = week.daily_sales[0]
+    changed = week.model_copy(
+        update={
+            "daily_sales": [
+                first.model_copy(update={"net_sales": first.net_sales + 100000}),
+                *week.daily_sales[1:],
+            ],
+            "totals": week.totals.model_copy(
+                update={"net_sales": (week.totals.net_sales or 0) + 100000}
+            ),
+        }
+    )
+    assert week_net(conn) == (Decimal(18432050), 7)
+    r = load(conn, changed, source_id=CENTRO_DAILY)
+    assert (r.status, [i.code for i in r.issues]) == ("needs_review", ["batch.correction"])
+    assert week_net(conn) == (Decimal(18432050), 7), "the overlapping week does not apply alone"
+    approve(conn, r.batch_id, LUPITA)
+    assert week_net(conn) == (Decimal(18532050), 7), "approved: each day counts once, from it"
+    rollback(conn, r.batch_id, LUPITA)
+    assert week_net(conn) == (Decimal(18432050), 7), "undone: the daily batches count again"
+
+
+def test_a_multi_day_item_report_is_rejected(conn: psycopg.Connection[Any]) -> None:
+    one = report("12/10/2026", PASTOR)
+    rows = [x.model_copy(update={"period_to": dt.date(2026, 10, 18)}) for x in one.item_sales]
+    week = one.model_copy(
+        update={
+            "item_sales": rows,
+            "period": one.period.model_copy(update={"to": dt.date(2026, 10, 18)}),
+        }
+    )
+    r = load(conn, week, source_id=CENTRO_ITEMS)
+    assert r.status == "rejected" and "batch.items_multi_day" in {i.code for i in r.issues}
+
+
+def test_another_location_s_code_for_another_dish_is_not_reused(
+    conn: psycopg.Connection[Any],
+) -> None:
+    horchata_p001 = ["P001", "Agua de horchata grande", "Bebidas", 5, 30, 150, 0, 150]
+    r = load(conn, report("12/10/2026", horchata_p001), source_id=CENTRO_ITEMS)
+    assert r.status == "needs_review"
+    assert "item.code_name_mismatch" in {i.code for i in r.issues}
+    booked = conn.execute(
+        """select m.name from public.item_sales_agg a
+           join public.menu_item m on m.id = a.menu_item_id
+           where a.batch_id = %s""",
+        (r.batch_id,),
+    ).fetchall()
+    assert booked == [("Agua de horchata grande",)], "not booked to Tacos al pastor"
+
+
+def test_negative_quantities_wait_for_review(conn: psycopg.Connection[Any]) -> None:
+    refund = ["P001", "Tacos al pastor (orden de 3)", "Tacos", -1, 65, -65, 0, -65]
+    r = load(conn, report("12/10/2026", PASTOR, refund), source_id=CENTRO_ITEMS)
+    assert (r.status, [i.code for i in r.issues]) == ("needs_review", ["rows.negative"])

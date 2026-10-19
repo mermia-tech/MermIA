@@ -65,7 +65,10 @@ select is((select row(actor_kind, after ->> 'restored_batch_id')::text from publ
            where batch_id = 'cccccccc-0000-7000-8000-000000000001' and action = 'import_batch.rollback'),
           format('(user,%s)', :SEEDED), 'the rollback is audit-logged');
 select throws_ok(format('select app.rollback_batch(%L)', 'cccccccc-0000-7000-8000-000000000001'), '55000', null, 'a rolled-back batch does not roll back twice');
-select throws_ok(format('select app.apply_batch(%L)', 'cccccccc-0000-7000-8000-000000000001'), '55000', null, 'nor re-applies');
+select lives_ok(format('select app.apply_batch(%L, %L)', 'cccccccc-0000-7000-8000-000000000001', :OWNER), 'an undone Deshacer restores it (09 2.6)');
+select is((select string_agg(status::text, ',' order by id) from public.import_batch where id in (:SEEDED, 'cccccccc-0000-7000-8000-000000000001')),
+          'superseded,applied', 'and supersedes the seeded batch again');
+select lives_ok(format('select app.rollback_batch(%L, %L)', 'cccccccc-0000-7000-8000-000000000001', :OWNER), 'undone once more');
 
 -- a first batch for a new slice: applied by the system, rollback leaves the slice empty
 insert into public.import_batch (id, tenant_id, source_id, location_id, parser, slice_key, status)
