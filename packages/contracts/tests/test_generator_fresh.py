@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import psycopg
 import pytest
 
@@ -24,7 +26,7 @@ def test_generation_is_deterministic(db_url: str) -> None:
     assert first == second
 
 
-def test_check_mode_passes_when_current_and_fails_when_stale(db_url: str, tmp_path) -> None:
+def test_check_mode_passes_when_current_and_fails_when_stale(db_url: str, tmp_path: Path) -> None:
     out = tmp_path / "models.py"
     out.write_text(DEFAULT_OUTPUT.read_text())
     assert main(["--db-url", db_url, "--output", str(out), "--check"]) == 0

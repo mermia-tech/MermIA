@@ -13,6 +13,8 @@ import os
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Iterator
+from typing import Any
 
 import psycopg
 import pytest
@@ -44,7 +46,7 @@ def b64(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
 
 
-def mint(claims: dict, secret: str | None = None) -> str:
+def mint(claims: dict[str, Any], secret: str | None = None) -> str:
     secret = secret or env("MERMIA_JWT_SECRET")
     head = b64(json.dumps({"alg": "HS256", "typ": "JWT"}).encode())
     body = b64(json.dumps({"exp": int(time.time()) + 300, **claims}).encode())
@@ -53,7 +55,7 @@ def mint(claims: dict, secret: str | None = None) -> str:
 
 
 def token(tenant: str = TA, locations: list[str] | str | None = "all") -> str:
-    claims: dict = {"role": "authenticated", "tenant_id": tenant}
+    claims: dict[str, Any] = {"role": "authenticated", "tenant_id": tenant}
     if locations != "absent":
         claims["location_ids"] = None if locations == "all" else locations
     return mint(claims)
@@ -63,9 +65,9 @@ def call(
     path: str,
     bearer: str,
     method: str = "GET",
-    body: dict | None = None,
+    body: dict[str, Any] | None = None,
     base: str = "/rest/v1/",
-):
+) -> tuple[int, str]:
     data = json.dumps(body).encode() if body is not None else None
     request = urllib.request.Request(
         env("MERMIA_API_URL") + base + path,
@@ -92,7 +94,7 @@ B_POLANCO = "ba7c0000-0000-7000-8000-0000000000e2"
 
 
 @pytest.fixture(scope="module")
-def fixtures():
+def fixtures() -> Iterator[None]:
     url = env("MERMIA_DB_URL")
     env("MERMIA_API_URL")
     with psycopg.connect(url, autocommit=True) as conn:
@@ -172,7 +174,7 @@ def fixtures():
         conn.execute("delete from public.tenant where id in (%s, %s)", (TA, TB))
 
 
-def test_forged_and_expired_tokens_are_rejected(fixtures) -> None:
+def test_forged_and_expired_tokens_are_rejected(fixtures: None) -> None:
     forged = mint({"role": "authenticated", "tenant_id": TA, "location_ids": None}, "x" * 40)
     assert call("location?select=name", forged)[0] == 401
     expired = mint({"role": "authenticated", "tenant_id": TA, "location_ids": None, "exp": 1})
@@ -180,13 +182,13 @@ def test_forged_and_expired_tokens_are_rejected(fixtures) -> None:
 
 
 @pytest.mark.parametrize("table", X_TABLES)
-def test_backend_only_tables_are_refused(fixtures, table: str) -> None:
+def test_backend_only_tables_are_refused(fixtures: None, table: str) -> None:
     status, body = call(f"{table}?select=*", token())
     assert status == 403, (table, status, body[:200])
     assert SECRET_PHONE not in body and SECRET_FILE not in body
 
 
-def test_source_hides_its_secret_columns(fixtures) -> None:
+def test_source_hides_its_secret_columns(fixtures: None) -> None:
     status, body = call("source?select=*", token())
     assert status == 403 and SECRET_CONFIG not in body
     status, body = call("source?select=config", token())
@@ -205,7 +207,7 @@ def test_source_hides_its_secret_columns(fixtures) -> None:
         "source(*)",
     ],
 )
-def test_embedding_backend_only_or_hidden_data_is_refused(fixtures, embed: str) -> None:
+def test_embedding_backend_only_or_hidden_data_is_refused(fixtures: None, embed: str) -> None:
     status, body = call(f"import_batch?select=slice_key,{embed}", token())
     assert status == 403 and json.loads(body)["code"] == "42501", (
         embed,
@@ -215,7 +217,7 @@ def test_embedding_backend_only_or_hidden_data_is_refused(fixtures, embed: str) 
     assert SECRET_PHONE not in body and SECRET_FILE not in body and SECRET_CONFIG not in body
 
 
-def test_embedding_the_readable_columns_of_source_works(fixtures) -> None:
+def test_embedding_the_readable_columns_of_source_works(fixtures: None) -> None:
     # positive control: the refusals above are about privileges, not about a broken request
     status, body = call("import_batch?select=slice_key,source(id,kind)&order=slice_key", token())
     assert status == 200, body[:200]
@@ -224,7 +226,7 @@ def test_embedding_the_readable_columns_of_source_works(fixtures) -> None:
     assert SECRET_CONFIG not in body
 
 
-def test_embedding_cannot_reach_a_hidden_table_from_the_other_side(fixtures) -> None:
+def test_embedding_cannot_reach_a_hidden_table_from_the_other_side(fixtures: None) -> None:
     # An ambiguous relationship is reported (300) before any permission check; a hinted one
     # reaches the privilege layer (403). Either way no data comes back.
     paths = {
@@ -238,7 +240,7 @@ def test_embedding_cannot_reach_a_hidden_table_from_the_other_side(fixtures) -> 
         assert SECRET_PHONE not in body and SECRET_FILE not in body, path
 
 
-def test_import_issue_follows_its_batch_directly_and_embedded(fixtures) -> None:
+def test_import_issue_follows_its_batch_directly_and_embedded(fixtures: None) -> None:
     centro = token(locations=[A1])
     status, body = call("import_issue?select=code", centro)
     assert status == 200 and [r["code"] for r in json.loads(body)] == ["centro_issue"]
@@ -261,14 +263,14 @@ def test_import_issue_follows_its_batch_directly_and_embedded(fixtures) -> None:
     ]
 
 
-def test_other_tenants_see_nothing(fixtures) -> None:
+def test_other_tenants_see_nothing(fixtures: None) -> None:
     status, body = call("import_issue?select=code", token(tenant=TB))
     assert status == 200 and json.loads(body) == []
     status, body = call("location?select=name", token(tenant=TB))
     assert [r["name"] for r in json.loads(body)] == ["B uno"]
 
 
-def test_writes_are_refused(fixtures) -> None:
+def test_writes_are_refused(fixtures: None) -> None:
     row = {"tenant_id": TA, "name": "Injected", "timezone": "x"}
     assert call("location", token(), "POST", row)[0] == 403
     assert call(f"location?id=eq.{A1}", token(), "PATCH", {"name": "Hacked"})[0] == 403
@@ -284,7 +286,7 @@ def test_writes_are_refused(fixtures) -> None:
     )
 
 
-def test_helper_schema_is_not_exposed(fixtures) -> None:
+def test_helper_schema_is_not_exposed(fixtures: None) -> None:
     status, body = call("rpc/current_tenant_id", token(), "POST", {})
     assert status in (404, 406), (status, body[:200])
     status, body = call(
@@ -296,7 +298,7 @@ def test_helper_schema_is_not_exposed(fixtures) -> None:
     assert status == 404
 
 
-def test_openapi_lists_no_backend_only_table(fixtures) -> None:
+def test_openapi_lists_no_backend_only_table(fixtures: None) -> None:
     status, body = call("", token())
     if status != 200:
         pytest.skip(f"OpenAPI document not served ({status})")
@@ -305,8 +307,8 @@ def test_openapi_lists_no_backend_only_table(fixtures) -> None:
     assert "/location" in paths
 
 
-def test_graphql_does_not_expose_backend_only_tables_or_secrets(fixtures) -> None:
-    def graphql(query: str):
+def test_graphql_does_not_expose_backend_only_tables_or_secrets(fixtures: None) -> None:
+    def graphql(query: str) -> tuple[int, str]:
         return call("", token(), "POST", {"query": query}, base="/graphql/v1")
 
     # Positive control first: if GraphQL cannot even read a readable table, nothing below
@@ -320,7 +322,7 @@ def test_graphql_does_not_expose_backend_only_tables_or_secrets(fixtures) -> Non
     assert SECRET_CONFIG not in body
 
 
-def test_a_self_referencing_composite_foreign_key_embeds(fixtures) -> None:
+def test_a_self_referencing_composite_foreign_key_embeds(fixtures: None) -> None:
     status, body = call("menu_category?select=name,menu_category(name)&order=name", token())
     assert status == 200, body[:200]
     rows = {r["name"]: [c["name"] for c in r["menu_category"]] for r in json.loads(body)}

@@ -9,12 +9,13 @@ import types
 import typing
 
 import pytest
+from pydantic import BaseModel
 
 from mermia_contracts import batch
 from mermia_contracts.db import models
 
 # input type -> (row model, {input field: column})
-MAP: dict[type, tuple[type, dict[str, str]]] = {
+MAP: dict[type[BaseModel], tuple[type[BaseModel], dict[str, str]]] = {
     batch.MenuItemIn: (
         models.MenuItemRow,
         {"external_id": "external_id", "name": "name", "kind": "kind"},
@@ -163,10 +164,11 @@ def enum_of(annotation: object) -> object:
     return args[0] if args else annotation
 
 
-@pytest.mark.parametrize(
-    "input_type", sorted(MAP, key=lambda t: t.__name__), ids=lambda t: t.__name__
-)
-def test_input_fields_map_to_columns(input_type: type) -> None:
+INPUT_TYPES = sorted(MAP, key=lambda t: t.__name__)
+
+
+@pytest.mark.parametrize("input_type", INPUT_TYPES, ids=[t.__name__ for t in INPUT_TYPES])
+def test_input_fields_map_to_columns(input_type: type[BaseModel]) -> None:
     row, mapping = MAP[input_type]
     fields = input_type.model_fields
     allowed = LOADER_ONLY.get(input_type, set())

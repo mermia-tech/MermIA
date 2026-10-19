@@ -2,6 +2,7 @@
 
 import datetime as dt
 from decimal import Decimal
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -16,12 +17,13 @@ from mermia_contracts.batch import (
     RecipeLineIn,
     TicketIn,
 )
+from mermia_contracts.db.models import TicketStatus
 
 D = dt.date(2026, 10, 12)
 NOW = dt.datetime(2026, 10, 12, 12, 0, tzinfo=dt.UTC)
 
 
-def batch_kwargs(**over):
+def batch_kwargs(**over: Any) -> dict[str, Any]:
     base = {
         "parser": "sr.example@v1",
         "source_kind": "sr_report",
@@ -32,7 +34,7 @@ def batch_kwargs(**over):
     return {**base, **over}
 
 
-def item_sales(**over):
+def item_sales(**over: Any) -> dict[str, Any]:
     base = {
         "item_name": "Taco",
         "period_from": D,
@@ -63,7 +65,7 @@ def test_minimal_batch_defaults() -> None:
 
 
 @pytest.mark.parametrize("bad", [12.5, "100", True, None])
-def test_cents_reject_floats_strings_bools_and_null(bad) -> None:
+def test_cents_reject_floats_strings_bools_and_null(bad: object) -> None:
     with pytest.raises(ValidationError):
         ItemSalesIn(**item_sales(gross=bad))
 
@@ -73,7 +75,7 @@ def test_cents_accept_negative_values_for_refunds() -> None:
 
 
 @pytest.mark.parametrize("bad", [1.5, 2, "1.5"])
-def test_quantities_require_decimal_in_python_mode(bad) -> None:
+def test_quantities_require_decimal_in_python_mode(bad: object) -> None:
     with pytest.raises(ValidationError):
         ItemSalesIn(**item_sales(units=bad))
 
@@ -118,7 +120,7 @@ def test_unit_price_keeps_six_decimals_and_percent_points_four() -> None:
 
 
 def test_instants_must_carry_a_time_zone() -> None:
-    kwargs = {
+    kwargs: dict[str, Any] = {
         "external_id": "N-1",
         "business_date": D,
         "subtotal": 1,
@@ -138,7 +140,7 @@ def test_ticket_closed_before_opened_is_rejected() -> None:
             business_date=D,
             subtotal=1,
             total=1,
-            status="paid",
+            status=TicketStatus.paid,
             opened_at=NOW,
             closed_at=NOW - dt.timedelta(minutes=1),
         )
@@ -171,7 +173,7 @@ def test_required_fields_are_required() -> None:
     with pytest.raises(ValidationError):
         DailySalesIn(business_date=D)  # type: ignore[call-arg]
     with pytest.raises(ValidationError):
-        PaymentIn(method="cash")  # type: ignore[call-arg]
+        PaymentIn(method="cash")  # type: ignore[call-arg,arg-type]
 
 
 def test_counts_cannot_be_negative() -> None:
