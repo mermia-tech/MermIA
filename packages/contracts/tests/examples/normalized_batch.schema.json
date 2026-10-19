@@ -1,0 +1,1278 @@
+{
+  "$defs": {
+    "BatchQuality": {
+      "enum": [
+        "file",
+        "push",
+        "ocr"
+      ],
+      "title": "BatchQuality",
+      "type": "string"
+    },
+    "DailySalesIn": {
+      "additionalProperties": false,
+      "description": "PROVISIONAL: the Corte Z / \"Ventas por dia\" format is unverified.\n\nColumns: daily_sales_agg. A figure the report does not give stays None (\"not\nreported\" is not zero).",
+      "properties": {
+        "business_date": {
+          "format": "date",
+          "title": "Business Date",
+          "type": "string"
+        },
+        "cancellations_amount": {
+          "anyOf": [
+            {
+              "description": "unit=centavos",
+              "maximum": 9223372036854775807,
+              "minimum": -9223372036854775808,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cancellations Amount"
+        },
+        "cancellations_count": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cancellations Count"
+        },
+        "discounts": {
+          "anyOf": [
+            {
+              "description": "unit=centavos",
+              "maximum": 9223372036854775807,
+              "minimum": -9223372036854775808,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Discounts"
+        },
+        "guests": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Guests"
+        },
+        "net_sales": {
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Net Sales",
+          "type": "integer"
+        },
+        "payment_mix": {
+          "additionalProperties": {
+            "description": "unit=centavos",
+            "maximum": 9223372036854775807,
+            "minimum": -9223372036854775808,
+            "type": "integer"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/PaymentMethod"
+          },
+          "title": "Payment Mix",
+          "type": "object"
+        },
+        "tax": {
+          "anyOf": [
+            {
+              "description": "unit=centavos",
+              "maximum": 9223372036854775807,
+              "minimum": -9223372036854775808,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tax"
+        },
+        "tickets": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tickets"
+        },
+        "tips": {
+          "anyOf": [
+            {
+              "description": "unit=centavos",
+              "maximum": 9223372036854775807,
+              "minimum": -9223372036854775808,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tips"
+        }
+      },
+      "required": [
+        "business_date",
+        "net_sales"
+      ],
+      "title": "DailySalesIn",
+      "type": "object"
+    },
+    "FiscalStatus": {
+      "enum": [
+        "none",
+        "requested",
+        "in_global",
+        "stamped"
+      ],
+      "title": "FiscalStatus",
+      "type": "string"
+    },
+    "Grain": {
+      "description": "What one row of the batch means (09 section 3).",
+      "enum": [
+        "ticket",
+        "item_daily",
+        "daily",
+        "purchase",
+        "catalog"
+      ],
+      "title": "Grain",
+      "type": "string"
+    },
+    "IssueIn": {
+      "additionalProperties": false,
+      "description": "Columns: import_issue. message_es is shown to the manager in Spanish.",
+      "properties": {
+        "code": {
+          "pattern": "^[a-z0-9_.]+$",
+          "title": "Code",
+          "type": "string"
+        },
+        "message_es": {
+          "pattern": "\\S",
+          "title": "Message Es",
+          "type": "string"
+        },
+        "row_ref": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Row Ref"
+        },
+        "severity": {
+          "$ref": "#/$defs/IssueSeverity"
+        }
+      },
+      "required": [
+        "severity",
+        "code",
+        "message_es"
+      ],
+      "title": "IssueIn",
+      "type": "object"
+    },
+    "IssueSeverity": {
+      "enum": [
+        "info",
+        "warning",
+        "error"
+      ],
+      "title": "IssueSeverity",
+      "type": "string"
+    },
+    "ItemSalesIn": {
+      "additionalProperties": false,
+      "description": "PROVISIONAL: \"Productos vendidos\" columns for SR 10-12 are unverified.\n\nColumns: item_sales_agg. The item is resolved to menu_item_id by the loader.",
+      "properties": {
+        "discount": {
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Discount",
+          "type": "integer"
+        },
+        "gross": {
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Gross",
+          "type": "integer"
+        },
+        "item_external_id": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item External Id"
+        },
+        "item_name": {
+          "pattern": "\\S",
+          "title": "Item Name",
+          "type": "string"
+        },
+        "net": {
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Net",
+          "type": "integer"
+        },
+        "period_from": {
+          "format": "date",
+          "title": "Period From",
+          "type": "string"
+        },
+        "period_to": {
+          "format": "date",
+          "title": "Period To",
+          "type": "string"
+        },
+        "units": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=quantity",
+          "title": "Units"
+        }
+      },
+      "required": [
+        "item_name",
+        "period_from",
+        "period_to",
+        "units",
+        "gross",
+        "discount",
+        "net"
+      ],
+      "title": "ItemSalesIn",
+      "type": "object"
+    },
+    "MenuItemIn": {
+      "additionalProperties": false,
+      "description": "PROVISIONAL: which report supplies menu prices and categories is unverified.\n\nColumns: menu_item (external_id, name, kind), menu_category.name (category),\nmenu_item_price (price_gross, tax_rate).",
+      "properties": {
+        "category": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Category"
+        },
+        "external_id": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "External Id"
+        },
+        "kind": {
+          "$ref": "#/$defs/MenuItemKind",
+          "default": "dish"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "price_gross": {
+          "anyOf": [
+            {
+              "description": "unit=centavos",
+              "maximum": 9223372036854775807,
+              "minimum": -9223372036854775808,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Price Gross"
+        },
+        "tax_rate": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "maximum": 1.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "unit=fraction"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tax Rate"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "MenuItemIn",
+      "type": "object"
+    },
+    "MenuItemKind": {
+      "enum": [
+        "dish",
+        "drink",
+        "modifier",
+        "combo"
+      ],
+      "title": "MenuItemKind",
+      "type": "string"
+    },
+    "PaymentIn": {
+      "additionalProperties": false,
+      "description": "Columns: payment.",
+      "properties": {
+        "amount": {
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "method": {
+          "$ref": "#/$defs/PaymentMethod"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider"
+        },
+        "provider_ref": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Ref"
+        },
+        "tip": {
+          "default": 0,
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Tip",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "method",
+        "amount"
+      ],
+      "title": "PaymentIn",
+      "type": "object"
+    },
+    "PaymentMethod": {
+      "enum": [
+        "cash",
+        "card",
+        "transfer",
+        "voucher",
+        "other"
+      ],
+      "title": "PaymentMethod",
+      "type": "string"
+    },
+    "Period": {
+      "additionalProperties": false,
+      "description": "Business dates covered by the batch, both inclusive.",
+      "properties": {
+        "from": {
+          "format": "date",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "format": "date",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Period",
+      "type": "object"
+    },
+    "PurchaseDocKind": {
+      "enum": [
+        "cfdi",
+        "nota_photo",
+        "manual"
+      ],
+      "title": "PurchaseDocKind",
+      "type": "string"
+    },
+    "PurchaseIn": {
+      "additionalProperties": false,
+      "description": "Columns: purchase_doc (CFDI 4.0 fields in 03 C.3 are still to validate).",
+      "properties": {
+        "cfdi_uuid": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cfdi Uuid"
+        },
+        "issued_at": {
+          "format": "date-time",
+          "title": "Issued At",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/PurchaseDocKind"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/$defs/PurchaseLineIn"
+          },
+          "title": "Lines",
+          "type": "array"
+        },
+        "subtotal": {
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Subtotal",
+          "type": "integer"
+        },
+        "supplier": {
+          "$ref": "#/$defs/SupplierIn"
+        },
+        "total": {
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "supplier",
+        "kind",
+        "issued_at",
+        "subtotal",
+        "total"
+      ],
+      "title": "PurchaseIn",
+      "type": "object"
+    },
+    "PurchaseLineIn": {
+      "additionalProperties": false,
+      "description": "Columns: purchase_line. unit_price_net is pesos per purchase unit.",
+      "properties": {
+        "description": {
+          "pattern": "\\S",
+          "title": "Description",
+          "type": "string"
+        },
+        "ingredient_name": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ingredient Name"
+        },
+        "qty": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=quantity",
+          "title": "Qty"
+        },
+        "unit": {
+          "pattern": "\\S",
+          "title": "Unit",
+          "type": "string"
+        },
+        "unit_price_net": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=pesos_per_purchase_unit",
+          "title": "Unit Price Net"
+        }
+      },
+      "required": [
+        "description",
+        "qty",
+        "unit",
+        "unit_price_net"
+      ],
+      "title": "PurchaseLineIn",
+      "type": "object"
+    },
+    "RecipeIn": {
+      "additionalProperties": false,
+      "description": "PROVISIONAL: whether the \"Recetas\" export carries costs and yields is unverified.\n\nColumns: recipe. Never applied directly: the loader turns it into a pending_change\n(09 section 3).",
+      "properties": {
+        "lines": {
+          "items": {
+            "$ref": "#/$defs/RecipeLineIn"
+          },
+          "minItems": 1,
+          "title": "Lines",
+          "type": "array"
+        },
+        "menu_item_external_id": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Menu Item External Id"
+        },
+        "menu_item_name": {
+          "pattern": "\\S",
+          "title": "Menu Item Name",
+          "type": "string"
+        },
+        "yield_qty": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=quantity",
+          "title": "Yield Qty"
+        }
+      },
+      "required": [
+        "menu_item_name",
+        "yield_qty",
+        "lines"
+      ],
+      "title": "RecipeIn",
+      "type": "object"
+    },
+    "RecipeLineIn": {
+      "additionalProperties": false,
+      "description": "PROVISIONAL: whether the \"Recetas\" export carries costs and yields is unverified.\n\nColumns: recipe_line. The ingredient is resolved by the loader.",
+      "properties": {
+        "ingredient_external_id": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ingredient External Id"
+        },
+        "ingredient_name": {
+          "pattern": "\\S",
+          "title": "Ingredient Name",
+          "type": "string"
+        },
+        "qty_base": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=quantity",
+          "title": "Qty Base"
+        },
+        "unit": {
+          "pattern": "\\S",
+          "title": "Unit",
+          "type": "string"
+        },
+        "yield_override_pct": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "unit=percent_points"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Yield Override Pct"
+        }
+      },
+      "required": [
+        "ingredient_name",
+        "qty_base",
+        "unit"
+      ],
+      "title": "RecipeLineIn",
+      "type": "object"
+    },
+    "SaleChannel": {
+      "enum": [
+        "dine_in",
+        "takeout",
+        "delivery_app",
+        "delivery"
+      ],
+      "title": "SaleChannel",
+      "type": "string"
+    },
+    "SourceKind": {
+      "enum": [
+        "sr_report",
+        "sr_corte_email",
+        "sr_erp_push",
+        "sr_connector",
+        "cfdi",
+        "photo_ocr",
+        "manual",
+        "mermia_pos"
+      ],
+      "title": "SourceKind",
+      "type": "string"
+    },
+    "StaffIn": {
+      "additionalProperties": false,
+      "description": "Columns: staff. First name only (09 section 2.3).",
+      "properties": {
+        "display_name": {
+          "pattern": "\\S",
+          "title": "Display Name",
+          "type": "string"
+        },
+        "external_id": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "External Id"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        }
+      },
+      "required": [
+        "display_name"
+      ],
+      "title": "StaffIn",
+      "type": "object"
+    },
+    "SupplierIn": {
+      "additionalProperties": false,
+      "description": "Columns: supplier.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/SupplierKind"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "rfc": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rfc"
+        }
+      },
+      "required": [
+        "name",
+        "kind"
+      ],
+      "title": "SupplierIn",
+      "type": "object"
+    },
+    "SupplierKind": {
+      "enum": [
+        "cfdi",
+        "market",
+        "other"
+      ],
+      "title": "SupplierKind",
+      "type": "string"
+    },
+    "TicketIn": {
+      "additionalProperties": false,
+      "description": "Columns: sale_ticket (ticket grain; the ERP/PMS push payload, Phase 1b).",
+      "properties": {
+        "area": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Area"
+        },
+        "business_date": {
+          "format": "date",
+          "title": "Business Date",
+          "type": "string"
+        },
+        "channel": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SaleChannel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "closed_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Closed At"
+        },
+        "discount": {
+          "default": 0,
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Discount",
+          "type": "integer"
+        },
+        "external_id": {
+          "pattern": "\\S",
+          "title": "External Id",
+          "type": "string"
+        },
+        "fiscal_status": {
+          "$ref": "#/$defs/FiscalStatus",
+          "default": "none"
+        },
+        "guests": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Guests"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/$defs/TicketLineIn"
+          },
+          "title": "Lines",
+          "type": "array"
+        },
+        "opened_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Opened At"
+        },
+        "payments": {
+          "items": {
+            "$ref": "#/$defs/PaymentIn"
+          },
+          "title": "Payments",
+          "type": "array"
+        },
+        "staff": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StaffIn"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "status": {
+          "$ref": "#/$defs/TicketStatus"
+        },
+        "subtotal": {
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Subtotal",
+          "type": "integer"
+        },
+        "table_label": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Table Label"
+        },
+        "tax": {
+          "default": 0,
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Tax",
+          "type": "integer"
+        },
+        "tip": {
+          "default": 0,
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Tip",
+          "type": "integer"
+        },
+        "total": {
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "external_id",
+        "business_date",
+        "subtotal",
+        "total",
+        "status"
+      ],
+      "title": "TicketIn",
+      "type": "object"
+    },
+    "TicketLineIn": {
+      "additionalProperties": false,
+      "description": "Columns: sale_line. The item is resolved to menu_item_id by the loader.",
+      "properties": {
+        "discount": {
+          "default": 0,
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Discount",
+          "type": "integer"
+        },
+        "is_void": {
+          "default": false,
+          "title": "Is Void",
+          "type": "boolean"
+        },
+        "item_external_id": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item External Id"
+        },
+        "item_name": {
+          "pattern": "\\S",
+          "title": "Item Name",
+          "type": "string"
+        },
+        "net": {
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Net",
+          "type": "integer"
+        },
+        "parent_line_index": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Line Index"
+        },
+        "qty": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=quantity",
+          "title": "Qty"
+        },
+        "tax": {
+          "default": 0,
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Tax",
+          "type": "integer"
+        },
+        "unit_price": {
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Unit Price",
+          "type": "integer"
+        },
+        "void_reason": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Void Reason"
+        }
+      },
+      "required": [
+        "item_name",
+        "qty",
+        "unit_price",
+        "net"
+      ],
+      "title": "TicketLineIn",
+      "type": "object"
+    },
+    "TicketStatus": {
+      "enum": [
+        "paid",
+        "cancelled"
+      ],
+      "title": "TicketStatus",
+      "type": "string"
+    },
+    "Totals": {
+      "additionalProperties": false,
+      "description": "Figures the loader checks against the rows (03 B.5).",
+      "properties": {
+        "lines": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Lines",
+          "type": "integer"
+        },
+        "net_sales": {
+          "anyOf": [
+            {
+              "description": "unit=centavos",
+              "maximum": 9223372036854775807,
+              "minimum": -9223372036854775808,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Net Sales"
+        },
+        "units": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "unit=quantity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Units"
+        }
+      },
+      "required": [
+        "lines"
+      ],
+      "title": "Totals",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One parsed file, ready to validate and load (09 section 3).",
+  "properties": {
+    "contract_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Contract Version",
+      "type": "integer"
+    },
+    "daily_sales": {
+      "items": {
+        "$ref": "#/$defs/DailySalesIn"
+      },
+      "title": "Daily Sales",
+      "type": "array"
+    },
+    "grain": {
+      "$ref": "#/$defs/Grain"
+    },
+    "issues": {
+      "items": {
+        "$ref": "#/$defs/IssueIn"
+      },
+      "title": "Issues",
+      "type": "array"
+    },
+    "item_sales": {
+      "items": {
+        "$ref": "#/$defs/ItemSalesIn"
+      },
+      "title": "Item Sales",
+      "type": "array"
+    },
+    "location_hint": {
+      "anyOf": [
+        {
+          "pattern": "\\S",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Location Hint"
+    },
+    "menu_items": {
+      "items": {
+        "$ref": "#/$defs/MenuItemIn"
+      },
+      "title": "Menu Items",
+      "type": "array"
+    },
+    "parser": {
+      "pattern": "^[a-z0-9_.]+@v[0-9]+$",
+      "title": "Parser",
+      "type": "string"
+    },
+    "period": {
+      "$ref": "#/$defs/Period"
+    },
+    "purchases": {
+      "items": {
+        "$ref": "#/$defs/PurchaseIn"
+      },
+      "title": "Purchases",
+      "type": "array"
+    },
+    "quality": {
+      "$ref": "#/$defs/BatchQuality",
+      "default": "file"
+    },
+    "recipes": {
+      "items": {
+        "$ref": "#/$defs/RecipeIn"
+      },
+      "title": "Recipes",
+      "type": "array"
+    },
+    "source_kind": {
+      "$ref": "#/$defs/SourceKind"
+    },
+    "tickets": {
+      "items": {
+        "$ref": "#/$defs/TicketIn"
+      },
+      "title": "Tickets",
+      "type": "array"
+    },
+    "totals": {
+      "$ref": "#/$defs/Totals"
+    }
+  },
+  "required": [
+    "parser",
+    "source_kind",
+    "period",
+    "grain",
+    "totals"
+  ],
+  "title": "NormalizedBatch",
+  "type": "object"
+}

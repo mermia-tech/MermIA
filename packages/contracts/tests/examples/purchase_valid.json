@@ -1,0 +1,14 @@
+{
+  "contract_version": 1,
+  "parser": "cfdi.example@v1",
+  "source_kind": "cfdi",
+  "period": {"from": "2026-10-12", "to": "2026-10-12"},
+  "grain": "purchase",
+  "totals": {"lines": 1},
+  "purchases": [
+    {"supplier": {"name": "Carnes SA", "rfc": "AAA010101AAA", "kind": "cfdi"}, "kind": "cfdi",
+     "cfdi_uuid": "11111111-2222-4333-8444-555555555555", "issued_at": "2026-10-12T10:00:00-06:00",
+     "subtotal": 100000, "total": 116000,
+     "lines": [{"description": "PASTOR KG", "qty": "5.000000", "unit": "KGM", "unit_price_net": "200.123456"}]}
+  ]
+}

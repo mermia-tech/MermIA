@@ -21,14 +21,17 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-# Add "packages" here when the first package lands (MR-10); mypy errors on missing paths.
-files = ["apps"]
+files = ["apps", "packages"]
 exclude = ['/\.venv/']
 # Name modules by path so same-named test files in different members do not clash.
 # List each member's src/ folder in mypy_path as members are added.
 explicit_package_bases = true
-mypy_path = ["$MYPY_CONFIG_FILE_DIR/apps/api/src"]
+mypy_path = ["$MYPY_CONFIG_FILE_DIR/apps/api/src", "$MYPY_CONFIG_FILE_DIR/packages/contracts/src"]
 
 [tool.pytest.ini_options]
 testpaths = ["apps", "packages"]
 addopts = ["--import-mode=importlib"]
+markers = [
+  "db: needs the local Supabase database (MERMIA_DB_URL)",
+  "rest: needs the local Supabase API (MERMIA_API_URL, MERMIA_JWT_SECRET, MERMIA_API_KEY)",
+]

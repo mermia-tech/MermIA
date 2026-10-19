@@ -26,11 +26,11 @@ If pilot samples are late, Dev A builds the fixtures from the SR 8 manual's repo
 
 ## Days 1-2: contracts (both devs, pairing)
 
-Everything lives in `packages/contracts`. A change after day 2 needs a PR approved by both devs (CODEOWNERS).
+Contracts live in `packages/contracts` (Pydantic models, generated from the schema) and in `supabase/migrations` (the SQL schema they are generated from). A change after day 2 needs a PR approved by both devs (CODEOWNERS).
 
 | Contract | Content | Primary author |
 |---|---|---|
-| C1 Normalized schema v1 | SQL migrations for 09 sections 2.1-2.5 (tables, enums, RLS policies), as DDL plus generated Pydantic models | Dev A |
+| C1 Normalized schema v1 | SQL migrations for 09 sections 2.1-2.5 (tables, enums, RLS policies) in `supabase/migrations`, plus Pydantic models generated from the migrated database into `packages/contracts` | Dev A |
 | C2 `NormalizedBatch` v1 | Pydantic model (09 section 3); the parser output format | Dev A |
 | C3 Metric RPC interfaces | The 11 read RPCs in 09 section 4.1: name, args, response JSON with formatted and raw values, flags, envelope; 1-2 example responses each | Dev A writes, Dev B reviews |
 | C4 Agent tool definitions | 12 tools as JSON Schema generated from C3 Pydantic models; one-line descriptions; ≤125 tokens each, measured with `count_tokens` | Dev B writes, Dev A reviews |
