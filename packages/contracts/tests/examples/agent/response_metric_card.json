@@ -1,0 +1,15 @@
+{
+  "messages": [
+    {
+      "kind": "metric_card",
+      "rpc": "get_sales_summary",
+      "data": {
+        "net_sales": {
+          "raw": 18432050,
+          "text": "$184,320.50"
+        }
+      }
+    }
+  ],
+  "route": "template"
+}

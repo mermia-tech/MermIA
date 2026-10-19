@@ -1,0 +1,28 @@
+{
+  "messages": [
+    {
+      "kind": "text",
+      "text": "Cambio pendiente: pastor $180 a $220/kg."
+    },
+    {
+      "kind": "choices",
+      "text": "¿Confirmas?",
+      "options": [
+        {
+          "id": "pc:0f7a1c52-3b6e-7c1a-9d33-000000000001:approve",
+          "label": "Confirmar"
+        },
+        {
+          "id": "pc:0f7a1c52-3b6e-7c1a-9d33-000000000001:reject",
+          "label": "Rechazar"
+        },
+        {
+          "id": "more_detail",
+          "label": "Ver detalle"
+        }
+      ]
+    }
+  ],
+  "route": "sonnet",
+  "usage_id": "0f7a1c52-3b6e-7c1a-9d44-000000000006"
+}
