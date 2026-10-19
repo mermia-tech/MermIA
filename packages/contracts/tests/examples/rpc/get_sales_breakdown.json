@@ -2,7 +2,7 @@
   "args": {
     "period": "yesterday",
     "by": "payment_method",
-    "location_id": "0f7a1c52-3b6e-7c1a-9d11-000000000001"
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
   },
   "response": {
     "ok": true,
@@ -10,38 +10,50 @@
       "by": "payment_method",
       "rows": [
         {
-          "key": "cash",
+          "key": "card",
           "net_sales": {
-            "raw": 1500000,
-            "text": "$15,000.00"
+            "raw": 1778115,
+            "text": "$17,781.15"
           },
           "tickets": 60,
           "share": {
-            "raw": 62.5,
-            "text": "62.5%"
+            "raw": 57.0,
+            "text": "57.0%"
           }
         },
         {
-          "key": "card",
+          "key": "cash",
           "net_sales": {
-            "raw": 900000,
-            "text": "$9,000.00"
+            "raw": 1123020,
+            "text": "$11,230.20"
           },
-          "tickets": 40,
+          "tickets": 38,
           "share": {
-            "raw": 37.5,
-            "text": "37.5%"
+            "raw": 36.0,
+            "text": "36.0%"
+          }
+        },
+        {
+          "key": "transfer",
+          "net_sales": {
+            "raw": 218365,
+            "text": "$2,183.65"
+          },
+          "tickets": 8,
+          "share": {
+            "raw": 7.0,
+            "text": "7.0%"
           }
         }
       ]
     },
     "flags": [],
     "meta": {
-      "as_of": "2026-10-19T08:00:00-06:00",
-      "coverage_pct": 87.5,
+      "as_of": "2026-10-12T09:00:00-06:00",
+      "coverage_pct": 100,
       "period_resolved": {
-        "from": "2026-10-12",
-        "to": "2026-10-18"
+        "from": "2026-10-11",
+        "to": "2026-10-11"
       }
     }
   }

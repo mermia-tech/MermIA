@@ -25,8 +25,8 @@ def _data() -> dict[str, Any]:
 
 def test_the_example_carries_both_resolved_ranges() -> None:
     data = ComparePeriodsData.model_validate(_data())
-    assert (str(data.period_a.from_), str(data.period_a.to)) == ("2026-10-12", "2026-10-18")
-    assert (str(data.period_b.from_), str(data.period_b.to)) == ("2026-10-05", "2026-10-11")
+    assert (str(data.period_a.from_), str(data.period_a.to)) == ("2026-10-05", "2026-10-11")
+    assert (str(data.period_b.from_), str(data.period_b.to)) == ("2026-09-28", "2026-10-04")
 
 
 @pytest.mark.parametrize("field", ["period_a", "period_b"])

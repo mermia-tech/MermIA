@@ -41,7 +41,7 @@ def _with_price(price: Any) -> dict[str, Any]:
 def test_the_example_move_is_valid_and_keeps_the_price_per_base_unit() -> None:
     move = PriceMove.model_validate(_move())
     assert move.new_unit_price.base_unit == "g"
-    assert move.new_unit_price.raw == Decimal("0.22")
+    assert move.new_unit_price.raw == Decimal("0.195")
 
 
 @pytest.mark.parametrize("bare", [0.22, "0.22", 220, None])
@@ -92,7 +92,7 @@ def test_the_text_cannot_be_blank() -> None:
 
 
 def test_the_example_text_and_number_agree_through_the_display_unit() -> None:
-    """The example quotes "$220.00/kg" for 0.22 pesos per g: 0.22 x 1000 = 220."""
+    """The example quotes "$195.00/kg" for 0.195 pesos per g: 0.195 x 1000 = 195."""
     move = PriceMove.model_validate(_move())
     match = re.fullmatch(r"\$([0-9,]+\.[0-9]{2})/(\w+)", move.new_unit_price.text)
     assert match, move.new_unit_price.text
@@ -103,4 +103,4 @@ def test_the_example_text_and_number_agree_through_the_display_unit() -> None:
 
 def test_the_alert_example_validates_as_a_whole() -> None:
     doc = json.loads(EXAMPLE.read_text())["response"]["data"]
-    assert len(CostAlertsData.model_validate(doc).price_moves) == 1
+    assert len(CostAlertsData.model_validate(doc).price_moves) == 2

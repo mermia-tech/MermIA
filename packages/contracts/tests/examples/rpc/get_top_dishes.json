@@ -2,7 +2,7 @@
   "args": {
     "period": {
       "from": "2026-10-01",
-      "to": "2026-10-15"
+      "to": "2026-10-11"
     },
     "metric": "units",
     "limit": 2
@@ -14,31 +14,31 @@
       "rows": [
         {
           "rank": 1,
-          "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000001",
-          "name": "Taco al pastor",
+          "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
+          "name": "Tacos al pastor (orden de 3)",
           "value": {
-            "raw": 640,
-            "text": "640"
+            "raw": 1208,
+            "text": "1,208"
           }
         },
         {
           "rank": 2,
-          "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000002",
-          "name": "Gringa",
+          "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
+          "name": "Coca-Cola",
           "value": {
-            "raw": 310,
-            "text": "310"
+            "raw": 816,
+            "text": "816"
           }
         }
       ]
     },
     "flags": [],
     "meta": {
-      "as_of": "2026-10-19T08:00:00-06:00",
-      "coverage_pct": 87.5,
+      "as_of": "2026-10-12T09:00:00-06:00",
+      "coverage_pct": 100,
       "period_resolved": {
         "from": "2026-10-01",
-        "to": "2026-10-15"
+        "to": "2026-10-11"
       }
     }
   }

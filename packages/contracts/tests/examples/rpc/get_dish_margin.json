@@ -1,57 +1,57 @@
 {
   "args": {
-    "dish": "pastor",
-    "location_id": "0f7a1c52-3b6e-7c1a-9d11-000000000001"
+    "dish": "tacos al pastor",
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
   },
   "response": {
     "ok": true,
     "data": {
       "match": "resolved",
-      "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000001",
-      "location_id": "0f7a1c52-3b6e-7c1a-9d11-000000000001",
-      "name": "Taco al pastor",
+      "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
+      "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+      "name": "Tacos al pastor (orden de 3)",
       "cost": {
-        "raw": 1820,
-        "text": "$18.20"
+        "raw": 1840,
+        "text": "$18.40"
       },
       "price_gross": {
-        "raw": 5800,
-        "text": "$58.00"
+        "raw": 6500,
+        "text": "$65.00"
       },
       "net_price": {
-        "raw": 5000,
-        "text": "$50.00"
+        "raw": 5603,
+        "text": "$56.03"
       },
       "margin": {
-        "raw": 3180,
-        "text": "$31.80"
+        "raw": 3763,
+        "text": "$37.63"
       },
       "margin_pct": {
-        "raw": 63.6,
-        "text": "63.6%"
+        "raw": 67.1604,
+        "text": "67.2%"
       },
       "food_cost": {
-        "raw": 36.4,
-        "text": "36.4%"
+        "raw": 32.8396,
+        "text": "32.8%"
       },
       "confidence": "confirmed",
       "cost_drivers": [
         {
-          "ingredient": "Carne al pastor",
+          "ingredient": "Carne al pastor (adobada)",
           "share": {
-            "raw": 71.0,
-            "text": "71.0%"
+            "raw": 73.5448,
+            "text": "73.5%"
           }
         }
       ]
     },
     "flags": [],
     "meta": {
-      "as_of": "2026-10-19T08:00:00-06:00",
-      "coverage_pct": 87.5,
+      "as_of": "2026-10-12T09:00:00-06:00",
+      "coverage_pct": 100,
       "period_resolved": {
         "from": "2026-10-12",
-        "to": "2026-10-18"
+        "to": "2026-10-12"
       }
     }
   }

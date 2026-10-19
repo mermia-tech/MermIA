@@ -1,40 +1,55 @@
 {
   "args": {
-    "period": "this_month",
+    "period": "yesterday",
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
     "group_by": "category"
   },
   "response": {
     "ok": true,
     "data": {
       "theoretical": {
-        "raw": 34.1,
-        "text": "34.1%"
+        "raw": 37.4569,
+        "text": "37.5%"
       },
       "target": {
         "raw": 32.0,
         "text": "32.0%"
       },
       "coverage": {
-        "raw": 87.5,
-        "text": "87.5%"
+        "raw": 71.3736,
+        "text": "71.4%"
       },
       "by_category": [
         {
           "category": "Tacos",
           "food_cost": {
-            "raw": 33.0,
-            "text": "33.0%"
+            "raw": 36.1709,
+            "text": "36.2%"
+          }
+        },
+        {
+          "category": "Especialidades",
+          "food_cost": {
+            "raw": 43.1795,
+            "text": "43.2%"
+          }
+        },
+        {
+          "category": "Bebidas",
+          "food_cost": {
+            "raw": 36.7929,
+            "text": "36.8%"
           }
         }
       ]
     },
     "flags": [],
     "meta": {
-      "as_of": "2026-10-19T08:00:00-06:00",
-      "coverage_pct": 87.5,
+      "as_of": "2026-10-12T09:00:00-06:00",
+      "coverage_pct": 100,
       "period_resolved": {
-        "from": "2026-10-12",
-        "to": "2026-10-18"
+        "from": "2026-10-11",
+        "to": "2026-10-11"
       }
     }
   }

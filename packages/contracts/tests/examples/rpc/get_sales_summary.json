@@ -1,6 +1,7 @@
 {
   "args": {
-    "period": "last_week"
+    "period": "last_week",
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
   },
   "response": {
     "ok": true,
@@ -9,32 +10,32 @@
         "raw": 18432050,
         "text": "$184,320.50"
       },
-      "tickets": 912,
+      "tickets": 648,
       "avg_ticket": {
-        "raw": 20211,
-        "text": "$202.11"
+        "raw": 28445,
+        "text": "$284.45"
       },
-      "guests": 1304,
+      "guests": 1428,
       "discounts": {
-        "raw": 215000,
-        "text": "$2,150.00"
+        "raw": 41450,
+        "text": "$414.50"
       },
       "cancellations": {
-        "raw": 98000,
-        "text": "$980.00"
+        "raw": 331500,
+        "text": "$3,315.00"
       },
       "change_vs_previous": {
-        "raw": 7.2,
+        "raw": 7.2223,
         "text": "+7.2%"
       }
     },
     "flags": [],
     "meta": {
-      "as_of": "2026-10-19T08:00:00-06:00",
-      "coverage_pct": 87.5,
+      "as_of": "2026-10-12T09:00:00-06:00",
+      "coverage_pct": 100,
       "period_resolved": {
-        "from": "2026-10-12",
-        "to": "2026-10-18"
+        "from": "2026-10-05",
+        "to": "2026-10-11"
       }
     }
   }

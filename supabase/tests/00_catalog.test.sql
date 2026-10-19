@@ -9,8 +9,11 @@ select is((select count(*) from pg_proc p where p.pronamespace = 'app'::regnames
 select is((select count(*) from pg_proc p where p.pronamespace = 'app'::regnamespace and has_function_privilege('anon', p.oid, 'execute')),
           0::bigint, 'anon executes nothing in app');
 select set_eq($$select p.proname::text from pg_proc p where p.pronamespace = 'app'::regnamespace and has_function_privilege('authenticated', p.oid, 'execute')$$,
-              array['current_tenant_id', 'can_see_location', 'has_all_locations', 'has_location_list', 'location_scope_ids'],
-              'authenticated executes only the policy helpers');
+              array['current_tenant_id', 'can_see_location', 'has_all_locations', 'has_location_list', 'location_scope_ids',
+                    -- MR-17: the read RPCs run as the caller, so the caller runs their helpers
+                    'business_today', 'resolve_period', 'previous_period', 'scope_locations', 'fmt_money', 'fmt_number',
+                    'fmt_pct', 'figure', 'data_as_of', 'rpc_ok', 'rpc_error', 'flag', 'sales_totals', 'item_rows', 'metric_value'],
+              'authenticated executes only the policy helpers and the read-RPC helpers');
 select ok(has_function_privilege('service_role', 'app.uuid_v7(timestamptz)', 'execute'), 'service_role can run the uuid default');
 select ok(has_schema_privilege('authenticated', 'app', 'usage'), 'authenticated has usage on app');
 select ok(has_schema_privilege('service_role', 'app', 'usage'), 'service_role has usage on app');
