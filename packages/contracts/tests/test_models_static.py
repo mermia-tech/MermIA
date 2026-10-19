@@ -43,7 +43,7 @@ def test_rows_are_frozen_and_reject_unknown_columns() -> None:
         version=1,
     )
     with pytest.raises(ValidationError):
-        row.name = "x"  # type: ignore[misc]
+        row.name = "x"
     with pytest.raises(ValidationError):
         models.LocationRow(**{**row.model_dump(), "surprise": 1})
 
@@ -77,7 +77,7 @@ def test_membership_scope_columns() -> None:
         id=ID,
         tenant_id=ID,
         user_id=ID,
-        role="owner",
+        role="owner",  # type: ignore[arg-type]  # the wire value is coerced
         all_locations=True,
         location_ids=None,
         can_approve=[],
@@ -95,16 +95,14 @@ def test_money_is_integer_centavos_and_unit_prices_keep_six_decimals() -> None:
         ingredient_id=ID,
         unit_price_net=Decimal("0.220000"),
         effective_from=dt.date(2026, 10, 12),
-        source="manual",
+        source="manual",  # type: ignore[arg-type]
         created_at=NOW,
         updated_at=NOW,
         version=1,
     )
     assert price.unit_price_net == Decimal("0.22")
     with pytest.raises(ValidationError):
-        models.IngredientPriceRow(
-            **{**price.model_dump(), "unit_price_net": Decimal("0.2200001")}
-        )
+        models.IngredientPriceRow(**{**price.model_dump(), "unit_price_net": Decimal("0.2200001")})
     fields = models.DailySalesAggRow.model_fields
     assert fields["net_sales"].annotation is int
     assert fields["net_sales"].description == "unit=centavos"
@@ -126,7 +124,7 @@ def test_enum_members_follow_the_database_labels_and_escape_keywords() -> None:
 def test_documented_jsonb_columns_are_typed_and_the_rest_are_open() -> None:
     assert models.ImportBatchRow.model_fields["stats"].annotation is ImportBatchStats
     assert models.TenantRow.model_fields["settings"].annotation is TenantSettings
-    settings = TenantSettings(target_food_cost_pct=Decimal("32.5"), kpis=["margin"])
+    settings = TenantSettings(target_food_cost_pct=Decimal("32.5"), kpis=["margin"])  # type: ignore[call-arg]
     assert settings.model_extra == {"kpis": ["margin"]}
     mix = models.DailySalesAggRow.model_fields["payment_mix"].annotation
     assert mix == PaymentMix
@@ -135,8 +133,6 @@ def test_documented_jsonb_columns_are_typed_and_the_rest_are_open() -> None:
 
 
 def test_import_batch_stats_totals_reject_floats() -> None:
-    assert ImportBatchStats(totals={"net_sales": 3188000}).totals == {
-        "net_sales": 3188000
-    }
+    assert ImportBatchStats(totals={"net_sales": 3188000}).totals == {"net_sales": 3188000}
     with pytest.raises(ValidationError):
-        ImportBatchStats(totals={"net_sales": 1234.56})
+        ImportBatchStats(totals={"net_sales": 1234.56})  # type: ignore[dict-item]

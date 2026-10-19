@@ -9,12 +9,13 @@ import types
 import typing
 
 import pytest
+from pydantic import BaseModel
 
 from mermia_contracts import batch
 from mermia_contracts.db import models
 
 # input type -> (row model, {input field: column})
-MAP: dict[type, tuple[type, dict[str, str]]] = {
+MAP: dict[type[BaseModel], tuple[type[BaseModel], dict[str, str]]] = {
     batch.MenuItemIn: (
         models.MenuItemRow,
         {"external_id": "external_id", "name": "name", "kind": "kind"},
@@ -155,9 +156,7 @@ def optional(annotation: object) -> bool:
 
 def unit(annotation: object) -> str | None:
     text = str(annotation or "")
-    return (
-        text.split("unit=")[1].split("'")[0].split(")")[0] if "unit=" in text else None
-    )
+    return text.split("unit=")[1].split("'")[0].split(")")[0] if "unit=" in text else None
 
 
 def enum_of(annotation: object) -> object:
@@ -165,10 +164,11 @@ def enum_of(annotation: object) -> object:
     return args[0] if args else annotation
 
 
-@pytest.mark.parametrize(
-    "input_type", sorted(MAP, key=lambda t: t.__name__), ids=lambda t: t.__name__
-)
-def test_input_fields_map_to_columns(input_type: type) -> None:
+INPUT_TYPES = sorted(MAP, key=lambda t: t.__name__)
+
+
+@pytest.mark.parametrize("input_type", INPUT_TYPES, ids=[t.__name__ for t in INPUT_TYPES])
+def test_input_fields_map_to_columns(input_type: type[BaseModel]) -> None:
     row, mapping = MAP[input_type]
     fields = input_type.model_fields
     allowed = LOADER_ONLY.get(input_type, set())
@@ -180,15 +180,11 @@ def test_input_fields_map_to_columns(input_type: type) -> None:
         in_unit = unit(in_field.annotation) or unit(in_field.description)
         col_unit = unit(col_field.annotation) or unit(col_field.description)
         if in_unit and col_unit:
-            assert in_unit == col_unit, (
-                f"{input_type.__name__}.{name}: {in_unit} vs {col_unit}"
-            )
+            assert in_unit == col_unit, f"{input_type.__name__}.{name}: {in_unit} vs {col_unit}"
         # enums are the generated ones
         col_enum = enum_of(col_field.annotation)
         if isinstance(col_enum, type) and issubclass(col_enum, enum.StrEnum):
-            assert enum_of(in_field.annotation) is col_enum, (
-                f"{input_type.__name__}.{name}"
-            )
+            assert enum_of(in_field.annotation) is col_enum, f"{input_type.__name__}.{name}"
         # a field the database requires cannot be optional on the input side
         if (
             not optional(col_field.annotation)

@@ -13,12 +13,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 Cents = Annotated[int, Field(description="unit=centavos")]
 Bytes = Annotated[int, Field(ge=0, description="unit=bytes")]
-Quantity = Annotated[
-    Decimal, Field(max_digits=18, decimal_places=6, description="unit=quantity")
-]
-Factor = Annotated[
-    Decimal, Field(max_digits=20, decimal_places=10, description="unit=quantity")
-]
+Quantity = Annotated[Decimal, Field(max_digits=18, decimal_places=6, description="unit=quantity")]
+Factor = Annotated[Decimal, Field(max_digits=20, decimal_places=10, description="unit=quantity")]
 UnitPricePesosPerBaseUnit = Annotated[
     Decimal,
     Field(max_digits=20, decimal_places=6, description="unit=pesos_per_base_unit"),
@@ -30,9 +26,7 @@ UnitPricePesosPerPurchaseUnit = Annotated[
 PercentPoints = Annotated[
     Decimal, Field(max_digits=7, decimal_places=4, description="unit=percent_points")
 ]
-Fraction = Annotated[
-    Decimal, Field(max_digits=5, decimal_places=4, description="unit=fraction")
-]
+Fraction = Annotated[Decimal, Field(max_digits=5, decimal_places=4, description="unit=fraction")]
 Usd = Annotated[Decimal, Field(max_digits=12, decimal_places=6, description="unit=usd")]
 
 

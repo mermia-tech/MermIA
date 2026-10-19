@@ -124,14 +124,10 @@ order by c.relname, a.attnum
 
 
 def introspect(conn: psycopg.Connection) -> Schema:
-    enums = tuple(
-        EnumType(name, tuple(labels)) for name, labels in conn.execute(ENUMS_SQL)
-    )
+    enums = tuple(EnumType(name, tuple(labels)) for name, labels in conn.execute(ENUMS_SQL))
     table_comments: dict[str, str | None] = dict(conn.execute(TABLES_SQL).fetchall())
     columns: dict[str, list[Column]] = {name: [] for name in table_comments}
-    for rel, name, typ, typtype, sql_type, elem, not_null, comment in conn.execute(
-        COLUMNS_SQL
-    ):
+    for rel, name, typ, typtype, sql_type, elem, not_null, comment in conn.execute(COLUMNS_SQL):
         columns[rel].append(
             Column(
                 name=name,
@@ -144,8 +140,7 @@ def introspect(conn: psycopg.Connection) -> Schema:
             )
         )
     tables = tuple(
-        Table(name, table_comments[name], tuple(columns[name]))
-        for name in sorted(table_comments)
+        Table(name, table_comments[name], tuple(columns[name])) for name in sorted(table_comments)
     )
     return Schema(enums, tables)
 
@@ -179,14 +174,14 @@ def python_type(table: str, col: Column, used: set[str]) -> str:
     try:
         return SIMPLE_TYPES[col.pg_type]
     except KeyError:
-        raise SystemExit(f"{table}.{col.name}: unsupported type {col.sql_type}")
+        raise SystemExit(f"{table}.{col.name}: unsupported type {col.sql_type}") from None
 
 
 def element_type(pg_elem: str) -> str:
     try:
         return SIMPLE_TYPES[pg_elem.lstrip("_")]
     except KeyError:
-        raise SystemExit(f"unsupported array element type {pg_elem}")
+        raise SystemExit(f"unsupported array element type {pg_elem}") from None
 
 
 ALIAS_NAMES = (
@@ -224,7 +219,7 @@ def render(schema: Schema, migrations_hash: str) -> str:
     first: list[str] = []
     if overrides:
         first.append(import_line("mermia_contracts.db.overrides", overrides))
-    aliases = sorted(a for a in ALIAS_NAMES if a in used) + ["RowModel"]
+    aliases = [*sorted(a for a in ALIAS_NAMES if a in used), "RowModel"]
     first.append(import_line("mermia_contracts.db.types", sorted(aliases)))
 
     header = [
@@ -258,9 +253,7 @@ def generate(conn: psycopg.Connection, migrations_dir: Path) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument(
-        "--db-url", default=os.environ.get("MERMIA_DB_URL", DEFAULT_DB_URL)
-    )
+    parser.add_argument("--db-url", default=os.environ.get("MERMIA_DB_URL", DEFAULT_DB_URL))
     parser.add_argument("--migrations-dir", type=Path, default=DEFAULT_MIGRATIONS_DIR)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--check", action="store_true")
