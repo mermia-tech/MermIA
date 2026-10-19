@@ -18,9 +18,13 @@ from uuid import UUID
 
 from pydantic import Field, model_validator
 
-from mermia_contracts.batch import Cents, Model, Text
+from mermia_contracts.batch import Model, Text
 from mermia_contracts.db.models import IngredientPriceSource, PendingChangeStatus
-from mermia_contracts.decimals import PercentPoints, Quantity, UnitPricePerBaseUnit
+from mermia_contracts.decimals import (
+    PositivePercentPoints,
+    PositiveQuantity,
+    PositiveUnitPricePerBaseUnit,
+)
 
 
 class PendingKind(StrEnum):
@@ -47,7 +51,7 @@ class IngredientPriceSet(Model):
     the caller converts before proposing (MR-10 spec 5.4).
     """
 
-    unit_price: UnitPricePerBaseUnit
+    unit_price: PositiveUnitPricePerBaseUnit
     effective_from: dt.date
     source: IngredientPriceSource = IngredientPriceSource.manual
 
@@ -59,20 +63,27 @@ class RecipeLine(Model):
 
     ingredient_name: Text
     ingredient_external_id: Text | None = None
-    qty_base: Quantity
+    qty_base: PositiveQuantity
     unit: Text
-    yield_override_pct: PercentPoints | None = None
+    yield_override_pct: PositivePercentPoints | None = None
+    """Edible portion over purchased, in percent (03 C.6). Greater than zero; not capped at 100
+    because the "Recetas" export that fills it is unverified; limited to the column's 999.9999."""
 
 
 class RecipeUpsert(Model):
     """PROVISIONAL: the lines mirror the "Recetas" import."""
 
-    yield_qty: Quantity
+    yield_qty: PositiveQuantity
     lines: Annotated[list[RecipeLine], Field(min_length=1)]
 
 
+PositiveCents = Annotated[
+    int, Field(strict=True, gt=0, le=2**63 - 1, description="unit=centavos, greater than zero")
+]
+
+
 class MenuItemPriceSet(Model):
-    price_gross: Cents
+    price_gross: PositiveCents
     effective_from: dt.date
 
 

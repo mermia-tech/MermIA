@@ -92,13 +92,14 @@
         "unit_price": {
           "anyOf": [
             {
+              "exclusiveMinimum": 0.0,
               "type": "number"
             },
             {
               "type": "string"
             }
           ],
-          "description": "unit=pesos_per_base_unit (g, ml or pza), never per purchase unit",
+          "description": "unit=pesos_per_base_unit (g, ml or pza), never per purchase unit; greater than zero",
           "title": "Unit Price"
         }
       },
@@ -167,9 +168,9 @@
           "type": "string"
         },
         "price_gross": {
-          "description": "unit=centavos",
+          "description": "unit=centavos, greater than zero",
+          "exclusiveMinimum": 0,
           "maximum": 9223372036854775807,
-          "minimum": -9223372036854775808,
           "title": "Price Gross",
           "type": "integer"
         }
@@ -251,13 +252,14 @@
         "qty_base": {
           "anyOf": [
             {
+              "exclusiveMinimum": 0.0,
               "type": "number"
             },
             {
               "type": "string"
             }
           ],
-          "description": "unit=quantity",
+          "description": "unit=quantity, greater than zero",
           "title": "Qty Base"
         },
         "unit": {
@@ -270,13 +272,14 @@
             {
               "anyOf": [
                 {
+                  "exclusiveMinimum": 0.0,
                   "type": "number"
                 },
                 {
                   "type": "string"
                 }
               ],
-              "description": "unit=percent_points"
+              "description": "unit=percent_points, greater than zero, column limit 999.9999"
             },
             {
               "type": "null"
@@ -309,13 +312,14 @@
         "yield_qty": {
           "anyOf": [
             {
+              "exclusiveMinimum": 0.0,
               "type": "number"
             },
             {
               "type": "string"
             }
           ],
-          "description": "unit=quantity",
+          "description": "unit=quantity, greater than zero",
           "title": "Yield Qty"
         }
       },

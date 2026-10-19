@@ -55,13 +55,17 @@ def _from_python(value: Any) -> Any:
 
 
 class _Exact:
-    def __init__(self, max_digits: int, decimal_places: int) -> None:
+    def __init__(self, max_digits: int, decimal_places: int, *, gt: Decimal | None = None) -> None:
         self.max_digits = max_digits
         self.decimal_places = decimal_places
+        self.gt = gt
 
     def __get_pydantic_core_schema__(self, source: Any, handler: Any) -> core_schema.CoreSchema:
         exact = core_schema.decimal_schema(
-            max_digits=self.max_digits, decimal_places=self.decimal_places, strict=True
+            max_digits=self.max_digits,
+            decimal_places=self.decimal_places,
+            gt=self.gt,
+            strict=True,
         )
         return core_schema.no_info_before_validator_function(_from_python, exact)
 
@@ -79,6 +83,25 @@ UnitPricePerBaseUnit = Annotated[
     _Exact(20, 6),
     Field(description="unit=pesos_per_base_unit (g, ml or pza), never per purchase unit"),
 ]
+_ZERO = Decimal(0)
+PositiveUnitPricePerBaseUnit = Annotated[
+    Decimal,
+    _Exact(20, 6, gt=_ZERO),
+    Field(
+        description="unit=pesos_per_base_unit (g, ml or pza), never per purchase unit; "
+        "greater than zero"
+    ),
+]
+PositiveQuantity = Annotated[
+    Decimal, _Exact(18, 6, gt=_ZERO), Field(description="unit=quantity, greater than zero")
+]
+PositivePercentPoints = Annotated[
+    Decimal,
+    _Exact(7, 4, gt=_ZERO),
+    Field(description="unit=percent_points, greater than zero, column limit 999.9999"),
+]
+"""Strictly positive twins of the types above, for values that divide or multiply a cost: a
+price, a quantity, a yield. Each keeps the digits of its database column."""
 FigureRaw = Annotated[Decimal, _Exact(24, 6)]
 """The raw value of a Figure: its unit depends on the metric asked for."""
 
