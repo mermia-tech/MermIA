@@ -305,3 +305,54 @@ def test_an_oversized_file_is_refused_before_reading() -> None:
     with pytest.raises(UnreadableFile) as e:
         parse_file(b"PK" + b"\0" * (10 * 1024 * 1024))
     assert "grande" in e.value.message_es
+
+
+# --- review on #58 ---------------------------------------------------------------------------
+
+
+def test_an_unexpected_parser_error_is_logged_and_reported_as_unreadable(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    from mermia_api.ingestion import registry
+
+    def boom(wb: Any) -> Any:
+        raise RuntimeError("parser bug")
+
+    stub = registry.XlsxParser("test.stub@v1", "Stub", lambda wb: True, boom)
+    monkeypatch.setattr(registry, "XLSX_PARSERS", (stub,))
+    with (
+        caplog.at_level("ERROR", logger="mermia_api.ingestion.registry"),
+        pytest.raises(UnreadableFile),
+    ):
+        parse_file(report(PASTOR))
+    assert [r.exc_info[0] for r in caplog.records if r.exc_info] == [RuntimeError]
+
+
+def test_a_repeated_clave_is_refused_naming_the_rows() -> None:
+    again = ["P001", "Tacos al pastor (orden de 3)", "Tacos", 1, 65, 65, 0, 65]
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report(PASTOR, again, total=[None, "Total", None, 3, None, 195, 5, 190]))
+    assert "Las filas 6 y 7" in e.value.message_es and "P001" in e.value.message_es
+
+
+def test_two_rows_without_clave_and_the_same_name_are_refused() -> None:
+    a = [None, "Refresco", "Bebidas", 1, 30, 30, 0, 30]
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report(a, a, total=[None, "Total", None, 2, None, 60, 0, 60]))
+    assert "Refresco" in e.value.message_es
+
+
+def test_an_item_called_total_is_an_item() -> None:
+    combo = ["P050", "Total", "Especialidades", 1, 120, 120, 0, 120]
+    batch = parse_file(report(combo, total=[None, "Total", None, 1, None, 120, 0, 120]))
+    assert [x.item_name for x in batch.item_sales] == ["Total"]
+    assert batch.totals.lines == 1
+
+
+def test_a_sheet_with_too_many_rows_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    from mermia_api.ingestion.parsers import sr_productos_vendidos
+
+    monkeypatch.setattr(sr_productos_vendidos, "MAX_ROWS", 2)
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report(PASTOR, COCA, AGUA))
+    assert "renglones" in e.value.message_es

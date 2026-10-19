@@ -7,6 +7,7 @@ here.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -16,6 +17,8 @@ from mermia_api.ingestion.errors import ReportError, UnknownReport, UnreadableFi
 from mermia_api.ingestion.parsers import sr_productos_vendidos
 from mermia_api.ingestion.xlsx import open_workbook
 from mermia_contracts.batch import NormalizedBatch
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -49,6 +52,8 @@ def parse_file(data: bytes) -> NormalizedBatch:
     except Exception as e:
         # A damaged file (corrupt sheet XML, bad cell values) fails inside openpyxl while sheets
         # are read lazily, or a value breaks a contract limit: never a crash, always a message.
+        # It may also be a bug of ours, so it is logged with its traceback.
+        logger.exception("parse_file: unexpected %s, reported as unreadable", type(e).__name__)
         raise UnreadableFile(
             "No pude leer el archivo: parece dañado. Vuelve a exportar el reporte desde Soft "
             "Restaurant y envíamelo de nuevo.",
