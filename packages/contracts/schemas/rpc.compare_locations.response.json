@@ -139,7 +139,7 @@
                   "type": "string"
                 }
               ],
-              "description": "unit=percent_points"
+              "description": "unit=percent_points (calculated, 4 decimals)"
             },
             {
               "type": "null"

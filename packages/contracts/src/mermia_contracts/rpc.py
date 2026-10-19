@@ -22,7 +22,7 @@ from pydantic import AwareDatetime, Field, model_validator
 from mermia_contracts.batch import Cents, Count, Model, Text
 from mermia_contracts.batch import Period as DateRange
 from mermia_contracts.db.models import CostConfidence, SourceKind
-from mermia_contracts.decimals import FigureRaw, PercentPoints, UnitPricePerBaseUnit
+from mermia_contracts.decimals import ComputedPercent, FigureRaw, UnitPricePerBaseUnit
 
 # --- shared pieces ---------------------------------------------------------------------------
 
@@ -52,7 +52,9 @@ class Money(Model):
 
 
 class Pct(Model):
-    raw: PercentPoints
+    """A calculated percentage in percent points (+7.2 is 7.2 %), not a database column."""
+
+    raw: ComputedPercent
     text: Text
 
 
@@ -70,7 +72,7 @@ class Flag(Model):
 
 class Meta(Model):
     as_of: AwareDatetime
-    coverage_pct: PercentPoints | None = None
+    coverage_pct: ComputedPercent | None = None
     period_resolved: DateRange | None = None
 
 
@@ -186,11 +188,22 @@ class SalesSummaryData(Model):
 
 
 class ComparePeriodsData(Model):
+    """`a` against the base period `b`: abs_change = a - b and pct_change = (a - b) / b.
+
+    `pct_change` is null when `b` is zero: the change is undefined, never 0 or infinite.
+    """
+
     metric: CompareMetric
     a: Figure
     b: Figure
     abs_change: Figure
     pct_change: Pct | None = None
+
+    @model_validator(mode="after")
+    def _no_change_over_a_zero_base(self) -> ComparePeriodsData:
+        if self.b.raw == 0 and self.pct_change is not None:
+            raise ValueError("pct_change must be null when the base period is zero")
+        return self
 
 
 class LocationValue(Model):

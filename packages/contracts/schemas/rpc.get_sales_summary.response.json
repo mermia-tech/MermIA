@@ -46,7 +46,7 @@
                   "type": "string"
                 }
               ],
-              "description": "unit=percent_points"
+              "description": "unit=percent_points (calculated, 4 decimals)"
             },
             {
               "type": "null"
@@ -98,6 +98,7 @@
     },
     "Pct": {
       "additionalProperties": false,
+      "description": "A calculated percentage in percent points (+7.2 is 7.2 %), not a database column.",
       "properties": {
         "raw": {
           "anyOf": [
@@ -108,7 +109,7 @@
               "type": "string"
             }
           ],
-          "description": "unit=percent_points",
+          "description": "unit=percent_points (calculated, 4 decimals)",
           "title": "Raw"
         },
         "text": {

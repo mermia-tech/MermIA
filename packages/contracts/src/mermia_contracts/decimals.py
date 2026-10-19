@@ -67,6 +67,12 @@ class _Exact:
 
 
 PercentPoints = Annotated[Decimal, _Exact(7, 4), Field(description="unit=percent_points")]
+"""A percentage stored in a `numeric(7,4)` column: keeps the column's limit (999.9999)."""
+ComputedPercent = Annotated[
+    Decimal, _Exact(14, 4), Field(description="unit=percent_points (calculated, 4 decimals)")
+]
+"""A percentage the metric layer calculates for an RPC result. Ten whole digits, so a change such
+as 1 to 15 units (+1400) fits; it never reaches a column, which is why it is not PercentPoints."""
 Quantity = Annotated[Decimal, _Exact(18, 6), Field(description="unit=quantity")]
 UnitPricePerBaseUnit = Annotated[
     Decimal,

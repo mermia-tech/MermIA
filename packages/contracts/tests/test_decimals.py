@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 from mermia_contracts.batch import Model
 from mermia_contracts.decimals import (
+    ComputedPercent,
     FigureRaw,
     PercentPoints,
     Quantity,
@@ -118,7 +119,9 @@ def test_both_modes_agree_on_exact_numbers(given: Any) -> None:
     assert Price.model_validate_json(body).x == Price.model_validate({"x": given}).x
 
 
-@pytest.mark.parametrize("type_", [PercentPoints, Quantity, FigureRaw, UnitPricePerBaseUnit])
+@pytest.mark.parametrize(
+    "type_", [PercentPoints, ComputedPercent, Quantity, FigureRaw, UnitPricePerBaseUnit]
+)
 def test_every_decimal_type_takes_parsed_json_numbers(type_: Any) -> None:
     class One(Model):
         x: type_
