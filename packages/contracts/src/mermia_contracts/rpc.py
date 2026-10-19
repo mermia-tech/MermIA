@@ -13,8 +13,9 @@ a successful response (`match="ambiguous"`).
 from __future__ import annotations
 
 import datetime as dt
+from decimal import Decimal
 from enum import StrEnum
-from typing import Annotated, Any, Literal, NamedTuple
+from typing import Annotated, Any, Final, Literal, NamedTuple
 from uuid import UUID
 
 from pydantic import AwareDatetime, Field, model_validator
@@ -46,6 +47,38 @@ BreakdownBy = Literal["payment_method", "staff", "hour", "weekday", "channel", "
 CancellationKind = Literal["cancellations", "discounts"]
 
 
+Unit = Literal["centavos", "count", "percent_points"]
+
+METRIC_UNIT: Final[dict[str, Unit]] = {
+    "net_sales": "centavos",
+    "avg_ticket": "centavos",
+    "revenue": "centavos",
+    "margin": "centavos",
+    "tickets": "count",
+    "guests": "count",
+    "units": "count",
+    "food_cost_pct": "percent_points",
+    "margin_pct": "percent_points",
+}
+"""The unit of `Figure.raw` for each metric of compare_* and get_top_dishes.
+
+An amount of money is integer centavos everywhere, so `net_sales` has the same `raw` in
+get_sales_summary (a Money) and in compare_periods (a Figure).
+"""
+
+
+def _check_scale(metric: str, **figures: Figure) -> None:
+    unit = METRIC_UNIT[metric]
+    for name, figure in figures.items():
+        raw = figure.raw
+        if unit == "centavos" and raw != raw.to_integral_value():
+            raise ValueError(f"{name} of {metric} must be whole centavos, got {raw}")
+        if unit == "count" and raw != raw.to_integral_value():
+            raise ValueError(f"{name} of {metric} must be a whole number, got {raw}")
+        if unit == "percent_points" and raw != raw.quantize(Decimal("0.0001")):
+            raise ValueError(f"{name} of {metric} allows four decimals at most, got {raw}")
+
+
 class Money(Model):
     raw: Cents
     text: Text
@@ -59,7 +92,11 @@ class Pct(Model):
 
 
 class Figure(Model):
-    """A number whose unit depends on the metric asked for (compare_*, top dishes)."""
+    """A number whose unit depends on the metric asked for (compare_*, top dishes).
+
+    The unit is not a field: it follows from `metric` through METRIC_UNIT. Money is integer
+    centavos (as Money.raw), counts are whole numbers and percentages are percent points.
+    """
 
     raw: FigureRaw
     text: Text
@@ -205,6 +242,13 @@ class ComparePeriodsData(Model):
             raise ValueError("pct_change must be null when the base period is zero")
         return self
 
+    @model_validator(mode="after")
+    def _figures_follow_the_metric_unit(self) -> ComparePeriodsData:
+        _check_scale(self.metric, a=self.a, b=self.b, abs_change=self.abs_change)
+        if self.abs_change.raw != self.a.raw - self.b.raw:
+            raise ValueError("abs_change must equal a - b")
+        return self
+
 
 class LocationValue(Model):
     location_id: UUID
@@ -218,6 +262,12 @@ class CompareLocationsData(Model):
     metric: CompareMetric
     rows: list[LocationValue]
 
+    @model_validator(mode="after")
+    def _figures_follow_the_metric_unit(self) -> CompareLocationsData:
+        for row in self.rows:
+            _check_scale(self.metric, value=row.value, diff_vs_best=row.diff_vs_best)
+        return self
+
 
 class DishValue(Model):
     rank: Annotated[int, Field(strict=True, ge=1)]
@@ -229,6 +279,12 @@ class DishValue(Model):
 class TopDishesData(Model):
     metric: TopMetric
     rows: Annotated[list[DishValue], Field(max_length=10)]
+
+    @model_validator(mode="after")
+    def _values_follow_the_metric_unit(self) -> TopDishesData:
+        for row in self.rows:
+            _check_scale(self.metric, value=row.value)
+        return self
 
 
 class BreakdownRow(Model):

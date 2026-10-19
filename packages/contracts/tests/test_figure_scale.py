@@ -1,0 +1,140 @@
+"""Figure.raw has one scale per metric: centavos, a count, or percent points.
+
+The unit is not a field of Figure; it follows from the `metric` that travels beside it
+(rpc.METRIC_UNIT). These tests pin the table, the checks it drives and the agreement between
+RPCs that report the same amount.
+"""
+
+import json
+from pathlib import Path
+from typing import Any, get_args
+
+import pytest
+from pydantic import ValidationError
+
+from mermia_contracts.rpc import (
+    METRIC_UNIT,
+    CompareLocationsData,
+    CompareMetric,
+    ComparePeriodsData,
+    Figure,
+    SalesSummaryData,
+    TopDishesData,
+    TopMetric,
+)
+
+EXAMPLES = Path(__file__).parent / "examples" / "rpc"
+LOC = "0f7a1c52-3b6e-7c1a-9d11-000000000001"
+DISH = "0f7a1c52-3b6e-7c1a-9d22-000000000001"
+MONEY = [m for m, u in METRIC_UNIT.items() if u == "centavos"]
+
+
+def _fig(raw: Any) -> dict[str, Any]:
+    return {"raw": raw, "text": str(raw)}
+
+
+def _compare(metric: str, a: Any, b: Any, change: Any) -> dict[str, Any]:
+    return {"metric": metric, "a": _fig(a), "b": _fig(b), "abs_change": _fig(change)}
+
+
+def _locations(metric: str, value: Any, diff: Any) -> dict[str, Any]:
+    row = {"location_id": LOC, "name": "Centro", "value": _fig(value), "rank": 1}
+    return {"metric": metric, "rows": [{**row, "diff_vs_best": _fig(diff)}]}
+
+
+def _dishes(metric: str, value: Any) -> dict[str, Any]:
+    return {
+        "metric": metric,
+        "rows": [{"rank": 1, "menu_item_id": DISH, "name": "Taco", "value": _fig(value)}],
+    }
+
+
+def test_the_table_names_a_unit_for_every_metric_of_every_rpc() -> None:
+    assert set(METRIC_UNIT) == set(get_args(CompareMetric)) | set(get_args(TopMetric))
+
+
+def test_the_table_pins_the_agreed_units() -> None:
+    assert METRIC_UNIT == {
+        "net_sales": "centavos",
+        "avg_ticket": "centavos",
+        "revenue": "centavos",
+        "margin": "centavos",
+        "tickets": "count",
+        "guests": "count",
+        "units": "count",
+        "food_cost_pct": "percent_points",
+        "margin_pct": "percent_points",
+    }
+
+
+def test_the_figure_schema_tells_the_reader_where_the_unit_comes_from() -> None:
+    description = Figure.model_json_schema()["description"]
+    assert "METRIC_UNIT" in description and "centavos" in description
+
+
+@pytest.mark.parametrize("metric", [m for m in MONEY if m in get_args(CompareMetric)])
+def test_compare_periods_money_is_whole_centavos(metric: str) -> None:
+    ComparePeriodsData.model_validate(_compare(metric, 18432050, 17190500, 1241550))
+    with pytest.raises(ValidationError, match="whole centavos"):
+        ComparePeriodsData.model_validate(_compare(metric, 184320.5, 171905, 12415.5))
+
+
+@pytest.mark.parametrize("metric", [m for m in MONEY if m in get_args(CompareMetric)])
+def test_the_same_pesos_in_pesos_instead_of_centavos_is_a_fractional_centavo(metric: str) -> None:
+    """184,320.50 pesos written as 184320.50 is the 100x mix-up: it must not pass as money."""
+    with pytest.raises(ValidationError, match="whole centavos"):
+        ComparePeriodsData.model_validate(_compare(metric, "184320.50", 0, "184320.50"))
+
+
+@pytest.mark.parametrize("metric", ["tickets", "guests", "units"])
+def test_counts_are_whole_numbers(metric: str) -> None:
+    ComparePeriodsData.model_validate(_compare(metric, 15, 1, 14))
+    with pytest.raises(ValidationError, match="whole number"):
+        ComparePeriodsData.model_validate(_compare(metric, 15.5, 1, 14.5))
+
+
+def test_percent_metrics_keep_up_to_four_decimals() -> None:
+    ComparePeriodsData.model_validate(_compare("food_cost_pct", "36.4", "32.0001", "4.3999"))
+    with pytest.raises(ValidationError, match="four decimals"):
+        ComparePeriodsData.model_validate(_compare("food_cost_pct", "36.40001", 32, "4.40001"))
+
+
+def test_abs_change_is_a_minus_b() -> None:
+    with pytest.raises(ValidationError, match="abs_change"):
+        ComparePeriodsData.model_validate(_compare("net_sales", 18432050, 17190500, 1))
+
+
+def test_compare_locations_checks_value_and_diff_with_the_metric_unit() -> None:
+    CompareLocationsData.model_validate(_locations("net_sales", 12000000, -5567950))
+    for value, diff in [(120000.5, 0), (12000000, -55679.5)]:
+        with pytest.raises(ValidationError, match="whole centavos"):
+            CompareLocationsData.model_validate(_locations("net_sales", value, diff))
+
+
+@pytest.mark.parametrize("metric", ["revenue", "margin"])
+def test_top_dishes_money_metrics_are_whole_centavos(metric: str) -> None:
+    TopDishesData.model_validate(_dishes(metric, 4200000))
+    with pytest.raises(ValidationError, match="whole centavos"):
+        TopDishesData.model_validate(_dishes(metric, 42000.5))
+
+
+def test_top_dishes_units_are_a_count_and_margin_pct_are_percent_points() -> None:
+    TopDishesData.model_validate(_dishes("units", 640))
+    TopDishesData.model_validate(_dishes("margin_pct", "67.1631"))
+    with pytest.raises(ValidationError, match="whole number"):
+        TopDishesData.model_validate(_dishes("units", 640.5))
+
+
+def _example(name: str) -> dict[str, Any]:
+    doc: dict[str, Any] = json.loads((EXAMPLES / f"{name}.json").read_text())
+    data: dict[str, Any] = doc["response"]["data"]
+    return data
+
+
+def test_the_same_amount_has_the_same_raw_in_get_sales_summary_and_compare_periods() -> None:
+    """Both examples ask about last_week: one is a Money, the other the Figure for net_sales."""
+    summary = SalesSummaryData.model_validate(_example("get_sales_summary"))
+    compare = ComparePeriodsData.model_validate(_example("compare_periods"))
+    assert compare.metric == "net_sales"
+    assert compare.a.raw == summary.net_sales.raw
+    assert compare.a.text == summary.net_sales.text
