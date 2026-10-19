@@ -44,19 +44,21 @@ select is((select d.business_date from public.daily_sales_agg d join l on l.id =
 
 -- 13 H3 example 4: tacos al pastor cost $18.40 from recipe and prices in effect on 2026-10-12.
 -- cost = sum(qty * price per base unit * 100 / yield), sub-recipes per unit of their yield;
--- rounded once, half away from zero.
+-- rounded once, half away from zero. Prices are kept per day: today (10-12) for the dish
+-- cost, yesterday (10-11) for yesterday's food cost.
 create temp table price_on as
-select p.ingredient_id, p.unit_price_net
-from public.ingredient_price p join t on t.id = p.tenant_id
-where p.effective_from <= '2026-10-12' and (p.effective_to is null or p.effective_to >= '2026-10-12');
+select d.day, p.ingredient_id, p.unit_price_net
+from (values ('2026-10-11'::date), ('2026-10-12'::date)) d(day)
+join public.ingredient_price p on p.effective_from <= d.day and (p.effective_to is null or p.effective_to >= d.day)
+join t on t.id = p.tenant_id;
 create temp table salsa_per_g as
-select r.id as recipe_id, sum(rl.qty_base * pr.unit_price_net * 100 / i.default_yield_pct) / r.yield_qty as cost
+select pr.day, r.id as recipe_id, sum(rl.qty_base * pr.unit_price_net * 100 / i.default_yield_pct) / r.yield_qty as cost
 from public.recipe r
 join public.recipe_line rl on rl.recipe_id = r.id
 join public.ingredient i on i.id = rl.ingredient_id
 join price_on pr on pr.ingredient_id = i.id
 where r.produces_ingredient_id is not null
-group by r.id, r.yield_qty;
+group by pr.day, r.id, r.yield_qty;
 select is((
   select round(100 * sum(case
     when rl.sub_recipe_id is not null then rl.qty_base * s.cost
@@ -65,13 +67,14 @@ select is((
   join public.recipe r on r.menu_item_id = m.id
   join public.recipe_line rl on rl.recipe_id = r.id
   left join public.ingredient i on i.id = rl.ingredient_id
-  left join price_on pr on pr.ingredient_id = rl.ingredient_id
-  left join salsa_per_g s on s.recipe_id = rl.sub_recipe_id
+  left join price_on pr on pr.ingredient_id = rl.ingredient_id and pr.day = '2026-10-12'
+  left join salsa_per_g s on s.recipe_id = rl.sub_recipe_id and s.day = '2026-10-12'
   join t on t.id = m.tenant_id
   where m.external_id = 'P001'), 1840::numeric, 'tacos al pastor cost $18.40 today');
 -- 13 H3 example 6 (food cost yesterday), recomputed from the rows: for Centro on 2026-10-11,
 -- numerator = units x dish cost (dish cost rounded once per dish) over items with a recipe,
 -- denominator = those items' net (gross - discount) less the IVA inside it.
+-- dish cost with the prices in effect on 2026-10-11, the day being measured
 create temp table dish_cost_on as
 select m.id as menu_item_id, round(100 * sum(case
     when rl.sub_recipe_id is not null then rl.qty_base * s.cost
@@ -80,8 +83,8 @@ from public.menu_item m
 join public.recipe r on r.menu_item_id = m.id
 join public.recipe_line rl on rl.recipe_id = r.id
 left join public.ingredient i on i.id = rl.ingredient_id
-left join price_on pr on pr.ingredient_id = rl.ingredient_id
-left join salsa_per_g s on s.recipe_id = rl.sub_recipe_id
+left join price_on pr on pr.ingredient_id = rl.ingredient_id and pr.day = '2026-10-11'
+left join salsa_per_g s on s.recipe_id = rl.sub_recipe_id and s.day = '2026-10-11'
 join t on t.id = m.tenant_id
 group by m.id;
 create temp table yesterday as
@@ -115,6 +118,11 @@ select is((select sum(total) from cancelled),
           (select d.cancellations_amount::numeric from public.daily_sales_agg d join l on l.id = d.location_id
            where l.name = 'Centro' and d.business_date = '2026-10-10'),
           'they add up to the day''s cancellations_amount');
+select is((select count(*) from cancelled c
+           where c.total <> (select sum(sl.net) from public.sale_line sl where sl.ticket_id = c.id)
+              or c.tax <> (select sum(sl.tax) from public.sale_line sl where sl.ticket_id = c.id)
+              or c.subtotal <> c.total - c.tax), 0::bigint,
+          'ticket total = sum of line net, tax = sum of line tax, subtotal = total - tax (fixtures/README.md)');
 select is((select count(*) from public.sale_line sl join cancelled c on c.id = sl.ticket_id
            left join public.staff s on s.id = sl.voided_by and s.location_id = sl.location_id
            where not sl.is_void or s.id is null or sl.void_reason is null), 0::bigint,

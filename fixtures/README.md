@@ -52,13 +52,18 @@ All money is integer centavos, rounded once, half away from zero.
 | Daily `net_sales` (`daily_sales_agg`) | sum of that day's item nets | included | subtracted |
 | Daily `tax` | IVA inside `net_sales`: `round(net_sales x 16 / 116)` | | |
 | `payment_mix` | cash + card + transfer = `net_sales` | included | |
+| Ticket line `net` (`sale_line.net`) | `qty x unit_price` | **included** (`unit_price` is the menu price) | n/a (seed tickets have none) |
+| Ticket line `tax` (`sale_line.tax`) | IVA inside the line: `round(net x 16 / 116)` | | |
+| Ticket `total` / `tax` / `subtotal` (`sale_ticket`) | `total = sum(line net)`, `tax = sum(line tax)`, `subtotal = total - tax` | `total` included, `subtotal` excluded | |
 | Dish cost | `sum(qty_base x price per base unit x 100 / yield_pct)` over the recipe, sub-recipes per gram of their yield, using the ingredient prices in effect that day | excluded (purchase prices are pre-IVA) | n/a |
 | Net price | `price_gross - round(price_gross x 16 / 116)` | excluded | n/a |
 | Dish margin | `margin_pct = (net_price - cost) / net_price`, `food_cost_pct = cost / net_price` (MR-11 D20) | excluded | n/a |
-| Day food cost | `sum(units x dish cost) / (covered net - IVA inside it)`, over items with a recipe only | excluded | lower the denominator |
+| Day food cost | `sum(units x dish cost) / (covered net - IVA inside it)`, dish cost rounded once per dish, over items with a recipe only | excluded | lower the denominator |
 | Coverage | `covered net / day net` | same basis on both sides | |
 
-Sales `net` keeps the meaning the MR-10 contract examples already use (`packages/contracts/tests/examples/daily_valid.json`: `payment_mix` adds up to `net_sales`, so `net_sales` includes IVA). Cost-side ratios (margin, food cost) take IVA out, as `03` requires ("food cost % = ingredient cost / (menu price / 1.16)").
+Sales `net` keeps the meaning the MR-10 contract examples already use (`packages/contracts/tests/examples/daily_valid.json`: `payment_mix` adds up to `net_sales`, so `net_sales` includes IVA). **Open question at ticket grain:** `packages/contracts/tests/examples/ticket_valid.json` has the opposite reading: line `net` = `subtotal` = 10000 *without* IVA, `tax` = 1600 added on top, `total` = 11600 (while its `totals.net_sales` = 11600 *with* IVA). The seed follows item and daily grain instead: line `net` includes IVA, so `sum(line net) = total`, not `subtotal`. Ticket loaders (MR-15, MR-23) need one rule; the 17 seed tickets (all cancelled) are the only ticket rows today, so either way is a small change.
+
+Cost-side ratios (margin, food cost) take IVA out, as `03` requires ("food cost % = ingredient cost / (menu price / 1.16)").
 
 Calibration: to land exactly on the two pinned weeks, calibration adds units across each week's best sellers. It then takes the last few pesos (less than the cheapest item) off that Sunday's pastor order as a discount. That's why Centro's pastor order has a small, unexplained discount on 2026-10-04 ($6) and 2026-10-11 ($5).
 

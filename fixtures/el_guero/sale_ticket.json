@@ -48,8 +48,8 @@
   "channel": "dine_in",
   "table_label": "Mesa 19",
   "staff_id": "8cf4f013-5aa5-5f5c-aec4-7b265f5aeabf",
-  "subtotal": 15517,
-  "tax": 2483,
+  "subtotal": 15518,
+  "tax": 2482,
   "total": 18000,
   "status": "cancelled"
  },
@@ -138,8 +138,8 @@
   "channel": "dine_in",
   "table_label": "Mesa 1",
   "staff_id": "8cf4f013-5aa5-5f5c-aec4-7b265f5aeabf",
-  "subtotal": 31466,
-  "tax": 5034,
+  "subtotal": 31465,
+  "tax": 5035,
   "total": 36500,
   "status": "cancelled"
  },
@@ -300,8 +300,8 @@
   "channel": "dine_in",
   "table_label": "Mesa 12",
   "staff_id": "8bc4ea7d-9e26-5d03-8998-7f22411da5fe",
-  "subtotal": 9914,
-  "tax": 1586,
+  "subtotal": 9913,
+  "tax": 1587,
   "total": 11500,
   "status": "cancelled"
  }

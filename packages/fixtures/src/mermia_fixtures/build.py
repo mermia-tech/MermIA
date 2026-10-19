@@ -547,7 +547,8 @@ def build() -> tuple[dict[str, list[Row]], list[ItemDay], list[Day]]:
     for c in cancelled_tickets():
         ticket = uid("sale_ticket", cancel_loc, c.number)
         staff = uid("staff", cancel_loc, c.waiter)
-        tax = vat_inside(c.total)
+        # IVA is rounded once per line; the ticket's tax is the sum of its lines' tax.
+        tax = sum(vat_inside(line.net) for line in c.lines)
         t["sale_ticket"].append(
             {
                 "id": ticket,
