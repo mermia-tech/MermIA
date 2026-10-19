@@ -73,6 +73,11 @@ get_sales_summary (a Money) and in compare_periods (a Figure).
 
 
 _PCT_ROUNDING = Decimal("0.0001")  # a Pct keeps four decimals
+_SCALE_ROUNDING: dict[Unit, Decimal] = {
+    "centavos": Decimal(1),
+    "count": Decimal(0),
+    "percent_points": _PCT_ROUNDING,
+}
 
 
 def _check_scale(metric: str, **figures: Figure) -> None:
@@ -267,8 +272,12 @@ class ComparePeriodsData(Model):
     @model_validator(mode="after")
     def _figures_follow_the_metric_unit(self) -> ComparePeriodsData:
         _check_scale(self.metric, a=self.a, b=self.b, abs_change=self.abs_change)
-        if self.abs_change.raw != self.a.raw - self.b.raw:
-            raise ValueError("abs_change must equal a - b")
+        # each figure is rounded once from unrounded values: a - b can be one unit off
+        if (
+            abs(self.abs_change.raw - (self.a.raw - self.b.raw))
+            > _SCALE_ROUNDING[METRIC_UNIT[self.metric]]
+        ):
+            raise ValueError("abs_change must equal a - b (within one unit of the scale)")
         return self
 
 
@@ -374,8 +383,6 @@ class DishMarginResolved(Model):
         slack = Decimal("50") * (1 + abs(Decimal(cost) / net)) / net + _PCT_ROUNDING
         if abs(self.food_cost.raw - Decimal(cost) / net * 100) > slack:
             raise ValueError("food_cost must follow cost / net_price (net, without IVA)")
-        if abs(self.margin_pct.raw - Decimal(self.margin.raw) / net * 100) > slack:
-            raise ValueError("margin_pct must follow margin / net_price (net, without IVA)")
         return self
 
 

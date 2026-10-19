@@ -111,6 +111,34 @@ def test_abs_change_is_a_minus_b() -> None:
         ComparePeriodsData.model_validate(_compare("net_sales", 18432050, 17190500, 1))
 
 
+@pytest.mark.parametrize(
+    "metric,a,b,change,ok",
+    [
+        ("avg_ticket", 1000, 501, 500, True),  # true 1000.4 and 500.6: round(499.8) = 500
+        ("avg_ticket", 1000, 501, 499, True),  # a - b exactly
+        ("avg_ticket", 1000, 501, 498, True),  # a - b = 499, one centavo off
+        ("avg_ticket", 1000, 501, 497, False),
+        ("avg_ticket", 1000, 501, 501, False),  # two centavos off
+        ("food_cost_pct", "10.0000", "5.0001", "5.0000", True),  # true 10.00004 and 5.00006
+        ("food_cost_pct", "10.0000", "5.0001", "4.9999", True),
+        ("food_cost_pct", "10.0000", "5.0001", "5.0001", False),
+        ("tickets", 15, 1, 14, True),
+        ("tickets", 15, 1, 15, False),  # counts are exact
+    ],
+)
+def test_abs_change_may_differ_from_a_minus_b_by_the_rounding_of_its_scale(
+    metric: str, a: Any, b: Any, change: Any, ok: bool
+) -> None:
+    """a, b and abs_change are each rounded once from unrounded values, so the difference of
+    the rounded ones can be one unit off: a centavo, or 0.0001 percent points. Counts are exact."""
+    doc = _compare(metric, a, b, change)
+    if ok:
+        ComparePeriodsData.model_validate(doc)
+    else:
+        with pytest.raises(ValidationError, match="abs_change"):
+            ComparePeriodsData.model_validate(doc)
+
+
 def test_compare_locations_checks_value_and_diff_with_the_metric_unit() -> None:
     CompareLocationsData.model_validate(_locations("net_sales", 12000000, -5567950))
     for value, diff in [(120000.5, 0), (12000000, -55679.5)]:
