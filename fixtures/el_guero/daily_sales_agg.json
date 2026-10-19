@@ -909,19 +909,19 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "batch_id": "3f01cf98-eff5-592d-b483-0fdf4a85205e",
   "business_date": "2026-09-29",
-  "net_sales": 1811600,
-  "tax": 249876,
+  "net_sales": 1805100,
+  "tax": 248979,
   "tickets": 66,
   "guests": 134,
   "discounts": 42900,
   "cancellations_amount": 28000,
   "cancellations_count": 2,
   "payment_mix": {
-   "cash": 652176,
-   "card": 1032612,
-   "transfer": 126812
+   "cash": 649836,
+   "card": 1028907,
+   "transfer": 126357
   },
-  "tips": 82609
+  "tips": 82313
  },
  {
   "id": "bd12c367-59ab-52cf-a917-70095ddf786b",
@@ -930,19 +930,19 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "batch_id": "791604a1-547e-59e5-a501-9a5bac82c5c2",
   "business_date": "2026-09-30",
-  "net_sales": 2037000,
-  "tax": 280966,
+  "net_sales": 2041500,
+  "tax": 281586,
   "tickets": 69,
   "guests": 139,
   "discounts": 0,
   "cancellations_amount": 0,
   "cancellations_count": 0,
   "payment_mix": {
-   "cash": 753690,
-   "card": 1140720,
-   "transfer": 142590
+   "cash": 755355,
+   "card": 1143240,
+   "transfer": 142905
   },
-  "tips": 91258
+  "tips": 91459
  },
  {
   "id": "904e5209-3ee1-549d-b53f-7bfb5b2b3fa1",
@@ -993,19 +993,19 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "batch_id": "e920478e-2996-5fba-a23a-8bebbaba5194",
   "business_date": "2026-10-03",
-  "net_sales": 3475000,
-  "tax": 479310,
+  "net_sales": 3476500,
+  "tax": 479517,
   "tickets": 127,
   "guests": 272,
   "discounts": 0,
   "cancellations_amount": 0,
   "cancellations_count": 0,
   "payment_mix": {
-   "cash": 1390000,
-   "card": 1841750,
-   "transfer": 243250
+   "cash": 1390600,
+   "card": 1842545,
+   "transfer": 243355
   },
-  "tips": 147340
+  "tips": 147404
  },
  {
   "id": "585532cb-ff97-54e8-8e20-a88ee03b909e",
@@ -1014,19 +1014,19 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "batch_id": "b1521a60-a4a3-5955-9471-b8d4644988f1",
   "business_date": "2026-10-04",
-  "net_sales": 3017900,
-  "tax": 416262,
+  "net_sales": 3018400,
+  "tax": 416331,
   "tickets": 110,
   "guests": 232,
-  "discounts": 1100,
+  "discounts": 600,
   "cancellations_amount": 40500,
   "cancellations_count": 3,
   "payment_mix": {
-   "cash": 1056265,
-   "card": 1750382,
-   "transfer": 211253
+   "cash": 1056440,
+   "card": 1750672,
+   "transfer": 211288
   },
-  "tips": 140031
+  "tips": 140054
  },
  {
   "id": "2ef1cd74-8512-5a02-82f2-ee8ab63f1186",
@@ -1035,19 +1035,19 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "batch_id": "9b18f774-2207-58a6-bf23-2b8ef4f93913",
   "business_date": "2026-10-05",
-  "net_sales": 1791500,
-  "tax": 247103,
+  "net_sales": 1793000,
+  "tax": 247310,
   "tickets": 63,
   "guests": 142,
   "discounts": 0,
   "cancellations_amount": 0,
   "cancellations_count": 0,
   "payment_mix": {
-   "cash": 627025,
-   "card": 1039070,
-   "transfer": 125405
+   "cash": 627550,
+   "card": 1039940,
+   "transfer": 125510
   },
-  "tips": 83126
+  "tips": 83195
  },
  {
   "id": "523ac540-72ea-5615-9410-bb14134af381",
@@ -1056,19 +1056,19 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "batch_id": "e2f1b6d6-1120-5399-9f65-9bf0032da21e",
   "business_date": "2026-10-06",
-  "net_sales": 1980550,
-  "tax": 273179,
+  "net_sales": 1974050,
+  "tax": 272283,
   "tickets": 68,
   "guests": 148,
   "discounts": 40950,
   "cancellations_amount": 0,
   "cancellations_count": 0,
   "payment_mix": {
-   "cash": 693192,
-   "card": 1148719,
-   "transfer": 138639
+   "cash": 690917,
+   "card": 1144949,
+   "transfer": 138184
   },
-  "tips": 91898
+  "tips": 91596
  },
  {
   "id": "2d101905-ebcc-5e09-b252-cf36cee7acc0",
@@ -1098,19 +1098,19 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "batch_id": "7667d670-13fb-512e-bfa9-30b2c0b0559c",
   "business_date": "2026-10-08",
-  "net_sales": 2459500,
-  "tax": 339241,
+  "net_sales": 2468000,
+  "tax": 340414,
   "tickets": 89,
   "guests": 201,
   "discounts": 0,
   "cancellations_amount": 9500,
   "cancellations_count": 1,
   "payment_mix": {
-   "cash": 885420,
-   "card": 1401915,
-   "transfer": 172165
+   "cash": 888480,
+   "card": 1406760,
+   "transfer": 172760
   },
-  "tips": 112153
+  "tips": 112541
  },
  {
   "id": "a023ef10-9074-55e5-b0e2-3d4e605190e2",
@@ -1119,19 +1119,19 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "batch_id": "5765f543-15b5-54fa-831f-fb88cb79125b",
   "business_date": "2026-10-09",
-  "net_sales": 3021000,
-  "tax": 416690,
+  "net_sales": 3018000,
+  "tax": 416276,
   "tickets": 110,
   "guests": 233,
   "discounts": 0,
   "cancellations_amount": 24000,
   "cancellations_count": 3,
   "payment_mix": {
-   "cash": 1117770,
-   "card": 1691760,
-   "transfer": 211470
+   "cash": 1116660,
+   "card": 1690080,
+   "transfer": 211260
   },
-  "tips": 135341
+  "tips": 135206
  },
  {
   "id": "ada671ee-6afb-5fea-a2ca-0807767cd1f5",
@@ -1145,7 +1145,7 @@
   "tickets": 134,
   "guests": 289,
   "discounts": 0,
-  "cancellations_amount": 289000,
+  "cancellations_amount": 265500,
   "cancellations_count": 17,
   "payment_mix": {
    "cash": 1364220,
@@ -1161,19 +1161,19 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "batch_id": "d82c2511-4372-5715-9b0e-c214d9f19546",
   "business_date": "2026-10-11",
-  "net_sales": 3120000,
-  "tax": 430345,
+  "net_sales": 3119500,
+  "tax": 430276,
   "tickets": 106,
   "guests": 246,
-  "discounts": 0,
+  "discounts": 500,
   "cancellations_amount": 8500,
   "cancellations_count": 1,
   "payment_mix": {
-   "cash": 1123200,
-   "card": 1778400,
-   "transfer": 218400
+   "cash": 1123020,
+   "card": 1778115,
+   "transfer": 218365
   },
-  "tips": 142272
+  "tips": 142249
  },
  {
   "id": "2b923d17-d2a5-53aa-909e-9ef19b6bf523",

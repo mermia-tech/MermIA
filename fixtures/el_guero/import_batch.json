@@ -3358,5 +3358,20 @@
   "quality": "file",
   "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
   "applied_at": "2026-10-12T09:00:00-06:00"
+ },
+ {
+  "id": "8aa9aa14-d7a7-5fed-985a-192b4c438afb",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "source_id": "5db82f2e-3177-507b-b191-65d5bdf8eb89",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "parser": "sr.cancelaciones@v1",
+  "slice_key": "L1:cancellations:2026-10-10",
+  "status": "applied",
+  "stats": {
+   "lines": 17
+  },
+  "quality": "file",
+  "applied_by": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
+  "applied_at": "2026-10-11T09:00:00-06:00"
  }
 ]

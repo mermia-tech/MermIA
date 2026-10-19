@@ -65,6 +65,9 @@ WEEK_TARGETS = {
 
 # The cancellation-heavy Saturday (13 H3 example 7).
 CANCEL_SATURDAY = ("L1", dt.date(2026, 10, 10))
+# Who cancelled the 17 tickets that Saturday, and the reasons the POS recorded.
+CANCEL_WAITERS = ("Pepe",) * 8 + ("Luis",) * 5 + ("Ana",) * 3 + ("Marta",)
+CANCEL_REASONS = ("Cliente se retiró", "Error de captura", "Platillo agotado", "Demora en cocina")
 
 
 @dataclass(frozen=True)

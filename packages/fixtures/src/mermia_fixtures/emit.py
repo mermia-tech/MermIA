@@ -143,6 +143,7 @@ def expected(items: list[b.ItemDay], days: list[b.Day]) -> dict[str, Any]:
             )
     loc, sat = r.CANCEL_SATURDAY
     cancel = next(d for d in days if d.location == loc and d.day == sat)
+    by_waiter = Counter(c.waiter for c in b.cancelled_tickets())
     return {
         "today": r.TODAY.isoformat(),
         "notes": [
@@ -161,7 +162,9 @@ def expected(items: list[b.ItemDay], days: list[b.Day]) -> dict[str, Any]:
             "date": sat.isoformat(),
             "count": cancel.cancellations_count,
             "amount": cancel.cancellations_amount,
+            "by_waiter": dict(by_waiter.most_common()),
         },
+        "food_cost_yesterday": food_cost(items, r.TODAY - dt.timedelta(days=1)),
         "price_jumps": [
             {
                 "ingredient": b.INGREDIENTS[k].name,
@@ -173,6 +176,30 @@ def expected(items: list[b.ItemDay], days: list[b.Day]) -> dict[str, Any]:
             for k, since, new in r.PRICE_JUMPS
         ],
     }
+
+
+def food_cost(items: list[b.ItemDay], day: dt.date) -> dict[str, Any]:
+    """Theoretical food cost of one day, per location.
+
+    pct = recipe cost of the items sold / their net sales without IVA, over the items that
+    have a recipe; coverage_pct = that net / the day's whole net. Both in percent points.
+    """
+    out: dict[str, Any] = {"date": day.isoformat(), "definition": food_cost.__doc__}
+    for lo in r.LOCATIONS:
+        rows = [x for x in items if x.location == lo.key and x.day == day]
+        covered = [x for x in rows if b.dish_cost(x.code, day) is not None]
+        cost = sum(x.units * (b.dish_cost(x.code, day) or 0) for x in covered)
+        net = sum(x.net for x in covered)
+        net_ex_vat = net - b.vat_inside(net)
+        out[lo.key] = {
+            "cost": cost,
+            "covered_net_ex_iva": net_ex_vat,
+            "pct": str((Decimal(cost) * 100 / net_ex_vat).quantize(Decimal("0.1"))),
+            "coverage_pct": str(
+                (Decimal(net) * 100 / sum(x.net for x in rows)).quantize(Decimal("0.1"))
+            ),
+        }
+    return out
 
 
 # --- sample SR exports -------------------------------------------------------------------

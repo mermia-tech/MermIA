@@ -166,7 +166,7 @@ select is((select count(*) from cls where cls in ('T','F') and tbl not in ('tena
           'service_role sees both tenants in tenant-wide and full-scope tables');
 select is((select count(*) from cls where cls in ('L','LP') and pg_temp.seen_test_tenants('service_role', tbl) is distinct from '3'), 0::bigint,
           'service_role sees all three location rows in location-scoped tables');
-select is(pg_temp.seen('postgres', '', 'sale_ticket'), '3', 'postgres bypasses RLS');
+select is(pg_temp.seen_test_tenants('postgres', 'sale_ticket'), '3', 'postgres bypasses RLS');
 
 select * from finish();
 rollback;

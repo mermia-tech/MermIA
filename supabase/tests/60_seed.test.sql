@@ -78,20 +78,40 @@ select is((select count(*) from public.ingredient_price p join public.ingredient
            join t on t.id = i.tenant_id where i.name in ('Carne al pastor (adobada)', 'Aguacate Hass')),
           4::bigint, 'two ingredients have a price jump');
 
+-- 13 H3 example 7: the cancellations have waiters. Ticket grain, cancelled, every line voided
+-- by a waiter of the same location, and they add up to the day's daily row.
+create temp table cancelled as
+select st.* from public.sale_ticket st join l on l.id = st.location_id
+where l.name = 'Centro' and st.business_date = '2026-10-10' and st.status = 'cancelled';
+select is((select count(*) from cancelled), 17::bigint, 'Centro has 17 cancelled tickets on 2026-10-10');
+select is((select sum(total) from cancelled),
+          (select d.cancellations_amount::numeric from public.daily_sales_agg d join l on l.id = d.location_id
+           where l.name = 'Centro' and d.business_date = '2026-10-10'),
+          'they add up to the day''s cancellations_amount');
+select is((select count(*) from public.sale_line sl join cancelled c on c.id = sl.ticket_id
+           left join public.staff s on s.id = sl.voided_by and s.location_id = sl.location_id
+           where not sl.is_void or s.id is null or sl.void_reason is null), 0::bigint,
+          'every line is voided, with a reason, by a waiter of that location');
+select is((select s.display_name from cancelled c join public.staff s on s.id = c.staff_id
+           group by s.display_name order by count(*) desc limit 1), 'Pepe',
+          'Pepe cancelled the most');
+select is((select count(*) from public.sale_ticket st join t on t.id = st.tenant_id where st.status = 'paid'),
+          0::bigint, 'no paid tickets: sales stay at item and daily grain, so nothing counts twice');
+
 -- the seed's own memberships work with RLS: claims built from the Centro manager's membership
--- see Centro and nothing of Polanco
-select is((select m.location_ids from public.membership m join t on t.id = m.tenant_id
-           where m.role = 'manager' and m.location_ids = array[(select id from l where name = 'Centro')]),
-          array[(select id from l where name = 'Centro')], 'the Centro manager''s membership is scoped to Centro');
+-- see Centro's rows and none of Polanco's
 select set_config('request.jwt.claims', (
   select json_build_object('role', 'authenticated', 'tenant_id', m.tenant_id, 'app_role', m.role,
                            'location_ids', to_json(m.location_ids))::text
-  from public.membership m join t on t.id = m.tenant_id
-  where m.role = 'manager' and (select id from l where name = 'Centro') = any (m.location_ids)), true);
+  from public.membership m join public.app_user u on u.id = m.user_id join t on t.id = m.tenant_id
+  where u.name = 'Lupita'), true);
+create temp table centro_id as select id from l where name = 'Centro';
+grant select on centro_id to authenticated;
 set local role authenticated;
-select is((select count(distinct location_id) from public.item_sales_agg), 1::bigint,
-          'a Centro manager sees one location');
-select is((select count(*) from public.item_sales_agg), 2296::bigint, 'and all of its item rows');
+select is((select count(*) from public.item_sales_agg where location_id <> (select id from centro_id)),
+          0::bigint, 'the Centro manager sees no other location');
+select is((select count(*) from public.item_sales_agg where location_id = (select id from centro_id)),
+          2296::bigint, 'and all of Centro''s item rows');
 reset role;
 
 select * from finish();

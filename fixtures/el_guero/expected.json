@@ -71,19 +71,19 @@
    "2026-09-26": 3759500,
    "2026-09-27": 3243500,
    "2026-09-28": 1710000,
-   "2026-09-29": 1811600,
-   "2026-09-30": 2037000,
+   "2026-09-29": 1805100,
+   "2026-09-30": 2041500,
    "2026-10-01": 2305500,
    "2026-10-02": 2833500,
-   "2026-10-03": 3475000,
-   "2026-10-04": 3017900,
-   "2026-10-05": 1791500,
-   "2026-10-06": 1980550,
+   "2026-10-03": 3476500,
+   "2026-10-04": 3018400,
+   "2026-10-05": 1793000,
+   "2026-10-06": 1974050,
    "2026-10-07": 2270000,
-   "2026-10-08": 2459500,
-   "2026-10-09": 3021000,
+   "2026-10-08": 2468000,
+   "2026-10-09": 3018000,
    "2026-10-10": 3789500,
-   "2026-10-11": 3120000
+   "2026-10-11": 3119500
   },
   "L2": {
    "2026-08-17": 1481100,
@@ -149,7 +149,7 @@
    {
     "code": "P001",
     "name": "Tacos al pastor (orden de 3)",
-    "units": 657
+    "units": 656
    },
    {
     "code": "P043",
@@ -203,7 +203,7 @@
    {
     "code": "P001",
     "name": "Tacos al pastor (orden de 3)",
-    "units": 1209
+    "units": 1208
    },
    {
     "code": "P043",
@@ -473,7 +473,29 @@
   "location": "L1",
   "date": "2026-10-10",
   "count": 17,
-  "amount": 289000
+  "amount": 265500,
+  "by_waiter": {
+   "Pepe": 8,
+   "Luis": 5,
+   "Ana": 3,
+   "Marta": 1
+  }
+ },
+ "food_cost_yesterday": {
+  "date": "2026-10-11",
+  "definition": "Theoretical food cost of one day, per location.\n\n    pct = recipe cost of the items sold / their net sales without IVA, over the items that\n    have a recipe; coverage_pct = that net / the day's whole net. Both in percent points.\n    ",
+  "L1": {
+   "cost": 718946,
+   "covered_net_ex_iva": 1919397,
+   "pct": "37.5",
+   "coverage_pct": "71.4"
+  },
+  "L2": {
+   "cost": 586198,
+   "covered_net_ex_iva": 1712845,
+   "pct": "34.2",
+   "coverage_pct": "72.0"
+  }
  },
  "price_jumps": [
   {

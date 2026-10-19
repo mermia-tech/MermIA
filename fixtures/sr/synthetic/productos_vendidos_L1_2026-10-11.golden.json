@@ -10,7 +10,7 @@
  },
  "grain": "item_daily",
  "totals": {
-  "net_sales": 3120000,
+  "net_sales": 3119500,
   "units": "565.000000",
   "lines": 41
  },
@@ -352,8 +352,8 @@
    "period_to": "2026-10-11",
    "units": "56.000000",
    "gross": 364000,
-   "discount": 0,
-   "net": 364000
+   "discount": 500,
+   "net": 363500
   },
   {
    "item_external_id": "P002",

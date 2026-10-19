@@ -38,5 +38,15 @@
    "report": "ventas_por_dia"
   },
   "status": "active"
+ },
+ {
+  "id": "5db82f2e-3177-507b-b191-65d5bdf8eb89",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "kind": "sr_report",
+  "config": {
+   "report": "cancelaciones"
+  },
+  "status": "active"
  }
 ]

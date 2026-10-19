@@ -30,6 +30,7 @@ SEED = 20261012
 
 PARSER_ITEMS = "sr.productos_vendidos@v1"
 PARSER_DAILY = "sr.ventas_por_dia@v1"
+PARSER_CANCELLATIONS = "sr.cancelaciones@v1"
 
 
 def uid(*parts: object) -> str:
@@ -162,6 +163,11 @@ def _generate(week_scale: dict[tuple[str, dt.date], float]) -> list[ItemDay]:
     return rows
 
 
+def _is_promo(x: ItemDay) -> bool:
+    """Promo lines keep their exact 15 % discount, so calibration leaves them alone."""
+    return x.day.weekday() == 1 and x.code == r.TUESDAY_PROMO[0]
+
+
 def _week(rows: list[ItemDay], loc_key: str, monday: dt.date) -> list[ItemDay]:
     sunday = monday + dt.timedelta(days=6)
     return [x for x in rows if x.location == loc_key and monday <= x.day <= sunday]
@@ -177,7 +183,10 @@ def _calibrate(rows: list[ItemDay]) -> None:
     """
     for (loc_key, monday), target in r.WEEK_TARGETS.items():
         week = _week(rows, loc_key, monday)
-        busiest = sorted((x for x in week if x.units > 0), key=lambda x: (-x.units, x.day, x.code))
+        busiest = sorted(
+            (x for x in week if x.units > 0 and not _is_promo(x)),
+            key=lambda x: (-x.units, x.day, x.code),
+        )
         cheapest = min(x.gross // x.units for x in busiest)
         n = 0
         while sum(x.net for x in week) > target:  # noise can still overshoot: take units back
@@ -229,11 +238,13 @@ def daily_totals(items: list[ItemDay]) -> list[Day]:
         for d in days():
             rows = by_day[(loc.key, d)]
             net = sum(x.net for x in rows)
-            tax = cents(Decimal(net) / 100 * r.TAX_RATE / (1 + r.TAX_RATE))
+            tax = vat_inside(net)
             tickets = max(1, round(net / (loc.avg_ticket_pesos * 100) * rng.uniform(0.95, 1.05)))
             guests = round(tickets * rng.uniform(2.0, 2.4))
             if (loc.key, d) == r.CANCEL_SATURDAY:
-                cancel_count, cancel_amount = 17, 289_000
+                cancelled = cancelled_tickets()
+                cancel_count = len(cancelled)
+                cancel_amount = sum(c.total for c in cancelled)
             else:
                 cancel_count = rng.choice((0, 0, 1, 1, 2, 3))
                 cancel_amount = cancel_count * rng.randrange(4_500, 15_000, 500)
@@ -256,6 +267,58 @@ def daily_totals(items: list[ItemDay]) -> list[Day]:
                     tips,
                 )
             )
+    return out
+
+
+@dataclass
+class CancelledLine:
+    code: str
+    qty: int
+    unit_price: int
+
+    @property
+    def net(self) -> int:
+        return self.qty * self.unit_price
+
+
+@dataclass
+class CancelledTicket:
+    number: int
+    waiter: str
+    reason: str
+    table: int
+    opened_at: dt.datetime
+    lines: list[CancelledLine]
+
+    @property
+    def total(self) -> int:
+        return sum(x.net for x in self.lines)
+
+
+def cancelled_tickets() -> list[CancelledTicket]:
+    """The cancelled tickets of the cancellation-heavy Saturday, at ticket grain (13 H3 #7).
+
+    Cancelled tickets are not sales, so they do not overlap the item and daily rows.
+    """
+    rng = random.Random(SEED + 2)
+    loc_key, day = r.CANCEL_SATURDAY
+    loc = next(lo for lo in r.LOCATIONS if lo.key == loc_key)
+    codes = [m.code for m in r.MENU if m.kind in ("dish", "drink")]
+    tz = dt.timezone(dt.timedelta(hours=-6))
+    out = []
+    for n, waiter in enumerate(r.CANCEL_WAITERS):
+        lines = [
+            CancelledLine(c, rng.randint(1, 2), menu_price(c, loc))
+            for c in rng.sample(codes, rng.randint(1, 3))
+        ]
+        opened = dt.datetime.combine(day, dt.time(13, 0), tz) + dt.timedelta(
+            minutes=37 * n + rng.randint(0, 20)
+        )
+        out.append(
+            CancelledTicket(
+                1001 + n, waiter, rng.choice(r.CANCEL_REASONS), rng.randint(1, 24), opened, lines
+            )
+        )
     return out
 
 
@@ -334,6 +397,18 @@ def build() -> tuple[dict[str, list[Row]], list[ItemDay], list[Day]]:
         for lo in r.LOCATIONS
         for kind, report in (("items", "productos_vendidos"), ("daily", "ventas_por_dia"))
     ]
+    cancel_loc, cancel_day = r.CANCEL_SATURDAY
+    src[(cancel_loc, "cancellations")] = uid("source", cancel_loc, "cancellations")
+    t["source"].append(
+        {
+            "id": src[(cancel_loc, "cancellations")],
+            "tenant_id": tenant,
+            "location_id": loc_id[cancel_loc],
+            "kind": "sr_report",
+            "config": {"report": "cancelaciones"},
+            "status": "active",
+        }
+    )
 
     items = generate_sales()
     days_ = daily_totals(items)
@@ -452,8 +527,74 @@ def build() -> tuple[dict[str, list[Row]], list[ItemDay], list[Day]]:
         for x in days_
     ]
 
+    cancel_batch = uid("import_batch", cancel_loc, "cancellations", cancel_day)
+    t["import_batch"].append(
+        {
+            "id": cancel_batch,
+            "tenant_id": tenant,
+            "source_id": src[(cancel_loc, "cancellations")],
+            "location_id": loc_id[cancel_loc],
+            "parser": PARSER_CANCELLATIONS,
+            "slice_key": f"{cancel_loc}:cancellations:{cancel_day.isoformat()}",
+            "status": "applied",
+            "stats": {"lines": len(r.CANCEL_WAITERS)},
+            "quality": "file",
+            "applied_by": owner,
+            "applied_at": f"{(cancel_day + dt.timedelta(days=1)).isoformat()}T09:00:00-06:00",
+        }
+    )
+    t["sale_ticket"], t["sale_line"] = [], []
+    for c in cancelled_tickets():
+        ticket = uid("sale_ticket", cancel_loc, c.number)
+        staff = uid("staff", cancel_loc, c.waiter)
+        tax = vat_inside(c.total)
+        t["sale_ticket"].append(
+            {
+                "id": ticket,
+                "tenant_id": tenant,
+                "location_id": loc_id[cancel_loc],
+                "source_id": src[(cancel_loc, "cancellations")],
+                "external_id": f"C-{c.number}",
+                "batch_id": cancel_batch,
+                "business_date": cancel_day.isoformat(),
+                "opened_at": c.opened_at.isoformat(),
+                "closed_at": (c.opened_at + dt.timedelta(minutes=12)).isoformat(),
+                "channel": "dine_in",
+                "table_label": f"Mesa {c.table}",
+                "staff_id": staff,
+                "subtotal": c.total - tax,
+                "tax": tax,
+                "total": c.total,
+                "status": "cancelled",
+            }
+        )
+        for n, line in enumerate(c.lines):
+            t["sale_line"].append(
+                {
+                    "id": uid("sale_line", cancel_loc, c.number, n),
+                    "tenant_id": tenant,
+                    "location_id": loc_id[cancel_loc],
+                    "source_id": src[(cancel_loc, "cancellations")],
+                    "batch_id": cancel_batch,
+                    "ticket_id": ticket,
+                    "menu_item_id": item_id[line.code],
+                    "qty": f"{line.qty}.000000",
+                    "unit_price": line.unit_price,
+                    "tax": vat_inside(line.net),
+                    "net": line.net,
+                    "is_void": True,
+                    "void_reason": c.reason,
+                    "voided_by": staff,
+                }
+            )
+
     _costing(t, tenant)
     return t, items, days_
+
+
+def vat_inside(gross: int) -> int:
+    """The IVA contained in an IVA-included amount, in centavos."""
+    return cents(Decimal(gross) / 100 * r.TAX_RATE / (1 + r.TAX_RATE))
 
 
 def _costing(t: dict[str, list[Row]], tenant: str) -> None:
