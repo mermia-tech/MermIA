@@ -6,7 +6,11 @@ requires-python = ">=3.12"
 dependencies = ["pydantic>=2.11"]
 
 [dependency-groups]
-dev = ["pytest>=8", "psycopg[binary]>=3.2"]
+dev = [
+    "pytest>=8",
+    "psycopg[binary]>=3.2",
+    "anthropic>=1.15.0",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -20,5 +24,6 @@ testpaths = ["tests"]
 markers = [
   "db: needs the local Supabase database (MERMIA_DB_URL)",
   "rest: needs the local Supabase API (MERMIA_API_URL, MERMIA_JWT_SECRET, MERMIA_API_KEY)",
+  "tokens: calls the Anthropic count_tokens API (ANTHROPIC_API_KEY)",
 ]
-addopts = "-m 'not db and not rest'"
+addopts = "-m 'not db and not rest and not tokens'"
