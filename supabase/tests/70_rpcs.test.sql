@@ -57,6 +57,71 @@ select is(app.fmt_number(5880), '5,880', 'whole quantity');
 select is(app.fmt_number(12.5), '12.5', 'decimal quantity');
 select is(app.figure('food_cost_pct', -1.25, true), '{"raw": -1.25, "text": "-1.3 pts"}'::jsonb, 'a change of a percentage is in points');
 
+-- unified-grain views (docs/superpowers/specs/2026-10-19-mr-17-read-rpc-sources-decision.md) ----
+-- Mixed grain: Centro 2026-10-10 has the aggregate and 17 cancelled tickets, no paid ticket.
+select is((select row(grain, net_sales, tickets, cancellations_amount, cancellations_count)::text from app.v_daily_sales
+           where location_id = :'CENTRO' and business_date = '2026-10-10'),
+          '(aggregate,3789500,134,265500,17)', 'cancelled tickets alone never override the aggregate: $37,895.00, 134 tickets');
+select is(pg_temp.rpc(:OWNER, format('api.get_sales_summary(%L, %L)', '"yesterday"', :'CENTRO'), '2026-10-11') #>> '{data,net_sales,raw}', '3789500',
+          'and the RPC answers $37,895.00, neither replaced nor added to');
+select is((select sum(units) from app.v_item_sales_daily where location_id = :'CENTRO' and business_date = '2026-10-10'),
+          (select sum(units) from public.item_sales_agg where location_id = :'CENTRO' and period_from = '2026-10-10'),
+          'cancelled lines do not change the units sold on 2026-10-10');
+select is((select count(*) from app.v_daily_sales v group by v.location_id, v.business_date having count(*) > 1 limit 1), null,
+          'one row per location and day');
+select is((select sum(net_sales) from app.v_daily_sales where location_id = :'CENTRO' and business_date between '2026-10-05' and '2026-10-11'),
+          (select sum(d.net_sales) from public.daily_sales_agg d where d.location_id = :'CENTRO' and d.business_date between '2026-10-05' and '2026-10-11'),
+          'Centro 2026-10-05..11 equals a direct sum of the seeded rows');
+select is((select sum(net_sales) from app.v_daily_sales where location_id = :'CENTRO' and business_date between '2026-09-28' and '2026-10-04'),
+          17190500::numeric, 'Centro 2026-09-28..10-04 is $171,905.00');
+select throws_ok($$insert into public.sale_ticket (tenant_id, location_id, source_id, external_id, batch_id, business_date, subtotal, tax, total, status)
+                   select s.tenant_id, s.location_id, s.id, 'no-batch', null, '2026-10-09', 0, 0, 0, 'paid' from public.source s
+                   where s.location_id = '705e8e51-376b-5785-adbb-405eff4e2a22' limit 1$$,
+                 '23502', null, 'a ticket without a batch cannot exist (decision F)');
+
+-- A paid ticket wins for its day: sales, tickets and items come from tickets only.
+savepoint paid_ticket;
+insert into public.import_batch (id, tenant_id, source_id, location_id, parser, slice_key, status, applied_at)
+select 'eeeeeeee-0000-7000-8000-000000000001', s.tenant_id, s.id, s.location_id, 'sr.erp_push@v1', 'paid-ticket-test', 'applied', '2026-10-10T09:00:00-06:00'
+from public.source s where s.location_id = :'CENTRO' limit 1;
+insert into public.sale_ticket (id, tenant_id, location_id, source_id, external_id, batch_id, business_date, guests, subtotal, discount, tax, total, status)
+select 'eeeeeeee-0000-7000-8000-0000000000a1', b.tenant_id, b.location_id, b.source_id, 'P-1', b.id, '2026-10-09', 2, 11207, 500, 1793, 13000, 'paid'
+from public.import_batch b where b.id = 'eeeeeeee-0000-7000-8000-000000000001';
+insert into public.sale_line (tenant_id, location_id, source_id, batch_id, ticket_id, menu_item_id, qty, unit_price, discount, tax, net, is_void)
+select t.tenant_id, t.location_id, t.source_id, t.batch_id, t.id, m.id, x.qty, 6500, 0, round(x.qty * 6500 * 16 / 116.0), x.qty * 6500, x.void
+from public.sale_ticket t, public.menu_item m, (values (2, false), (1, true)) x(qty, void)
+where t.id = 'eeeeeeee-0000-7000-8000-0000000000a1' and m.external_id = 'P001';
+select is((select row(grain, net_sales, tickets, guests, discounts)::text from app.v_daily_sales
+           where location_id = :'CENTRO' and business_date = '2026-10-09'),
+          '(ticket,13000,1,2,500)', 'a day with a paid ticket takes sales, tickets and discounts from tickets only');
+select is((select count(*) from app.v_daily_sales where location_id = :'CENTRO' and business_date = '2026-10-09'), 1::bigint,
+          'with no double count against the aggregate');
+select is((select string_agg(grain || ':' || trim_scale(units), ',') from app.v_item_sales_daily
+           where location_id = :'CENTRO' and business_date = '2026-10-09'),
+          'ticket:2', 'items of that day come from non-voided ticket lines only');
+select is(pg_temp.rpc(:OWNER, format('api.get_sales_summary(%L, %L)', '{"from":"2026-10-09","to":"2026-10-09"}', :'CENTRO')) #> '{data,avg_ticket,raw}',
+          '13000', 'and the average ticket follows');
+rollback to savepoint paid_ticket;
+
+-- Batch status: rows of non-applied and superseded batches appear in neither view.
+savepoint batch_status;
+update public.import_batch b set status = 'superseded'
+where b.id in (select d.batch_id from public.daily_sales_agg d where d.location_id = :'CENTRO' and d.business_date = '2026-10-11'
+               union select a.batch_id from public.item_sales_agg a where a.location_id = :'CENTRO' and a.period_from = '2026-10-11');
+select is((select count(*) from app.v_daily_sales where location_id = :'CENTRO' and business_date = '2026-10-11'), 0::bigint, 'superseded daily rows are out');
+select is((select count(*) from app.v_item_sales_daily where location_id = :'CENTRO' and business_date = '2026-10-11'), 0::bigint, 'superseded item rows are out');
+update public.import_batch b set status = 'received'
+where b.id in (select d.batch_id from public.daily_sales_agg d where d.location_id = :'CENTRO' and d.business_date = '2026-10-11'
+               union select a.batch_id from public.item_sales_agg a where a.location_id = :'CENTRO' and a.period_from = '2026-10-11');
+select is((select count(*) from app.v_daily_sales where location_id = :'CENTRO' and business_date = '2026-10-11'), 0::bigint, 'received (not applied) daily rows are out');
+select is((select count(*) from app.v_item_sales_daily where location_id = :'CENTRO' and business_date = '2026-10-11'), 0::bigint, 'received item rows are out');
+rollback to savepoint batch_status;
+
+-- The views follow RLS (security_invoker): a Polanco manager reads only Polanco through them.
+select is(pg_temp.rpc(:POLANCO_MGR, '(select jsonb_agg(distinct location_id) from app.v_daily_sales)'), jsonb_build_array(:'POLANCO'), 'v_daily_sales follows RLS');
+select is(pg_temp.rpc(:POLANCO_MGR, '(select jsonb_agg(distinct location_id) from app.v_item_sales_daily)'), jsonb_build_array(:'POLANCO'), 'v_item_sales_daily follows RLS');
+select is(pg_temp.rpc(:OTHER_TENANT, '(select count(*)::text::jsonb from app.v_daily_sales)'), '0', 'another tenant reads nothing through them');
+
 -- get_sales_summary -----------------------------------------------------------------------
 select is(pg_temp.rpc(:OWNER, format('api.get_sales_summary(%L, %L)', '"last_week"', :'CENTRO')) #> '{data,net_sales}',
           '{"raw": 18432050, "text": "$184,320.50"}', 'Centro last week: $184,320.50 (13 H3)');

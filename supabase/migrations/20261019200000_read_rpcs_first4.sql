@@ -12,11 +12,13 @@
 --   location is given; America/Mexico_City as a last resort). `app.today` (a custom setting) pins
 --   it for tests; clients have no raw-SQL path to set it (spec 7.5.3).
 -- - Weeks start on Monday. last_7d and last_30d end yesterday: today's sales arrive tomorrow.
--- - Only rows of applied batches count (09 section 2.6). One daily row per location and day: the
---   one from the most recently applied batch.
--- - Sales come from daily_sales_agg; a day with item rows but no daily row adds its item net to
---   net_sales and reports the other figures as unknown. Ticket grain (ERP push) joins in later
---   through the unified-grain views (09 section 2.6), not here.
+-- - Sources follow docs/superpowers/specs/2026-10-19-mr-17-read-rpc-sources-decision.md: the RPCs
+--   read the unified-grain views app.v_daily_sales and app.v_item_sales_daily (09 section 2.6),
+--   which keep only rows of applied batches. Per (location, date), ticket grain wins when at least
+--   one paid ticket exists; otherwise the aggregate (the most recently applied batch's row).
+--   Cancelled tickets never override the aggregate, and cancelled or voided lines never count as
+--   items sold. A day with item rows but no daily row adds its item net to net_sales and reports
+--   the other figures as unknown.
 -- - meta.coverage_pct is data coverage: business days with sales data over the days the period
 --   should have (each visible location, up to yesterday), as 07 and 08 define it.
 -- - Cost figures (margin, food cost) read dish_cost_snapshot, which the costing engine writes
@@ -182,29 +184,104 @@ as $$
   select jsonb_build_object('code', code, 'message', message)
 $$;
 
+-- Unified grain (09 section 2.6; MR-17 sources decision) -----------------------------------
+-- Views live in `app` (public holds domain tables only) and run as the caller (security_invoker),
+-- so RLS on the underlying tables applies to every read.
+
+-- Paid tickets of applied batches, per location and day. A day here takes its sales from tickets.
+create view app.v_ticket_days with (security_invoker = true) as
+select t.tenant_id, t.location_id, t.business_date,
+       sum(t.total)::bigint as net_sales,
+       count(*)::bigint as tickets,
+       case when bool_and(t.guests is not null) then sum(t.guests)::bigint end as guests,
+       (sum(t.discount) + coalesce(sum(ld.discount), 0))::bigint as discounts
+from public.sale_ticket t
+join public.import_batch b on b.tenant_id = t.tenant_id and b.id = t.batch_id
+left join lateral (
+  select sum(l.discount) as discount from public.sale_line l
+  where l.tenant_id = t.tenant_id and l.ticket_id = t.id and not l.is_void
+) ld on true
+where b.status = 'applied' and t.status = 'paid'
+group by t.tenant_id, t.location_id, t.business_date;
+
+-- One row per location and day: ticket grain when the day has a paid ticket, otherwise the
+-- daily aggregate of the most recently applied batch. Cancellations on a ticket day come from its
+-- cancelled tickets; on an aggregate day from the aggregate (rule C).
+create view app.v_daily_sales with (security_invoker = true) as
+select d.tenant_id, d.location_id, d.business_date, 'ticket'::text as grain,
+       d.net_sales, d.tickets, d.guests, d.discounts,
+       coalesce(c.amount, 0)::bigint as cancellations_amount, coalesce(c.n, 0)::bigint as cancellations_count
+from app.v_ticket_days d
+left join lateral (
+  select sum(t.total) as amount, count(*) as n
+  from public.sale_ticket t
+  join public.import_batch b on b.tenant_id = t.tenant_id and b.id = t.batch_id
+  where b.status = 'applied' and t.status = 'cancelled'
+    and t.tenant_id = d.tenant_id and t.location_id = d.location_id and t.business_date = d.business_date
+) c on true
+union all
+select a.tenant_id, a.location_id, a.business_date, 'aggregate',
+       a.net_sales, a.tickets, a.guests, a.discounts, a.cancellations_amount, a.cancellations_count
+from (
+  select distinct on (s.tenant_id, s.location_id, s.business_date)
+         s.tenant_id, s.location_id, s.business_date, s.net_sales, s.tickets::bigint as tickets,
+         s.guests::bigint as guests, s.discounts, s.cancellations_amount,
+         s.cancellations_count::bigint as cancellations_count
+  from public.daily_sales_agg s
+  join public.import_batch b on b.tenant_id = s.tenant_id and b.id = s.batch_id
+  where b.status = 'applied'
+  order by s.tenant_id, s.location_id, s.business_date, b.applied_at desc, s.id desc
+) a
+where not exists (select 1 from app.v_ticket_days d
+                  where d.tenant_id = a.tenant_id and d.location_id = a.location_id and d.business_date = a.business_date);
+
+-- Items sold per location, day and dish, with the same per-day choice of grain. Ticket grain
+-- counts only non-voided lines of paid tickets (rule D); aggregate grain keeps single-day rows of
+-- the most recently applied batch for that location and day.
+create view app.v_item_sales_daily with (security_invoker = true) as
+select l.tenant_id, l.location_id, t.business_date, l.menu_item_id, 'ticket'::text as grain,
+       sum(l.qty) as units, sum(l.net + l.discount)::bigint as gross, sum(l.discount)::bigint as discount,
+       sum(l.net)::bigint as net
+from public.sale_line l
+join public.sale_ticket t on t.tenant_id = l.tenant_id and t.id = l.ticket_id
+join public.import_batch b on b.tenant_id = t.tenant_id and b.id = t.batch_id
+where b.status = 'applied' and t.status = 'paid' and not l.is_void
+group by l.tenant_id, l.location_id, t.business_date, l.menu_item_id
+union all
+select x.tenant_id, x.location_id, x.business_date, x.menu_item_id, 'aggregate',
+       sum(x.units), sum(x.gross)::bigint, sum(x.discount)::bigint, sum(x.net)::bigint
+from (
+  select a.tenant_id, a.location_id, a.period_from as business_date, a.menu_item_id,
+         a.units, a.gross, a.discount, a.net,
+         dense_rank() over (partition by a.tenant_id, a.location_id, a.period_from
+                            order by b.applied_at desc, b.id desc) as k
+  from public.item_sales_agg a
+  join public.import_batch b on b.tenant_id = a.tenant_id and b.id = a.batch_id
+  where b.status = 'applied' and a.period_from = a.period_to
+) x
+where x.k = 1
+  and not exists (select 1 from app.v_ticket_days d
+                  where d.tenant_id = x.tenant_id and d.location_id = x.location_id and d.business_date = x.business_date)
+group by x.tenant_id, x.location_id, x.business_date, x.menu_item_id;
+
+grant usage on schema app to authenticated;
+grant select on app.v_ticket_days, app.v_daily_sales, app.v_item_sales_daily to authenticated;
+
 -- Sales over a range ------------------------------------------------------------------------
--- Item sales of applied batches, single-day rows only, joined to the dish cost of that day. Like
--- daily rows, a location and day takes its rows from one batch: the most recently applied one.
+-- Items sold over [f, t], from v_item_sales_daily, joined to the dish cost of that day.
 create function app.item_rows(locs uuid[], f date, t date)
 returns table (location_id uuid, day date, menu_item_id uuid, units numeric, net bigint, cost bigint)
 language sql stable set search_path = ''
 as $$
-  select x.location_id, x.day, x.menu_item_id, x.units, x.net, x.cost
-  from (
-    select a.location_id, a.period_from as day, a.menu_item_id, a.units, a.net, c.cost,
-           dense_rank() over (partition by a.location_id, a.period_from order by b.applied_at desc, b.id desc) as k
-    from public.item_sales_agg a
-    join public.import_batch b on b.tenant_id = a.tenant_id and b.id = a.batch_id
-    left join public.dish_cost_snapshot c
-      on c.tenant_id = a.tenant_id and c.menu_item_id = a.menu_item_id
-     and c.location_id = a.location_id and c.date = a.period_from
-    where b.status = 'applied' and a.location_id = any (locs)
-      and a.period_from = a.period_to and a.period_from between f and t
-  ) x
-  where x.k = 1
+  select v.location_id, v.business_date, v.menu_item_id, v.units, v.net, c.cost
+  from app.v_item_sales_daily v
+  left join public.dish_cost_snapshot c
+    on c.tenant_id = v.tenant_id and c.menu_item_id = v.menu_item_id
+   and c.location_id = v.location_id and c.date = v.business_date
+  where v.location_id = any (locs) and v.business_date between f and t
 $$;
 
--- Daily figures over [f, t] for the locations, from applied batches only. A nullable figure is
+-- Daily figures over [f, t] for the locations, from v_daily_sales. A nullable figure is
 -- known only when every covered day reports it (not reported is not zero). Coverage compares
 -- like with like: expected_days are the location-days up to yesterday, and expected_covered
 -- counts the covered ones among them (a day loaded early, like today, adds sales, not coverage).
@@ -218,11 +295,8 @@ as $$
   with w as (
     select least(t, app.business_today(locs[1]) - 1) as last_expected
   ), d as (
-    select distinct on (s.location_id, s.business_date) s.*
-    from public.daily_sales_agg s
-    join public.import_batch b on b.tenant_id = s.tenant_id and b.id = s.batch_id
-    where b.status = 'applied' and s.location_id = any (locs) and s.business_date between f and t
-    order by s.location_id, s.business_date, b.applied_at desc, s.id desc
+    select v.* from app.v_daily_sales v
+    where v.location_id = any (locs) and v.business_date between f and t
   ), i as (
     select r.location_id, r.day, sum(r.net) as net
     from app.item_rows(locs, f, t) r

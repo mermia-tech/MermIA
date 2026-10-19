@@ -41,6 +41,11 @@ select is((select count(*) from (values ('app_user'), ('raw_file')) t(x)
 -- no view, function or sequence can bypass the table privileges (spec 7.2.5) --------------------------------
 select is((select count(*) from pg_class where relnamespace = 'public'::regnamespace and relkind in ('v', 'm', 'S', 'f', 'p')), 0::bigint, 'public has no view, materialized view, sequence, foreign table or partitioned table');
 select is((select count(*) from pg_proc where pronamespace = 'public'::regnamespace), 0::bigint, 'public has no function');
+-- MR-17: views live in `app` and run as the caller, so RLS applies (spec 8.1)
+select is((select count(*) from pg_class c where c.relnamespace = 'app'::regnamespace and c.relkind in ('v', 'm')
+           and not coalesce('security_invoker=true' = any (c.reloptions), false)), 0::bigint, 'every view in app is security_invoker');
+select set_eq($$select relname::text from pg_class where relnamespace = 'app'::regnamespace and relkind in ('v', 'm')$$,
+              array['v_ticket_days', 'v_daily_sales', 'v_item_sales_daily'], 'app holds the reviewed views only');
 -- MR-17: the read RPCs live in `api`, the one schema besides public the Data API exposes for us
 select is((select count(*) from pg_class where relnamespace = 'api'::regnamespace), 0::bigint, 'api has no table, view or sequence');
 select set_eq($$select proname::text from pg_proc where pronamespace = 'api'::regnamespace$$,
