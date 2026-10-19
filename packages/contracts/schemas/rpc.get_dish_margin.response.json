@@ -76,6 +76,7 @@
     },
     "DishMarginResolved": {
       "additionalProperties": false,
+      "description": "Margin and food cost on the NET price (without IVA), the basis of 03 and 09.\n\nmargin = net_price - cost; margin_pct = margin / net_price x 100; food_cost = cost /\nnet_price x 100, so margin_pct + food_cost = 100. `price_gross` is the menu price with IVA,\nonly to quote it: no percentage here is on it. Cost and prices are rounded to the centavo,\nthe percentages come from the unrounded values (they agree within that rounding).",
       "properties": {
         "confidence": {
           "$ref": "#/$defs/CostConfidence"
@@ -97,6 +98,9 @@
         "margin": {
           "$ref": "#/$defs/Money"
         },
+        "margin_pct": {
+          "$ref": "#/$defs/Pct"
+        },
         "match": {
           "const": "resolved",
           "title": "Match",
@@ -113,7 +117,10 @@
           "type": "string"
         },
         "net_price": {
-          "$ref": "#/$defs/Money"
+          "$ref": "#/$defs/PositiveMoney"
+        },
+        "price_gross": {
+          "$ref": "#/$defs/PositiveMoney"
         }
       },
       "required": [
@@ -121,8 +128,10 @@
         "menu_item_id",
         "name",
         "cost",
+        "price_gross",
         "net_price",
         "margin",
+        "margin_pct",
         "food_cost",
         "confidence",
         "cost_drivers"
@@ -276,6 +285,30 @@
         "to"
       ],
       "title": "Period",
+      "type": "object"
+    },
+    "PositiveMoney": {
+      "additionalProperties": false,
+      "description": "Money greater than zero: a price a dish is sold at.",
+      "properties": {
+        "raw": {
+          "description": "unit=centavos, greater than zero",
+          "exclusiveMinimum": 0,
+          "maximum": 9223372036854775807,
+          "title": "Raw",
+          "type": "integer"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "PositiveMoney",
       "type": "object"
     },
     "RpcError": {

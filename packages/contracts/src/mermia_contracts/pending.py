@@ -21,6 +21,7 @@ from pydantic import Field, model_validator
 from mermia_contracts.batch import Model, Text
 from mermia_contracts.db.models import IngredientPriceSource, PendingChangeStatus
 from mermia_contracts.decimals import (
+    PositiveCents,
     PositivePercentPoints,
     PositivePricePerUnit,
     PositiveQuantity,
@@ -86,11 +87,6 @@ class RecipeLine(Model):
 class RecipeUpsert(Model):
     yield_qty: PositiveQuantity
     lines: Annotated[list[RecipeLine], Field(min_length=1)]
-
-
-PositiveCents = Annotated[
-    int, Field(strict=True, gt=0, le=2**63 - 1, description="unit=centavos, greater than zero")
-]
 
 
 class MenuItemPriceSet(Model):

@@ -107,6 +107,9 @@ PositivePercentPoints = Annotated[
 ]
 """Strictly positive twins of the types above, for values that divide or multiply a cost: a
 price, a quantity, a yield. Each keeps the digits of its database column."""
+PositiveCents = Annotated[
+    int, Field(strict=True, gt=0, le=2**63 - 1, description="unit=centavos, greater than zero")
+]
 FigureRaw = Annotated[Decimal, _Exact(24, 6)]
 """The raw value of a Figure: its unit depends on the metric asked for."""
 

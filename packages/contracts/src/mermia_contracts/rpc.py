@@ -23,7 +23,12 @@ from pydantic import AwareDatetime, Field, model_validator
 from mermia_contracts.batch import Cents, Count, Model, Text
 from mermia_contracts.batch import Period as DateRange
 from mermia_contracts.db.models import BaseUnit, CostConfidence, SourceKind
-from mermia_contracts.decimals import ComputedPercent, FigureRaw, PositiveUnitPricePerBaseUnit
+from mermia_contracts.decimals import (
+    ComputedPercent,
+    FigureRaw,
+    PositiveCents,
+    PositiveUnitPricePerBaseUnit,
+)
 
 # --- shared pieces ---------------------------------------------------------------------------
 
@@ -67,6 +72,9 @@ get_sales_summary (a Money) and in compare_periods (a Figure).
 """
 
 
+_PCT_ROUNDING = Decimal("0.0001")  # a Pct keeps four decimals
+
+
 def _check_scale(metric: str, **figures: Figure) -> None:
     unit = METRIC_UNIT[metric]
     for name, figure in figures.items():
@@ -81,6 +89,13 @@ def _check_scale(metric: str, **figures: Figure) -> None:
 
 class Money(Model):
     raw: Cents
+    text: Text
+
+
+class PositiveMoney(Model):
+    """Money greater than zero: a price a dish is sold at."""
+
+    raw: PositiveCents
     text: Text
 
 
@@ -326,15 +341,42 @@ class CostDriver(Model):
 
 
 class DishMarginResolved(Model):
+    """Margin and food cost on the NET price (without IVA), the basis of 03 and 09.
+
+    margin = net_price - cost; margin_pct = margin / net_price x 100; food_cost = cost /
+    net_price x 100, so margin_pct + food_cost = 100. `price_gross` is the menu price with IVA,
+    only to quote it: no percentage here is on it. Cost and prices are rounded to the centavo,
+    the percentages come from the unrounded values (they agree within that rounding).
+    """
+
     match: Literal["resolved"]
     menu_item_id: UUID
     name: Text
     cost: Money
-    net_price: Money
+    price_gross: PositiveMoney
+    net_price: PositiveMoney
     margin: Money
+    margin_pct: Pct
     food_cost: Pct
     confidence: CostConfidence
     cost_drivers: Annotated[list[CostDriver], Field(max_length=3)]
+
+    @model_validator(mode="after")
+    def _on_the_net_price(self) -> DishMarginResolved:
+        net, cost = self.net_price.raw, self.cost.raw
+        if net > self.price_gross.raw:
+            raise ValueError("net_price must not exceed price_gross")
+        if self.margin.raw != net - cost:
+            raise ValueError("margin must equal net_price - cost")
+        if abs(self.margin_pct.raw + self.food_cost.raw - 100) > _PCT_ROUNDING:
+            raise ValueError("margin_pct and food_cost must add up to 100")
+        # centavo rounding of cost and net_price moves a percentage by at most this much
+        slack = Decimal("50") * (1 + abs(Decimal(cost) / net)) / net + _PCT_ROUNDING
+        if abs(self.food_cost.raw - Decimal(cost) / net * 100) > slack:
+            raise ValueError("food_cost must follow cost / net_price (net, without IVA)")
+        if abs(self.margin_pct.raw - Decimal(self.margin.raw) / net * 100) > slack:
+            raise ValueError("margin_pct must follow margin / net_price (net, without IVA)")
+        return self
 
 
 class DishCandidate(Model):

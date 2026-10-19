@@ -12,6 +12,10 @@
         "raw": 1820,
         "text": "$18.20"
       },
+      "price_gross": {
+        "raw": 5800,
+        "text": "$58.00"
+      },
       "net_price": {
         "raw": 5000,
         "text": "$50.00"
@@ -19,6 +23,10 @@
       "margin": {
         "raw": 3180,
         "text": "$31.80"
+      },
+      "margin_pct": {
+        "raw": 63.6,
+        "text": "63.6%"
       },
       "food_cost": {
         "raw": 36.4,
