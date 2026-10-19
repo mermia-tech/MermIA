@@ -163,7 +163,7 @@ select is((select count(*) from pg_attribute a join pg_class c on c.oid = a.attr
            where c.relnamespace = 'public'::regnamespace and c.relkind = 'r' and a.attnum > 0 and not a.attisdropped
              and a.atttypid in ('text'::regtype, 'character varying'::regtype)
              and not exists (select 1 from pg_constraint k where k.conrelid = c.oid and k.contype = 'c' and k.conname = a.attname || '_not_blank'
-                             and pg_get_constraintdef(k.oid) like '%~%u00a0%u3000%')),
+                             and position('~ ''[^\t\n\v\f\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]''' in pg_get_constraintdef(k.oid)) > 0)),
           0::bigint, 'every text column rejects blank strings (Unicode whitespace, as the contract''s Text)');
 
 -- composite foreign keys (D18) ---------------------------------------------------------------------------------------------
