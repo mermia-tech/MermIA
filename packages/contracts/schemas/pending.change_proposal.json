@@ -1,0 +1,404 @@
+{
+  "$defs": {
+    "ImportBatchApproveProposal": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "import_batch.approve",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "target_id": {
+          "format": "uuid",
+          "title": "Target Id",
+          "type": "string"
+        },
+        "values": {
+          "$ref": "#/$defs/NoPayload",
+          "default": {}
+        }
+      },
+      "required": [
+        "target_id",
+        "kind"
+      ],
+      "title": "ImportBatchApproveProposal",
+      "type": "object"
+    },
+    "ImportBatchRollbackProposal": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "import_batch.rollback",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "target_id": {
+          "format": "uuid",
+          "title": "Target Id",
+          "type": "string"
+        },
+        "values": {
+          "$ref": "#/$defs/NoPayload",
+          "default": {}
+        }
+      },
+      "required": [
+        "target_id",
+        "kind"
+      ],
+      "title": "ImportBatchRollbackProposal",
+      "type": "object"
+    },
+    "IngredientPriceSet": {
+      "additionalProperties": false,
+      "description": "Becomes `ingredient_price.unit_price_net`: pesos per BASE unit of the ingredient (g, ml or\npza), not per purchase unit. \"$220 per kg\" is 0.22 for an ingredient whose base unit is g;\nthe caller converts before proposing (MR-10 spec 5.4).",
+      "properties": {
+        "effective_from": {
+          "format": "date",
+          "title": "Effective From",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/IngredientPriceSource",
+          "default": "manual"
+        },
+        "unit_price": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=pesos_per_base_unit (g, ml or pza), never per purchase unit; greater than zero",
+          "title": "Unit Price"
+        }
+      },
+      "required": [
+        "unit_price",
+        "effective_from"
+      ],
+      "title": "IngredientPriceSet",
+      "type": "object"
+    },
+    "IngredientPriceSetProposal": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "ingredient_price.set",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "target_id": {
+          "format": "uuid",
+          "title": "Target Id",
+          "type": "string"
+        },
+        "values": {
+          "$ref": "#/$defs/IngredientPriceSet"
+        }
+      },
+      "required": [
+        "target_id",
+        "kind",
+        "values"
+      ],
+      "title": "IngredientPriceSetProposal",
+      "type": "object"
+    },
+    "IngredientPriceSource": {
+      "enum": [
+        "cfdi",
+        "nota",
+        "sr_import",
+        "manual",
+        "benchmark"
+      ],
+      "title": "IngredientPriceSource",
+      "type": "string"
+    },
+    "MenuItemPriceSet": {
+      "additionalProperties": false,
+      "description": "STORED: centavos for one location (`menu_item_price.location_id` is not null) and a date.",
+      "properties": {
+        "effective_from": {
+          "format": "date",
+          "title": "Effective From",
+          "type": "string"
+        },
+        "location_id": {
+          "format": "uuid",
+          "title": "Location Id",
+          "type": "string"
+        },
+        "price_gross": {
+          "description": "unit=centavos, greater than zero",
+          "exclusiveMinimum": 0,
+          "maximum": 9223372036854775807,
+          "title": "Price Gross",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "price_gross",
+        "location_id",
+        "effective_from"
+      ],
+      "title": "MenuItemPriceSet",
+      "type": "object"
+    },
+    "MenuItemPriceSetProposal": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "menu_item_price.set",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "target_id": {
+          "format": "uuid",
+          "title": "Target Id",
+          "type": "string"
+        },
+        "values": {
+          "$ref": "#/$defs/MenuItemPriceSet"
+        }
+      },
+      "required": [
+        "target_id",
+        "kind",
+        "values"
+      ],
+      "title": "MenuItemPriceSetProposal",
+      "type": "object"
+    },
+    "NoPayload": {
+      "additionalProperties": false,
+      "description": "No values: the target is the batch.",
+      "properties": {},
+      "title": "NoPayload",
+      "type": "object"
+    },
+    "RecipeLine": {
+      "additionalProperties": false,
+      "properties": {
+        "ingredient_external_id": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ingredient External Id"
+        },
+        "ingredient_name": {
+          "pattern": "\\S",
+          "title": "Ingredient Name",
+          "type": "string"
+        },
+        "qty_base": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=quantity (> 0)",
+          "title": "Qty Base"
+        },
+        "unit": {
+          "pattern": "\\S",
+          "title": "Unit",
+          "type": "string"
+        },
+        "yield_override_pct": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "unit=percent_points (> 0, max 999.9999)"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Yield Override Pct"
+        }
+      },
+      "required": [
+        "ingredient_name",
+        "qty_base",
+        "unit"
+      ],
+      "title": "RecipeLine",
+      "type": "object"
+    },
+    "RecipeUpsert": {
+      "additionalProperties": false,
+      "properties": {
+        "lines": {
+          "items": {
+            "$ref": "#/$defs/RecipeLine"
+          },
+          "minItems": 1,
+          "title": "Lines",
+          "type": "array"
+        },
+        "yield_qty": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=quantity (> 0)",
+          "title": "Yield Qty"
+        }
+      },
+      "required": [
+        "yield_qty",
+        "lines"
+      ],
+      "title": "RecipeUpsert",
+      "type": "object"
+    },
+    "RecipeUpsertProposal": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "recipe.upsert",
+          "title": "Kind",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "target_id": {
+          "format": "uuid",
+          "title": "Target Id",
+          "type": "string"
+        },
+        "values": {
+          "$ref": "#/$defs/RecipeUpsert"
+        }
+      },
+      "required": [
+        "target_id",
+        "kind",
+        "values"
+      ],
+      "title": "RecipeUpsertProposal",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "import_batch.approve": "#/$defs/ImportBatchApproveProposal",
+      "import_batch.rollback": "#/$defs/ImportBatchRollbackProposal",
+      "ingredient_price.set": "#/$defs/IngredientPriceSetProposal",
+      "menu_item_price.set": "#/$defs/MenuItemPriceSetProposal",
+      "recipe.upsert": "#/$defs/RecipeUpsertProposal"
+    },
+    "propertyName": "kind"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/IngredientPriceSetProposal"
+    },
+    {
+      "$ref": "#/$defs/RecipeUpsertProposal"
+    },
+    {
+      "$ref": "#/$defs/MenuItemPriceSetProposal"
+    },
+    {
+      "$ref": "#/$defs/ImportBatchApproveProposal"
+    },
+    {
+      "$ref": "#/$defs/ImportBatchRollbackProposal"
+    }
+  ]
+}

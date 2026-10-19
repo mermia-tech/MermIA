@@ -1,0 +1,109 @@
+{
+  "$defs": {
+    "Period": {
+      "additionalProperties": false,
+      "description": "Business dates covered by the batch, both inclusive.",
+      "properties": {
+        "from": {
+          "format": "date",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "format": "date",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Period",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "category": {
+      "anyOf": [
+        {
+          "pattern": "\\S",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Category"
+    },
+    "limit": {
+      "default": 5,
+      "maximum": 10,
+      "minimum": 1,
+      "title": "Limit",
+      "type": "integer"
+    },
+    "location_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Location Id"
+    },
+    "metric": {
+      "enum": [
+        "units",
+        "revenue",
+        "margin",
+        "margin_pct"
+      ],
+      "title": "Metric",
+      "type": "string"
+    },
+    "order": {
+      "default": "desc",
+      "enum": [
+        "asc",
+        "desc"
+      ],
+      "title": "Order",
+      "type": "string"
+    },
+    "period": {
+      "anyOf": [
+        {
+          "enum": [
+            "today",
+            "yesterday",
+            "this_week",
+            "last_week",
+            "prev_week",
+            "this_month",
+            "last_month",
+            "last_7d",
+            "last_30d"
+          ],
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/Period"
+        }
+      ],
+      "title": "Period"
+    }
+  },
+  "required": [
+    "period",
+    "metric"
+  ],
+  "title": "GetTopDishesArgs",
+  "type": "object"
+}

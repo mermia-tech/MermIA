@@ -1,0 +1,20 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "location_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Location Id"
+    }
+  },
+  "title": "GetDataStatusArgs",
+  "type": "object"
+}

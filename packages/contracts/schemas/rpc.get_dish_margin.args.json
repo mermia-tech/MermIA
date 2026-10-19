@@ -1,0 +1,28 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "dish": {
+      "pattern": "\\S",
+      "title": "Dish",
+      "type": "string"
+    },
+    "location_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Location Id"
+    }
+  },
+  "required": [
+    "dish"
+  ],
+  "title": "GetDishMarginArgs",
+  "type": "object"
+}

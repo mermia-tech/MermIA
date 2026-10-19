@@ -1,0 +1,67 @@
+{
+  "$defs": {
+    "Period": {
+      "additionalProperties": false,
+      "description": "Business dates covered by the batch, both inclusive.",
+      "properties": {
+        "from": {
+          "format": "date",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "format": "date",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Period",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "location_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Location Id"
+    },
+    "since": {
+      "anyOf": [
+        {
+          "enum": [
+            "today",
+            "yesterday",
+            "this_week",
+            "last_week",
+            "prev_week",
+            "this_month",
+            "last_month",
+            "last_7d",
+            "last_30d"
+          ],
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/Period"
+        }
+      ],
+      "default": "last_7d",
+      "title": "Since"
+    }
+  },
+  "title": "GetCostAlertsArgs",
+  "type": "object"
+}

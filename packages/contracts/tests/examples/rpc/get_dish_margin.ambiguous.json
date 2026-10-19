@@ -1,0 +1,25 @@
+{
+  "args": {
+    "dish": "al pastor"
+  },
+  "response": {
+    "ok": true,
+    "data": {
+      "match": "ambiguous",
+      "candidates": [
+        {
+          "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000001",
+          "name": "Taco al pastor"
+        },
+        {
+          "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000002",
+          "name": "Gringa al pastor"
+        }
+      ]
+    },
+    "flags": [],
+    "meta": {
+      "as_of": "2026-10-19T08:00:00-06:00"
+    }
+  }
+}

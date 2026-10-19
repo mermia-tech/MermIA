@@ -1,0 +1,59 @@
+{
+  "args": {},
+  "response": {
+    "ok": true,
+    "data": {
+      "price_moves": [
+        {
+          "ingredient": "Carne al pastor",
+          "change": {
+            "raw": 22.2,
+            "text": "+22.2%"
+          },
+          "new_unit_price": {
+            "raw": 0.22,
+            "base_unit": "g",
+            "text": "$220.00/kg"
+          }
+        }
+      ],
+      "breaches": [
+        {
+          "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000001",
+          "name": "Taco al pastor",
+          "food_cost": {
+            "raw": 36.4,
+            "text": "36.4%"
+          },
+          "target": {
+            "raw": 32.0,
+            "text": "32.0%"
+          }
+        }
+      ],
+      "suggestions": [
+        {
+          "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000001",
+          "name": "Taco al pastor",
+          "current_price": {
+            "raw": 5000,
+            "text": "$50.00"
+          },
+          "suggested_price": {
+            "raw": 5500,
+            "text": "$55.00"
+          }
+        }
+      ]
+    },
+    "flags": [],
+    "meta": {
+      "as_of": "2026-10-19T08:00:00-06:00",
+      "coverage_pct": 87.5,
+      "period_resolved": {
+        "from": "2026-10-12",
+        "to": "2026-10-18"
+      }
+    }
+  }
+}

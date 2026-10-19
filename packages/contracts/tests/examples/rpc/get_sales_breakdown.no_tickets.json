@@ -1,0 +1,47 @@
+{
+  "args": {
+    "period": "yesterday",
+    "by": "category"
+  },
+  "response": {
+    "ok": true,
+    "data": {
+      "by": "category",
+      "rows": [
+        {
+          "key": "Tacos",
+          "net_sales": {
+            "raw": 1500000,
+            "text": "$15,000.00"
+          },
+          "tickets": null,
+          "share": {
+            "raw": 62.5,
+            "text": "62.5%"
+          }
+        },
+        {
+          "key": "Bebidas",
+          "net_sales": {
+            "raw": 900000,
+            "text": "$9,000.00"
+          },
+          "tickets": null,
+          "share": {
+            "raw": 37.5,
+            "text": "37.5%"
+          }
+        }
+      ]
+    },
+    "flags": [],
+    "meta": {
+      "as_of": "2026-10-19T08:00:00-06:00",
+      "coverage_pct": 87.5,
+      "period_resolved": {
+        "from": "2026-10-18",
+        "to": "2026-10-18"
+      }
+    }
+  }
+}

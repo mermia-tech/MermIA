@@ -1,0 +1,285 @@
+{
+  "$defs": {
+    "ComparePeriodsData": {
+      "additionalProperties": false,
+      "description": "`a` against the base period `b`: abs_change = a - b and pct_change = (a - b) / b.\n\n`pct_change` is null when `b` is zero: the change is undefined, never 0 or infinite.\n`period_a` and `period_b` are the exact inclusive ranges that `a` and `b` cover. The\nenvelope's `meta.period_resolved` holds a single range, so for compare_periods it is null.",
+      "properties": {
+        "a": {
+          "$ref": "#/$defs/Figure"
+        },
+        "abs_change": {
+          "$ref": "#/$defs/Figure"
+        },
+        "b": {
+          "$ref": "#/$defs/Figure"
+        },
+        "metric": {
+          "enum": [
+            "net_sales",
+            "tickets",
+            "avg_ticket",
+            "guests",
+            "food_cost_pct",
+            "units"
+          ],
+          "title": "Metric",
+          "type": "string"
+        },
+        "pct_change": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pct"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "period_a": {
+          "$ref": "#/$defs/Period"
+        },
+        "period_b": {
+          "$ref": "#/$defs/Period"
+        }
+      },
+      "required": [
+        "metric",
+        "period_a",
+        "period_b",
+        "a",
+        "b",
+        "abs_change"
+      ],
+      "title": "ComparePeriodsData",
+      "type": "object"
+    },
+    "Figure": {
+      "additionalProperties": false,
+      "description": "A number whose unit depends on the metric asked for (compare_*, top dishes).\n\nThe unit is not a field: it follows from `metric` through METRIC_UNIT. Money is integer\ncentavos (as Money.raw), counts are whole numbers, units sold are quantities with up to six\ndecimals and percentages are percent points.",
+      "properties": {
+        "raw": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Raw"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "Figure",
+      "type": "object"
+    },
+    "Flag": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "pattern": "\\S",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "Flag",
+      "type": "object"
+    },
+    "Meta": {
+      "additionalProperties": false,
+      "description": "`period_resolved` is the one range a single-period RPC answered for (null for none, and\nfor compare_periods, which carries both ranges in its data).",
+      "properties": {
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "coverage_pct": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "unit=percent_points (calculated, 4 decimals)"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Coverage Pct"
+        },
+        "period_resolved": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Period"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "as_of"
+      ],
+      "title": "Meta",
+      "type": "object"
+    },
+    "Pct": {
+      "additionalProperties": false,
+      "description": "A calculated percentage in percent points (+7.2 is 7.2 %), not a database column.",
+      "properties": {
+        "raw": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=percent_points (calculated, 4 decimals)",
+          "title": "Raw"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "Pct",
+      "type": "object"
+    },
+    "Period": {
+      "additionalProperties": false,
+      "description": "Business dates covered by the batch, both inclusive.",
+      "properties": {
+        "from": {
+          "format": "date",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "format": "date",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Period",
+      "type": "object"
+    },
+    "RpcError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/RpcErrorCode"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "RpcError",
+      "type": "object"
+    },
+    "RpcErrorCode": {
+      "enum": [
+        "invalid_args",
+        "not_found",
+        "no_data",
+        "forbidden",
+        "internal"
+      ],
+      "title": "RpcErrorCode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "data": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ComparePeriodsData"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RpcError"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "flags": {
+      "items": {
+        "$ref": "#/$defs/Flag"
+      },
+      "title": "Flags",
+      "type": "array"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    },
+    "ok": {
+      "title": "Ok",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "ok",
+    "meta"
+  ],
+  "title": "RpcEnvelope[ComparePeriodsData]",
+  "type": "object"
+}

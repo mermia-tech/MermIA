@@ -1,0 +1,22 @@
+{
+  "additionalProperties": false,
+  "description": "`user_id` is the approver's `app_user.id`, resolved by the backend (a service_role call).",
+  "properties": {
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "user_id": {
+      "format": "uuid",
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "user_id"
+  ],
+  "title": "ApplyPendingChangeArgs",
+  "type": "object"
+}

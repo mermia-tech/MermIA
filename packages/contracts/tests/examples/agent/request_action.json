@@ -1,0 +1,14 @@
+{
+  "tenant_id": "0f7a1c52-3b6e-7c1a-9d44-000000000001",
+  "user_id": "0f7a1c52-3b6e-7c1a-9d44-000000000002",
+  "location_ids": [
+    "0f7a1c52-3b6e-7c1a-9d44-000000000003"
+  ],
+  "channel": "whatsapp",
+  "conversation_id": "0f7a1c52-3b6e-7c1a-9d44-000000000004",
+  "window_open_until": "2026-10-20T08:00:00-06:00",
+  "input": {
+    "type": "action",
+    "action_id": "pc:0f7a1c52-3b6e-7c1a-9d33-000000000001:approve"
+  }
+}

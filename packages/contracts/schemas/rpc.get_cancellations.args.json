@@ -1,0 +1,78 @@
+{
+  "$defs": {
+    "Period": {
+      "additionalProperties": false,
+      "description": "Business dates covered by the batch, both inclusive.",
+      "properties": {
+        "from": {
+          "format": "date",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "format": "date",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Period",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "default": "cancellations",
+      "enum": [
+        "cancellations",
+        "discounts"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "location_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Location Id"
+    },
+    "period": {
+      "anyOf": [
+        {
+          "enum": [
+            "today",
+            "yesterday",
+            "this_week",
+            "last_week",
+            "prev_week",
+            "this_month",
+            "last_month",
+            "last_7d",
+            "last_30d"
+          ],
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/Period"
+        }
+      ],
+      "title": "Period"
+    }
+  },
+  "required": [
+    "period"
+  ],
+  "title": "GetCancellationsArgs",
+  "type": "object"
+}

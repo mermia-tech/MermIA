@@ -1,0 +1,28 @@
+{
+  "args": {
+    "dish": "pastor"
+  },
+  "response": {
+    "ok": true,
+    "data": {
+      "match": "needs_location",
+      "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000001",
+      "name": "Taco al pastor",
+      "locations": [
+        {
+          "location_id": "0f7a1c52-3b6e-7c1a-9d11-000000000001",
+          "name": "Centro"
+        },
+        {
+          "location_id": "0f7a1c52-3b6e-7c1a-9d11-000000000002",
+          "name": "Polanco"
+        }
+      ]
+    },
+    "flags": [],
+    "meta": {
+      "as_of": "2026-10-19T08:00:00-06:00",
+      "coverage_pct": 87.5
+    }
+  }
+}

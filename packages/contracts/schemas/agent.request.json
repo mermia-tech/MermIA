@@ -1,0 +1,151 @@
+{
+  "$defs": {
+    "ActionInput": {
+      "additionalProperties": false,
+      "properties": {
+        "action_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Action Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "action",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "action_id"
+      ],
+      "title": "ActionInput",
+      "type": "object"
+    },
+    "Channel": {
+      "enum": [
+        "whatsapp",
+        "web",
+        "pos"
+      ],
+      "title": "Channel",
+      "type": "string"
+    },
+    "MediaInput": {
+      "additionalProperties": false,
+      "properties": {
+        "raw_file_id": {
+          "format": "uuid",
+          "title": "Raw File Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "media",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "raw_file_id"
+      ],
+      "title": "MediaInput",
+      "type": "object"
+    },
+    "TextInput": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        },
+        "type": {
+          "const": "text",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "text"
+      ],
+      "title": "TextInput",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "channel": {
+      "$ref": "#/$defs/Channel"
+    },
+    "conversation_id": {
+      "format": "uuid",
+      "title": "Conversation Id",
+      "type": "string"
+    },
+    "input": {
+      "discriminator": {
+        "mapping": {
+          "action": "#/$defs/ActionInput",
+          "media": "#/$defs/MediaInput",
+          "text": "#/$defs/TextInput"
+        },
+        "propertyName": "type"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/TextInput"
+        },
+        {
+          "$ref": "#/$defs/ActionInput"
+        },
+        {
+          "$ref": "#/$defs/MediaInput"
+        }
+      ],
+      "title": "Input"
+    },
+    "location_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "title": "Location Ids",
+      "type": "array"
+    },
+    "tenant_id": {
+      "format": "uuid",
+      "title": "Tenant Id",
+      "type": "string"
+    },
+    "user_id": {
+      "format": "uuid",
+      "title": "User Id",
+      "type": "string"
+    },
+    "window_open_until": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Window Open Until"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "user_id",
+    "location_ids",
+    "channel",
+    "conversation_id",
+    "input"
+  ],
+  "title": "AgentRequest",
+  "type": "object"
+}

@@ -1,0 +1,14 @@
+{
+  "tenant_id": "0f7a1c52-3b6e-7c1a-9d44-000000000001",
+  "user_id": "0f7a1c52-3b6e-7c1a-9d44-000000000002",
+  "location_ids": [
+    "0f7a1c52-3b6e-7c1a-9d44-000000000003"
+  ],
+  "channel": "web",
+  "conversation_id": "0f7a1c52-3b6e-7c1a-9d44-000000000004",
+  "window_open_until": null,
+  "input": {
+    "type": "media",
+    "raw_file_id": "0f7a1c52-3b6e-7c1a-9d44-000000000005"
+  }
+}

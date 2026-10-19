@@ -1,0 +1,9 @@
+{
+  "kind": "menu_item_price.set",
+  "target_id": "0f7a1c52-3b6e-7c1a-9d33-000000000001",
+  "values": {
+    "price_gross": 5500,
+    "location_id": "0f7a1c52-3b6e-7c1a-9d11-000000000001",
+    "effective_from": "2026-10-19"
+  }
+}

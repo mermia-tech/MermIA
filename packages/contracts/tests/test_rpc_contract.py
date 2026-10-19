@@ -1,0 +1,189 @@
+"""C3: the 11 RPC contracts parse their examples and reject malformed input."""
+
+import copy
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
+from pydantic import TypeAdapter, ValidationError
+
+from mermia_contracts.rpc import RPCS, RpcEnvelope
+
+EXAMPLES = Path(__file__).parent / "examples" / "rpc"
+FILES = sorted(EXAMPLES.glob("*.json"))
+NAMES = [
+    "get_sales_summary",
+    "compare_periods",
+    "compare_locations",
+    "get_top_dishes",
+    "get_sales_breakdown",
+    "get_cancellations",
+    "get_dish_margin",
+    "get_food_cost_pct",
+    "get_menu_engineering",
+    "get_cost_alerts",
+    "get_data_status",
+]
+
+
+def _envelope(name: str) -> TypeAdapter[Any]:
+    return TypeAdapter(RpcEnvelope[RPCS[name].data])  # type: ignore[misc,arg-type]
+
+
+def test_registry_has_the_eleven_rpcs_in_order() -> None:
+    assert list(RPCS) == NAMES
+
+
+def test_every_rpc_has_an_example() -> None:
+    assert {p.name.split(".")[0] for p in FILES} >= set(NAMES)
+
+
+@pytest.mark.parametrize("path", FILES, ids=lambda p: p.name)
+def test_examples_parse_and_round_trip(path: Path) -> None:
+    name = path.name.split(".")[0]
+    example = json.loads(path.read_text())
+    RPCS[name].args.model_validate(example["args"])
+    adapter = _envelope(name)
+    parsed = adapter.validate_json(json.dumps(example["response"]))
+    assert adapter.validate_json(adapter.dump_json(parsed, by_alias=True)) == parsed
+
+
+def _ok_summary() -> dict[str, Any]:
+    doc: dict[str, Any] = json.loads((EXAMPLES / "get_sales_summary.json").read_text())
+    response: dict[str, Any] = doc["response"]
+    return response
+
+
+def _error_doc() -> dict[str, Any]:
+    doc: dict[str, Any] = json.loads((EXAMPLES / "get_sales_summary.error.json").read_text())
+    response: dict[str, Any] = doc["response"]
+    return response
+
+
+def assert_rejects(
+    good: dict[str, Any], bad: dict[str, Any], *, loc: tuple[str, ...], reason: str
+) -> None:
+    """The unmodified document is valid, and `bad` fails at `loc` for `reason`.
+
+    Without the control, a document that was already invalid for an unrelated reason would
+    make every negative test pass for the wrong reason.
+    """
+    adapter = _envelope("get_sales_summary")
+    adapter.validate_python(good)
+    with pytest.raises(ValidationError) as info:
+        adapter.validate_python(bad)
+    found = [
+        e for e in info.value.errors() if tuple(map(str, e["loc"]))[-len(loc) :] == loc or not loc
+    ]
+    assert any(reason in e["type"] or reason in e["msg"] for e in found), info.value.errors()
+
+
+def _with(doc: dict[str, Any], path: tuple[str, ...], value: Any) -> dict[str, Any]:
+    out = copy.deepcopy(doc)
+    node = out
+    for key in path[:-1]:
+        node = node[key]
+    node[path[-1]] = value
+    return out
+
+
+@pytest.mark.parametrize(
+    "path,value,loc,reason",
+    [
+        (("data", "net_sales", "raw"), 1843205.5, ("net_sales", "raw"), "int_type"),  # float money
+        (("data", "net_sales", "raw"), "18432050", ("net_sales", "raw"), "int_type"),  # str money
+        (("data", "tickets"), -1, ("tickets",), "greater_than_equal"),
+        (("data", "surprise"), 1, ("surprise",), "extra_forbidden"),
+        (("data", "change_vs_previous", "raw"), 7.12345, ("raw",), "decimal_max_places"),
+        (("meta", "as_of"), "2026-10-19T08:00:00", ("as_of",), "timezone_aware"),
+        (("meta", "period_resolved", "to"), "2026-10-01", (), "must not be after"),
+    ],
+    ids=[
+        "float-money",
+        "string-money",
+        "negative-count",
+        "unknown-field",
+        "five-decimals",
+        "naive-instant",
+        "reversed-period",
+    ],
+)
+def test_malformed_responses_are_rejected(
+    path: tuple[str, ...], value: Any, loc: tuple[str, ...], reason: str
+) -> None:
+    good = _ok_summary()
+    assert_rejects(good, _with(good, path, value), loc=loc, reason=reason)
+
+
+@pytest.mark.parametrize(
+    "patch,reason",
+    [
+        ({"data": None}, "ok=true needs data"),
+        ({"error": {"code": "no_data", "message": "x"}}, "ok=true needs data and no error"),
+    ],
+    ids=["ok-no-data", "ok-with-error"],
+)
+def test_envelope_ok_true_inconsistencies(patch: dict[str, Any], reason: str) -> None:
+    good = _ok_summary()
+    assert_rejects(good, {**good, **patch}, loc=(), reason=reason)
+
+
+@pytest.mark.parametrize(
+    "patch,loc,reason",
+    [
+        ({"error": None}, (), "ok=false needs an error"),
+        ({"data": _ok_summary()["data"]}, (), "ok=false needs an error and no data"),
+        ({"error": {"code": "boom", "message": "x"}}, ("error", "code"), "enum"),
+    ],
+    ids=["fail-no-error", "fail-with-data", "unknown-code"],
+)
+def test_envelope_ok_false_inconsistencies(
+    patch: dict[str, Any], loc: tuple[str, ...], reason: str
+) -> None:
+    good = _error_doc()
+    assert_rejects(good, {**good, **patch}, loc=loc, reason=reason)
+
+
+@pytest.mark.parametrize(
+    "name,args",
+    [
+        ("get_top_dishes", {"period": "today", "metric": "units", "limit": 11}),
+        ("get_top_dishes", {"period": "today", "metric": "units", "limit": 0}),
+        ("get_top_dishes", {"period": "today", "metric": "profit"}),
+        ("get_sales_breakdown", {"period": "today", "by": "mood"}),
+        ("get_cancellations", {"period": "today", "kind": "refunds"}),
+        ("compare_periods", {"metric": "net_sales", "period_a": "today"}),
+        ("get_sales_summary", {"period": "next_year"}),
+        ("get_sales_summary", {"period": {"from": "2026-10-07", "to": "2026-10-01"}}),
+        ("get_sales_summary", {"period": "today", "tenant_id": "x"}),
+        ("get_dish_margin", {"dish": " "}),
+    ],
+)
+def test_bad_arguments_are_rejected(name: str, args: dict[str, Any]) -> None:
+    spec = RPCS[name]
+    example = json.loads((EXAMPLES / f"{name}.json").read_text())["args"]
+    spec.args.model_validate(example)  # control: the example arguments are valid
+    with pytest.raises(ValidationError):
+        spec.args.model_validate(args)
+
+
+def test_custom_period_uses_the_from_alias() -> None:
+    args = RPCS["get_sales_summary"].args.model_validate(
+        {"period": {"from": "2026-10-01", "to": "2026-10-07"}}
+    )
+    assert json.loads(args.model_dump_json())["period"]["from"] == "2026-10-01"
+
+
+def test_top_dishes_defaults() -> None:
+    args = RPCS["get_top_dishes"].args.model_validate({"period": "today", "metric": "units"})
+    assert (args.order, args.limit) == ("desc", 5)  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize("path", FILES, ids=lambda p: p.name)
+def test_python_and_json_paths_agree(path: Path) -> None:
+    """json.loads output (what an LLM tool or an HTTP client hands over) parses like the text."""
+    name = path.name.split(".")[0]
+    response = json.loads(path.read_text())["response"]
+    adapter = _envelope(name)
+    assert adapter.validate_python(response) == adapter.validate_json(json.dumps(response))
