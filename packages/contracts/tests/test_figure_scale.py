@@ -34,7 +34,14 @@ def _fig(raw: Any) -> dict[str, Any]:
 
 
 def _compare(metric: str, a: Any, b: Any, change: Any) -> dict[str, Any]:
-    return {"metric": metric, "a": _fig(a), "b": _fig(b), "abs_change": _fig(change)}
+    return {
+        "metric": metric,
+        "period_a": {"from": "2026-10-12", "to": "2026-10-18"},
+        "period_b": {"from": "2026-10-05", "to": "2026-10-11"},
+        "a": _fig(a),
+        "b": _fig(b),
+        "abs_change": _fig(change),
+    }
 
 
 def _locations(metric: str, value: Any, diff: Any) -> dict[str, Any]:

@@ -8,6 +8,14 @@
     "ok": true,
     "data": {
       "metric": "net_sales",
+      "period_a": {
+        "from": "2026-10-12",
+        "to": "2026-10-18"
+      },
+      "period_b": {
+        "from": "2026-10-05",
+        "to": "2026-10-11"
+      },
       "a": {
         "raw": 18432050,
         "text": "$184,320.50"
@@ -29,10 +37,7 @@
     "meta": {
       "as_of": "2026-10-19T08:00:00-06:00",
       "coverage_pct": 87.5,
-      "period_resolved": {
-        "from": "2026-10-12",
-        "to": "2026-10-18"
-      }
+      "period_resolved": null
     }
   }
 }

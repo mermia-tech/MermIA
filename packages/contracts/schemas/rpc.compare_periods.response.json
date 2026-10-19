@@ -2,7 +2,7 @@
   "$defs": {
     "ComparePeriodsData": {
       "additionalProperties": false,
-      "description": "`a` against the base period `b`: abs_change = a - b and pct_change = (a - b) / b.\n\n`pct_change` is null when `b` is zero: the change is undefined, never 0 or infinite.",
+      "description": "`a` against the base period `b`: abs_change = a - b and pct_change = (a - b) / b.\n\n`pct_change` is null when `b` is zero: the change is undefined, never 0 or infinite.\n`period_a` and `period_b` are the exact inclusive ranges that `a` and `b` cover. The\nenvelope's `meta.period_resolved` holds a single range, so for compare_periods it is null.",
       "properties": {
         "a": {
           "$ref": "#/$defs/Figure"
@@ -35,10 +35,18 @@
             }
           ],
           "default": null
+        },
+        "period_a": {
+          "$ref": "#/$defs/Period"
+        },
+        "period_b": {
+          "$ref": "#/$defs/Period"
         }
       },
       "required": [
         "metric",
+        "period_a",
+        "period_b",
         "a",
         "b",
         "abs_change"
@@ -103,6 +111,7 @@
     },
     "Meta": {
       "additionalProperties": false,
+      "description": "`period_resolved` is the one range a single-period RPC answered for (null for none, and\nfor compare_periods, which carries both ranges in its data).",
       "properties": {
         "as_of": {
           "format": "date-time",

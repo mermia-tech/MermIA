@@ -108,6 +108,9 @@ class Flag(Model):
 
 
 class Meta(Model):
+    """`period_resolved` is the one range a single-period RPC answered for (null for none, and
+    for compare_periods, which carries both ranges in its data)."""
+
     as_of: AwareDatetime
     coverage_pct: ComputedPercent | None = None
     period_resolved: DateRange | None = None
@@ -228,9 +231,13 @@ class ComparePeriodsData(Model):
     """`a` against the base period `b`: abs_change = a - b and pct_change = (a - b) / b.
 
     `pct_change` is null when `b` is zero: the change is undefined, never 0 or infinite.
+    `period_a` and `period_b` are the exact inclusive ranges that `a` and `b` cover. The
+    envelope's `meta.period_resolved` holds a single range, so for compare_periods it is null.
     """
 
     metric: CompareMetric
+    period_a: DateRange
+    period_b: DateRange
     a: Figure
     b: Figure
     abs_change: Figure

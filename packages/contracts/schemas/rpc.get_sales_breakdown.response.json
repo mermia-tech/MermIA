@@ -59,6 +59,7 @@
     },
     "Meta": {
       "additionalProperties": false,
+      "description": "`period_resolved` is the one range a single-period RPC answered for (null for none, and\nfor compare_periods, which carries both ranges in its data).",
       "properties": {
         "as_of": {
           "format": "date-time",

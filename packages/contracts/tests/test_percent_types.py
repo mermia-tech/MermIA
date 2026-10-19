@@ -25,6 +25,8 @@ def _fig(raw: Any) -> dict[str, Any]:
 def _compare(a: int, b: int, pct: Any) -> dict[str, Any]:
     return {
         "metric": "units",
+        "period_a": PERIODS,
+        "period_b": {"from": "2026-10-05", "to": "2026-10-11"},
         "a": _fig(a),
         "b": _fig(b),
         "abs_change": _fig(a - b),
