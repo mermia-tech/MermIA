@@ -573,18 +573,236 @@
  },
  "food_cost_yesterday": {
   "date": "2026-10-11",
-  "definition": "Theoretical food cost of one day, per location.\n\n    pct = recipe cost of the items sold / their net sales without IVA, over the items that\n    have a recipe; coverage_pct = that net / the day's whole net. Both in percent points.\n    ",
+  "definition": "Theoretical food cost of one day, per location (03: cost / (menu price / 1.16)).\n\n    numerator: sum over items sold that have a recipe of units x dish cost, the dish cost in\n    centavos from the recipe and the ingredient prices in effect that day (rounded once per\n    dish, as dish_costs_today). denominator: the same items' net sales (gross - discount, so\n    discounts lower it) less the IVA inside them. pct = numerator / denominator.\n    coverage_pct = those items' net / the day's whole net (both with IVA; the ratio is the\n    same without). Items with no recipe count in neither the numerator nor the denominator.\n    ",
   "L1": {
-   "cost": 718946,
-   "covered_net_ex_iva": 1919397,
+   "numerator_cost": 718946,
+   "denominator_net_ex_iva": 1919397,
+   "covered_net": 2226500,
+   "day_net": 3119500,
    "pct": "37.5",
-   "coverage_pct": "71.4"
+   "coverage_pct": "71.4",
+   "items": [
+    {
+     "code": "P001",
+     "units": 56,
+     "dish_cost": 1840,
+     "cost": 103040,
+     "net": 363500
+    },
+    {
+     "code": "P002",
+     "units": 30,
+     "dish_cost": 2532,
+     "cost": 75960,
+     "net": 225000
+    },
+    {
+     "code": "P003",
+     "units": 33,
+     "dish_cost": 2343,
+     "cost": 77319,
+     "net": 231000
+    },
+    {
+     "code": "P004",
+     "units": 23,
+     "dish_cost": 2085,
+     "cost": 47955,
+     "net": 172500
+    },
+    {
+     "code": "P005",
+     "units": 16,
+     "dish_cost": 1614,
+     "cost": 25824,
+     "net": 104000
+    },
+    {
+     "code": "P009",
+     "units": 21,
+     "dish_cost": 3155,
+     "cost": 66255,
+     "net": 178500
+    },
+    {
+     "code": "P010",
+     "units": 18,
+     "dish_cost": 1462,
+     "cost": 26316,
+     "net": 81000
+    },
+    {
+     "code": "P020",
+     "units": 24,
+     "dish_cost": 1101,
+     "cost": 26424,
+     "net": 108000
+    },
+    {
+     "code": "P023",
+     "units": 11,
+     "dish_cost": 6136,
+     "cost": 67496,
+     "net": 159500
+    },
+    {
+     "code": "P025",
+     "units": 12,
+     "dish_cost": 3449,
+     "cost": 41388,
+     "net": 96000
+    },
+    {
+     "code": "P040",
+     "units": 33,
+     "dish_cost": 517,
+     "cost": 17061,
+     "net": 115500
+    },
+    {
+     "code": "P041",
+     "units": 22,
+     "dish_cost": 314,
+     "cost": 6908,
+     "net": 77000
+    },
+    {
+     "code": "P043",
+     "units": 55,
+     "dish_cost": 1400,
+     "cost": 77000,
+     "net": 165000
+    },
+    {
+     "code": "P046",
+     "units": 14,
+     "dish_cost": 1200,
+     "cost": 16800,
+     "net": 42000
+    },
+    {
+     "code": "P048",
+     "units": 24,
+     "dish_cost": 1800,
+     "cost": 43200,
+     "net": 108000
+    }
+   ]
   },
   "L2": {
-   "cost": 586198,
-   "covered_net_ex_iva": 1712845,
+   "numerator_cost": 586198,
+   "denominator_net_ex_iva": 1712845,
+   "covered_net": 1986900,
+   "day_net": 2759900,
    "pct": "34.2",
-   "coverage_pct": "72.0"
+   "coverage_pct": "72.0",
+   "items": [
+    {
+     "code": "P001",
+     "units": 48,
+     "dish_cost": 1840,
+     "cost": 88320,
+     "net": 345600
+    },
+    {
+     "code": "P002",
+     "units": 25,
+     "dish_cost": 2532,
+     "cost": 63300,
+     "net": 207500
+    },
+    {
+     "code": "P003",
+     "units": 19,
+     "dish_cost": 2343,
+     "cost": 44517,
+     "net": 146300
+    },
+    {
+     "code": "P004",
+     "units": 17,
+     "dish_cost": 2085,
+     "cost": 35445,
+     "net": 141100
+    },
+    {
+     "code": "P005",
+     "units": 13,
+     "dish_cost": 1614,
+     "cost": 20982,
+     "net": 93600
+    },
+    {
+     "code": "P009",
+     "units": 21,
+     "dish_cost": 3155,
+     "cost": 66255,
+     "net": 197400
+    },
+    {
+     "code": "P010",
+     "units": 13,
+     "dish_cost": 1462,
+     "cost": 19006,
+     "net": 65000
+    },
+    {
+     "code": "P020",
+     "units": 18,
+     "dish_cost": 1101,
+     "cost": 19818,
+     "net": 90000
+    },
+    {
+     "code": "P023",
+     "units": 13,
+     "dish_cost": 6136,
+     "cost": 79768,
+     "net": 208000
+    },
+    {
+     "code": "P025",
+     "units": 9,
+     "dish_cost": 3449,
+     "cost": 31041,
+     "net": 79200
+    },
+    {
+     "code": "P040",
+     "units": 24,
+     "dish_cost": 517,
+     "cost": 12408,
+     "net": 93600
+    },
+    {
+     "code": "P041",
+     "units": 17,
+     "dish_cost": 314,
+     "cost": 5338,
+     "net": 66300
+    },
+    {
+     "code": "P043",
+     "units": 41,
+     "dish_cost": 1400,
+     "cost": 57400,
+     "net": 135300
+    },
+    {
+     "code": "P046",
+     "units": 10,
+     "dish_cost": 1200,
+     "cost": 12000,
+     "net": 33000
+    },
+    {
+     "code": "P048",
+     "units": 17,
+     "dish_cost": 1800,
+     "cost": 30600,
+     "net": 85000
+    }
+   ]
   }
  },
  "price_jumps": [

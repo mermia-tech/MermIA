@@ -187,10 +187,14 @@ def pct(part: int, whole: int) -> str:
 
 
 def food_cost(items: list[b.ItemDay], day: dt.date) -> dict[str, Any]:
-    """Theoretical food cost of one day, per location.
+    """Theoretical food cost of one day, per location (03: cost / (menu price / 1.16)).
 
-    pct = recipe cost of the items sold / their net sales without IVA, over the items that
-    have a recipe; coverage_pct = that net / the day's whole net. Both in percent points.
+    numerator: sum over items sold that have a recipe of units x dish cost, the dish cost in
+    centavos from the recipe and the ingredient prices in effect that day (rounded once per
+    dish, as dish_costs_today). denominator: the same items' net sales (gross - discount, so
+    discounts lower it) less the IVA inside them. pct = numerator / denominator.
+    coverage_pct = those items' net / the day's whole net (both with IVA; the ratio is the
+    same without). Items with no recipe count in neither the numerator nor the denominator.
     """
     out: dict[str, Any] = {"date": day.isoformat(), "definition": food_cost.__doc__}
     for lo in r.LOCATIONS:
@@ -200,12 +204,22 @@ def food_cost(items: list[b.ItemDay], day: dt.date) -> dict[str, Any]:
         net = sum(x.net for x in covered)
         net_ex_vat = net - b.vat_inside(net)
         out[lo.key] = {
-            "cost": cost,
-            "covered_net_ex_iva": net_ex_vat,
-            "pct": str((Decimal(cost) * 100 / net_ex_vat).quantize(Decimal("0.1"))),
-            "coverage_pct": str(
-                (Decimal(net) * 100 / sum(x.net for x in rows)).quantize(Decimal("0.1"))
-            ),
+            "numerator_cost": cost,
+            "denominator_net_ex_iva": net_ex_vat,
+            "covered_net": net,
+            "day_net": sum(x.net for x in rows),
+            "pct": pct(cost, net_ex_vat),
+            "coverage_pct": pct(net, sum(x.net for x in rows)),
+            "items": [
+                {
+                    "code": x.code,
+                    "units": x.units,
+                    "dish_cost": b.dish_cost(x.code, day),
+                    "cost": x.units * (b.dish_cost(x.code, day) or 0),
+                    "net": x.net,
+                }
+                for x in covered
+            ],
         }
     return out
 

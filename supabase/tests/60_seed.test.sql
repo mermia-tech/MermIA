@@ -69,6 +69,33 @@ select is((
   left join salsa_per_g s on s.recipe_id = rl.sub_recipe_id
   join t on t.id = m.tenant_id
   where m.external_id = 'P001'), 1840::numeric, 'tacos al pastor cost $18.40 today');
+-- 13 H3 example 6 (food cost yesterday), recomputed from the rows: for Centro on 2026-10-11,
+-- numerator = units x dish cost (dish cost rounded once per dish) over items with a recipe,
+-- denominator = those items' net (gross - discount) less the IVA inside it.
+create temp table dish_cost_on as
+select m.id as menu_item_id, round(100 * sum(case
+    when rl.sub_recipe_id is not null then rl.qty_base * s.cost
+    else rl.qty_base * pr.unit_price_net * 100 / i.default_yield_pct end)) as cost
+from public.menu_item m
+join public.recipe r on r.menu_item_id = m.id
+join public.recipe_line rl on rl.recipe_id = r.id
+left join public.ingredient i on i.id = rl.ingredient_id
+left join price_on pr on pr.ingredient_id = rl.ingredient_id
+left join salsa_per_g s on s.recipe_id = rl.sub_recipe_id
+join t on t.id = m.tenant_id
+group by m.id;
+create temp table yesterday as
+select sum(a.units * c.cost) as cost, sum(a.net) as net
+from public.item_sales_agg a
+join dish_cost_on c on c.menu_item_id = a.menu_item_id
+join l on l.id = a.location_id
+where l.name = 'Centro' and a.period_from = '2026-10-11';
+select is((select cost from yesterday), 718946::numeric, 'food cost numerator: $7,189.46 of recipe cost');
+select is((select net - round(net * 16 / 116) from yesterday), 1919397::numeric,
+          'denominator: $19,193.97 of covered net sales without IVA');
+select is((select round(cost * 100 / (net - round(net * 16 / 116)), 1) from yesterday), 37.5,
+          'Centro food cost on 2026-10-11 is 37.5 %');
+
 select is((select p.price_gross from public.menu_item_price p join public.menu_item m on m.id = p.menu_item_id
            join l on l.id = p.location_id where l.name = 'Centro' and m.external_id = 'P001'),
           6500::bigint, 'and sell for $65.00 at Centro');

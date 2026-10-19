@@ -30,19 +30,37 @@ The restaurant itself is written by hand in `packages/fixtures/src/mermia_fixtur
 |---|---|---|
 | 1, 2 | Centro net sales: $184,320.50 for 2026-10-05..11 and $171,905.00 for 2026-09-28..10-04 | `test_fixtures.py`, `supabase/tests/60_seed.test.sql` |
 | 4 | Tacos al pastor: cost $18.40, menu price $65.00 ($56.03 without IVA), margin 67.2% on the net price | same |
+| 6 | Centro food cost on 2026-10-11: 37.5% (not the 31.4% in `13` H3, see below) | `60_seed.test.sql` |
 | 7 | 2026-10-10 is the Saturday with the most cancellations, and every cancelled ticket has a waiter | same |
 | 9 | Pastor meat costs less than $220/kg today ($195) | `test_fixtures.py` |
 
 `el_guero/expected.json` has the other figures the eval and the RPC tests need: weekly and daily totals, this month's top 5 dishes, today's dish costs, the price jumps, cancellations by waiter, and yesterday's food cost.
 
-Example 6 (food cost yesterday = 31.4%) is **not** pinned. The seed's figure is in `food_cost_yesterday` (Centro: 37.5% of recipe-covered sales without IVA, covering 71.4% of the day's sales). The eval question should quote that figure, or the definition should change. That's a decision for MR-19 and MR-24.
+Example 6 quotes a food cost of 31.4% for yesterday, which the seed does not reproduce. That figure was written in the kickoff docs (commit `ab3062d`, 2026-10-15) before any data existed, so no dataset produced it. The seed gives **37.5%** for Centro on 2026-10-11, and it is traced in two independent ways:
+- `food_cost_yesterday` in `expected.json` lists every covered item: units, dish cost, cost and net.
+- `60_seed.test.sql` recomputes the 37.5% in SQL from `item_sales_agg`, `recipe`, `recipe_line` and `ingredient_price`, without the generator.
 
-## Conventions
+The figure is high mainly because bottled drinks are covered and cost a lot relative to their price: Coca-Cola runs at 54% and Corona at 46%. Alambre (49%) and torta de pastor (50%) add to it. Example 6 should quote 37.5% (MR-19), unless the team agrees a different definition (MR-24).
 
-- Money is integer centavos. A sales line's `net` is `gross - discount`, **IVA included**. A day's `net_sales` is the sum of its item nets. `tax` is the IVA inside it, and `payment_mix` adds up to `net_sales`.
-- Dish margin and food cost are on the **net price** (without IVA), as decided in MR-11 (D20): `margin_pct = (net_price - cost) / net_price`. For the pastor that is 67.2%, so `13` H3 example 4's 71.7% (computed on the gross price) has to change to 67.2% (MR-19).
-- Dish cost is `sum(qty * price per base unit * 100 / yield_pct)`, rounded once to centavos, half away from zero.
-- To land exactly on the two pinned weeks, calibration adds units across each week's best sellers. It then takes the last few pesos (less than the cheapest item) off that Sunday's pastor order as a discount. That's why Centro's pastor order has a small, unexplained discount on 2026-10-04 ($6) and 2026-10-11 ($5).
+## Definitions
+
+All money is integer centavos, rounded once, half away from zero.
+
+| Figure | Formula | IVA | Discounts |
+|---|---|---|---|
+| Sales line `net` (`item_sales_agg.net`) | `gross - discount`, where `gross = units x menu price` | **included** (menu prices include 16% IVA) | subtracted |
+| Daily `net_sales` (`daily_sales_agg`) | sum of that day's item nets | included | subtracted |
+| Daily `tax` | IVA inside `net_sales`: `round(net_sales x 16 / 116)` | | |
+| `payment_mix` | cash + card + transfer = `net_sales` | included | |
+| Dish cost | `sum(qty_base x price per base unit x 100 / yield_pct)` over the recipe, sub-recipes per gram of their yield, using the ingredient prices in effect that day | excluded (purchase prices are pre-IVA) | n/a |
+| Net price | `price_gross - round(price_gross x 16 / 116)` | excluded | n/a |
+| Dish margin | `margin_pct = (net_price - cost) / net_price`, `food_cost_pct = cost / net_price` (MR-11 D20) | excluded | n/a |
+| Day food cost | `sum(units x dish cost) / (covered net - IVA inside it)`, over items with a recipe only | excluded | lower the denominator |
+| Coverage | `covered net / day net` | same basis on both sides | |
+
+Sales `net` keeps the meaning the MR-10 contract examples already use (`packages/contracts/tests/examples/daily_valid.json`: `payment_mix` adds up to `net_sales`, so `net_sales` includes IVA). Cost-side ratios (margin, food cost) take IVA out, as `03` requires ("food cost % = ingredient cost / (menu price / 1.16)").
+
+Calibration: to land exactly on the two pinned weeks, calibration adds units across each week's best sellers. It then takes the last few pesos (less than the cheapest item) off that Sunday's pastor order as a discount. That's why Centro's pastor order has a small, unexplained discount on 2026-10-04 ($6) and 2026-10-11 ($5).
 
 ## Sample SR exports (`sr/synthetic/`)
 
