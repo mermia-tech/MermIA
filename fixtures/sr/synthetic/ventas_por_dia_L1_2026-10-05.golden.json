@@ -1,0 +1,137 @@
+{
+ "contract_version": 1,
+ "parser": "sr.ventas_por_dia@v1",
+ "source_kind": "sr_report",
+ "quality": "file",
+ "location_hint": "Centro",
+ "period": {
+  "from": "2026-10-05",
+  "to": "2026-10-11"
+ },
+ "grain": "daily",
+ "totals": {
+  "net_sales": 18432050,
+  "units": null,
+  "lines": 7
+ },
+ "menu_items": [],
+ "item_sales": [],
+ "daily_sales": [
+  {
+   "business_date": "2026-10-05",
+   "net_sales": 1793000,
+   "tax": 247310,
+   "tickets": 63,
+   "guests": 142,
+   "discounts": 0,
+   "cancellations_amount": 0,
+   "cancellations_count": 0,
+   "payment_mix": {
+    "cash": 627550,
+    "card": 1039940,
+    "transfer": 125510
+   },
+   "tips": 83195
+  },
+  {
+   "business_date": "2026-10-06",
+   "net_sales": 1974050,
+   "tax": 272283,
+   "tickets": 68,
+   "guests": 148,
+   "discounts": 40950,
+   "cancellations_amount": 0,
+   "cancellations_count": 0,
+   "payment_mix": {
+    "cash": 690917,
+    "card": 1144949,
+    "transfer": 138184
+   },
+   "tips": 91596
+  },
+  {
+   "business_date": "2026-10-07",
+   "net_sales": 2270000,
+   "tax": 313103,
+   "tickets": 78,
+   "guests": 169,
+   "discounts": 0,
+   "cancellations_amount": 24000,
+   "cancellations_count": 2,
+   "payment_mix": {
+    "cash": 862600,
+    "card": 1248500,
+    "transfer": 158900
+   },
+   "tips": 99880
+  },
+  {
+   "business_date": "2026-10-08",
+   "net_sales": 2468000,
+   "tax": 340414,
+   "tickets": 89,
+   "guests": 201,
+   "discounts": 0,
+   "cancellations_amount": 9500,
+   "cancellations_count": 1,
+   "payment_mix": {
+    "cash": 888480,
+    "card": 1406760,
+    "transfer": 172760
+   },
+   "tips": 112541
+  },
+  {
+   "business_date": "2026-10-09",
+   "net_sales": 3018000,
+   "tax": 416276,
+   "tickets": 110,
+   "guests": 233,
+   "discounts": 0,
+   "cancellations_amount": 24000,
+   "cancellations_count": 3,
+   "payment_mix": {
+    "cash": 1116660,
+    "card": 1690080,
+    "transfer": 211260
+   },
+   "tips": 135206
+  },
+  {
+   "business_date": "2026-10-10",
+   "net_sales": 3789500,
+   "tax": 522690,
+   "tickets": 134,
+   "guests": 289,
+   "discounts": 0,
+   "cancellations_amount": 265500,
+   "cancellations_count": 17,
+   "payment_mix": {
+    "cash": 1364220,
+    "card": 2160015,
+    "transfer": 265265
+   },
+   "tips": 172801
+  },
+  {
+   "business_date": "2026-10-11",
+   "net_sales": 3119500,
+   "tax": 430276,
+   "tickets": 106,
+   "guests": 246,
+   "discounts": 500,
+   "cancellations_amount": 8500,
+   "cancellations_count": 1,
+   "payment_mix": {
+    "cash": 1123020,
+    "card": 1778115,
+    "transfer": 218365
+   },
+   "tips": 142249
+  }
+ ],
+ "tickets": [],
+ "purchases": [],
+ "recipes": [],
+ "issues": []
+}

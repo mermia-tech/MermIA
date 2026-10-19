@@ -1,0 +1,52 @@
+[
+ {
+  "id": "a5e3ca67-0220-5268-96a4-2167966e1131",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "kind": "nota_photo",
+  "cfdi_uuid": null,
+  "issued_at": "2026-08-01T08:30:00-06:00",
+  "subtotal": 2466800,
+  "total": 2466800
+ },
+ {
+  "id": "fa65ded0-b6f4-5735-9d1e-0b7c24797468",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "e3287b40-c0d7-5297-93e1-f7beb8943507",
+  "kind": "cfdi",
+  "cfdi_uuid": "7C93502D-6BD9-5D6D-B5F6-D582EC3FBC08",
+  "issued_at": "2026-08-01T08:30:00-06:00",
+  "subtotal": 652800,
+  "total": 757248
+ },
+ {
+  "id": "6f24f2fa-a922-5a4b-bf2e-0f84d381b906",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "kind": "cfdi",
+  "cfdi_uuid": "D7BCEAB9-1124-5C58-88CB-A64B3FA86847",
+  "issued_at": "2026-08-01T08:30:00-06:00",
+  "subtotal": 2250400,
+  "total": 2610464
+ },
+ {
+  "id": "7219369a-5eec-50ff-8f8e-a358ab9dc45e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "kind": "cfdi",
+  "cfdi_uuid": "B1FD974D-A834-5EB4-91B6-71971C6989D1",
+  "issued_at": "2026-09-21T08:30:00-06:00",
+  "subtotal": 195000,
+  "total": 226200
+ },
+ {
+  "id": "826b9111-bfcd-5537-94e5-0fdb859a2728",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "supplier_id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "kind": "nota_photo",
+  "cfdi_uuid": null,
+  "issued_at": "2026-09-28T08:30:00-06:00",
+  "subtotal": 89000,
+  "total": 89000
+ }
+]
