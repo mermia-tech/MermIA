@@ -124,6 +124,22 @@ def _demand_scale() -> float:
 
 
 def generate_sales() -> list[ItemDay]:
+    """Item-daily sales for every location and day, with the target weeks exact.
+
+    A first pass measures each target week; the second scales that week's demand to land just
+    under its figure, so _calibrate only has a small gap to close.
+    """
+    natural = _generate({})
+    week_scale = {}
+    for (loc_key, monday), target in r.WEEK_TARGETS.items():
+        total = sum(x.net for x in _week(natural, loc_key, monday))
+        week_scale[(loc_key, monday)] = target * 0.985 / total
+    rows = _generate(week_scale)
+    _calibrate(rows)
+    return rows
+
+
+def _generate(week_scale: dict[tuple[str, dt.date], float]) -> list[ItemDay]:
     rng = random.Random(SEED)
     scale = _demand_scale()
     weeks = (r.LAST_DAY - r.FIRST_DAY).days // 7 + 1
@@ -133,6 +149,7 @@ def generate_sales() -> list[ItemDay]:
             week_no = (d - r.FIRST_DAY).days // 7
             trend = 1 + 0.012 * (week_no - weeks / 2)  # slow growth over the 8 weeks
             factor = r.WEEKDAY_FACTOR[d.weekday()] * loc.unit_factor * trend * scale
+            factor *= week_scale.get((loc.key, week_start(d)), 1.0)
             for m in r.MENU:
                 expected = m.base_units * factor
                 units = max(0, round(rng.gauss(expected, expected * 0.12)))
@@ -142,31 +159,48 @@ def generate_sales() -> list[ItemDay]:
                 if d.weekday() == 1 and m.code == r.TUESDAY_PROMO[0]:
                     discount = cents(Decimal(gross) / 100 * r.TUESDAY_PROMO[1])
                 rows.append(ItemDay(loc.key, d, m.code, units, gross, discount))
-    _calibrate(rows)
     return rows
+
+
+def _week(rows: list[ItemDay], loc_key: str, monday: dt.date) -> list[ItemDay]:
+    sunday = monday + dt.timedelta(days=6)
+    return [x for x in rows if x.location == loc_key and monday <= x.day <= sunday]
 
 
 def _calibrate(rows: list[ItemDay]) -> None:
     """Moves each target week onto its exact figure (13 H3 examples 1 and 2).
 
-    Adds whole units of "Agua natural" on the week's Sunday until the week is at or above
-    the target, then takes the rest off as a Sunday discount on the pastor order.
+    The gap left by the second pass is about 1.5 %. It is closed one unit at a time, cycling
+    through the week's best sellers so no single line jumps, and the last few pesos (less
+    than the cheapest item) come off the Sunday pastor order as a small discount, after one
+    more unit of the cheapest item steps the week just past its figure.
     """
     for (loc_key, monday), target in r.WEEK_TARGETS.items():
+        week = _week(rows, loc_key, monday)
+        busiest = sorted((x for x in week if x.units > 0), key=lambda x: (-x.units, x.day, x.code))
+        cheapest = min(x.gross // x.units for x in busiest)
+        n = 0
+        while sum(x.net for x in week) > target:  # noise can still overshoot: take units back
+            x = busiest[n % len(busiest)]
+            if x.units > 1:
+                x.gross -= x.gross // x.units
+                x.units -= 1
+            n += 1
+        n = 0
+        while target - sum(x.net for x in week) >= cheapest:
+            x = busiest[n % len(busiest)]
+            price = x.gross // x.units
+            if price <= target - sum(y.net for y in week):
+                x.units += 1
+                x.gross += price
+            n += 1
+        if sum(x.net for x in week) < target:  # step just past it with the cheapest item
+            low = min(busiest, key=lambda x: (x.gross // x.units, x.day, x.code))
+            low.gross += low.gross // low.units
+            low.units += 1
         sunday = monday + dt.timedelta(days=6)
-        week = [x for x in rows if x.location == loc_key and monday <= x.day <= sunday]
-        filler = next(x for x in week if x.day == sunday and x.code == "P047")
-        price = (
-            filler.gross // filler.units
-            if filler.units
-            else menu_price("P047", next(lo for lo in r.LOCATIONS if lo.key == loc_key))
-        )
-        while sum(x.net for x in week) < target:
-            filler.units += 1
-            filler.gross += price
-        excess = sum(x.net for x in week) - target
         pastor = next(x for x in week if x.day == sunday and x.code == "P001")
-        pastor.discount += excess
+        pastor.discount += sum(x.net for x in week) - target
         assert sum(x.net for x in week) == target
 
 
@@ -228,8 +262,11 @@ def daily_totals(items: list[ItemDay]) -> list[Day]:
 # --- tables ------------------------------------------------------------------------------
 
 
-def build() -> dict[str, list[Row]]:
-    """All seed rows, keyed by table, in an order that satisfies the foreign keys."""
+def build() -> tuple[dict[str, list[Row]], list[ItemDay], list[Day]]:
+    """All seed rows, keyed by table, in an order that satisfies the foreign keys.
+
+    Also returns the sales it generated, so callers derive everything from one run.
+    """
     t: dict[str, list[Row]] = {}
     tenant = uid("tenant")
     loc_id = {lo.key: uid("location", lo.key) for lo in r.LOCATIONS}
@@ -416,7 +453,7 @@ def build() -> dict[str, list[Row]]:
     ]
 
     _costing(t, tenant)
-    return t
+    return t, items, days_
 
 
 def _costing(t: dict[str, list[Row]], tenant: str) -> None:

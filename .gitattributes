@@ -1,4 +1,6 @@
 packages/contracts/src/mermia_contracts/db/models.py linguist-generated=true
-supabase/seed.sql linguist-generated=true
-fixtures/el_guero/*.json linguist-generated=true
-fixtures/sr/synthetic/* linguist-generated=true
+# MR-12 fixtures: generated, byte-compared by `python -m mermia_fixtures --check`, so keep LF
+supabase/seed.sql linguist-generated=true text eol=lf
+fixtures/el_guero/*.json linguist-generated=true text eol=lf
+fixtures/sr/synthetic/*.json linguist-generated=true text eol=lf
+fixtures/sr/synthetic/*.xlsx linguist-generated=true binary

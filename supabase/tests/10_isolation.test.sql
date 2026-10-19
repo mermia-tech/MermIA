@@ -112,10 +112,15 @@ create function pg_temp.seen_test_tenants(r text, tbl text) returns text languag
 declare n bigint;
 begin
   execute format('set local role %I', r);
-  execute format('select count(*) from public.%I where tenant_id in (%L, %L)', tbl,
-                 'aaaaaaaa-0000-7000-8000-000000000001', 'bbbbbbbb-0000-7000-8000-000000000002') into n;
-  reset role;
-  return n::text;
+  begin
+    execute format('select count(*) from public.%I where tenant_id in (%L, %L)', tbl,
+                   'aaaaaaaa-0000-7000-8000-000000000001', 'bbbbbbbb-0000-7000-8000-000000000002') into n;
+    reset role;
+    return n::text;
+  exception when others then
+    reset role;
+    return 'ERR ' || sqlstate;
+  end;
 end $$;
 
 -- scenarios: name, claims

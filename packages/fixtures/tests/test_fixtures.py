@@ -11,7 +11,7 @@ from openpyxl import load_workbook
 from mermia_contracts.batch import Grain, NormalizedBatch
 from mermia_fixtures import build as b
 from mermia_fixtures import restaurant as r
-from mermia_fixtures.emit import JSON_DIR, REPO, SR_DIR, render
+from mermia_fixtures.emit import JSON_DIR, REPO, SR_DIR, orphans, render
 
 
 def committed(path: Path) -> Any:
@@ -25,6 +25,22 @@ def test_committed_files_are_fresh() -> None:
         if not (REPO / p).is_file() or (REPO / p).read_bytes() != data
     ]
     assert stale == [], "run: uv run python -m mermia_fixtures"
+
+
+def test_no_stray_files_in_generated_folders() -> None:
+    assert orphans(render()) == [], "run: uv run python -m mermia_fixtures"
+
+
+def test_sales_lines_are_plausible() -> None:
+    # calibration must not leave a negative line, an oversized discount or a one-day spike
+    items = b.generate_sales()
+    assert all(0 <= x.discount <= x.gross * 0.2 for x in items)
+    by_slot: dict[tuple[str, str, int], list[int]] = {}
+    for x in items:
+        by_slot.setdefault((x.location, x.code, x.day.weekday()), []).append(x.units)
+    for slot, units in by_slot.items():
+        mean = sum(units) / len(units)
+        assert max(units) <= 2 * mean + 3, slot
 
 
 def test_generation_is_deterministic() -> None:
@@ -64,7 +80,7 @@ def test_recipes_cover_exactly_the_top_15_items() -> None:
 
 def test_dataset_size_matches_the_brief() -> None:
     # 08 C7: 2 locations, 8 weeks, about 40 menu items, about 60 ingredients, 3 suppliers
-    data = b.build()
+    data, _, _ = b.build()
     assert len(data["location"]) == 2
     assert (r.LAST_DAY - r.FIRST_DAY).days + 1 == 56
     assert 38 <= len(data["menu_item"]) <= 45

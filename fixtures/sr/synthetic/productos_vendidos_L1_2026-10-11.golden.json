@@ -10,8 +10,8 @@
  },
  "grain": "item_daily",
  "totals": {
-  "net_sales": 3751525,
-  "units": "842.000000",
+  "net_sales": 3120000,
+  "units": "565.000000",
   "lines": 41
  },
  "menu_items": [
@@ -19,247 +19,329 @@
    "external_id": "P001",
    "name": "Tacos al pastor (orden de 3)",
    "category": "Tacos",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P002",
    "name": "Tacos de bistec (orden de 3)",
    "category": "Tacos",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P003",
    "name": "Tacos de suadero (orden de 3)",
    "category": "Tacos",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P004",
    "name": "Tacos campechanos (orden de 3)",
    "category": "Tacos",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P005",
    "name": "Tacos de longaniza (orden de 3)",
    "category": "Tacos",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P006",
    "name": "Tacos de lengua (orden de 3)",
    "category": "Tacos",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P007",
    "name": "Tacos de tripa (orden de 3)",
    "category": "Tacos",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P008",
    "name": "Tacos de cabeza (orden de 3)",
    "category": "Tacos",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P009",
    "name": "Gringa de pastor",
    "category": "Tacos",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P010",
    "name": "Volcán de pastor",
    "category": "Tacos",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P011",
    "name": "Taco de costilla",
    "category": "Tacos",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P020",
    "name": "Quesadilla de queso",
    "category": "Especialidades",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P021",
    "name": "Quesadilla de flor de calabaza",
    "category": "Especialidades",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P022",
    "name": "Quesadilla de champiñón",
    "category": "Especialidades",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P023",
    "name": "Alambre de res",
    "category": "Especialidades",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P024",
    "name": "Alambre de pollo",
    "category": "Especialidades",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P025",
    "name": "Torta de pastor",
    "category": "Especialidades",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P026",
    "name": "Huarache de bistec",
    "category": "Especialidades",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P027",
    "name": "Sopes de chicharrón (orden de 2)",
    "category": "Especialidades",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P028",
    "name": "Nopales asados",
    "category": "Especialidades",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P029",
    "name": "Frijoles charros",
    "category": "Especialidades",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P030",
    "name": "Guacamole con totopos",
    "category": "Especialidades",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P031",
    "name": "Papa asada con chorizo",
    "category": "Especialidades",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P040",
    "name": "Agua de horchata",
    "category": "Bebidas",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P041",
    "name": "Agua de jamaica",
    "category": "Bebidas",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P042",
    "name": "Agua de tamarindo",
    "category": "Bebidas",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P043",
    "name": "Coca-Cola",
    "category": "Bebidas",
-   "kind": "drink"
+   "kind": "drink",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P044",
    "name": "Coca-Cola Light",
    "category": "Bebidas",
-   "kind": "drink"
+   "kind": "drink",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P045",
    "name": "Sprite",
    "category": "Bebidas",
-   "kind": "drink"
+   "kind": "drink",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P046",
    "name": "Agua mineral",
    "category": "Bebidas",
-   "kind": "drink"
+   "kind": "drink",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P047",
    "name": "Agua natural",
    "category": "Bebidas",
-   "kind": "drink"
+   "kind": "drink",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P048",
    "name": "Cerveza Corona",
    "category": "Bebidas",
-   "kind": "drink"
+   "kind": "drink",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P049",
    "name": "Cerveza Victoria",
    "category": "Bebidas",
-   "kind": "drink"
+   "kind": "drink",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P050",
    "name": "Michelada",
    "category": "Bebidas",
-   "kind": "drink"
+   "kind": "drink",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P051",
    "name": "Café de olla",
    "category": "Bebidas",
-   "kind": "drink"
+   "kind": "drink",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P060",
    "name": "Flan napolitano",
    "category": "Postres",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P061",
    "name": "Arroz con leche",
    "category": "Postres",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P062",
    "name": "Churros (orden de 3)",
    "category": "Postres",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P070",
    "name": "Extra queso",
    "category": "Extras",
-   "kind": "modifier"
+   "kind": "modifier",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P071",
    "name": "Extra aguacate",
    "category": "Extras",
-   "kind": "modifier"
+   "kind": "modifier",
+   "price_gross": null,
+   "tax_rate": null
   },
   {
    "external_id": "P072",
    "name": "Orden de tortillas",
    "category": "Extras",
-   "kind": "dish"
+   "kind": "dish",
+   "price_gross": null,
+   "tax_rate": null
   }
  ],
  "item_sales": [
@@ -268,40 +350,40 @@
    "item_name": "Tacos al pastor (orden de 3)",
    "period_from": "2026-10-11",
    "period_to": "2026-10-11",
-   "units": "54.000000",
-   "gross": 351000,
-   "discount": 975,
-   "net": 350025
+   "units": "56.000000",
+   "gross": 364000,
+   "discount": 0,
+   "net": 364000
   },
   {
    "item_external_id": "P002",
    "item_name": "Tacos de bistec (orden de 3)",
    "period_from": "2026-10-11",
    "period_to": "2026-10-11",
-   "units": "28.000000",
-   "gross": 210000,
+   "units": "30.000000",
+   "gross": 225000,
    "discount": 0,
-   "net": 210000
+   "net": 225000
   },
   {
    "item_external_id": "P003",
    "item_name": "Tacos de suadero (orden de 3)",
    "period_from": "2026-10-11",
    "period_to": "2026-10-11",
-   "units": "31.000000",
-   "gross": 217000,
+   "units": "33.000000",
+   "gross": 231000,
    "discount": 0,
-   "net": 217000
+   "net": 231000
   },
   {
    "item_external_id": "P004",
    "item_name": "Tacos campechanos (orden de 3)",
    "period_from": "2026-10-11",
    "period_to": "2026-10-11",
-   "units": "22.000000",
-   "gross": 165000,
+   "units": "23.000000",
+   "gross": 172500,
    "discount": 0,
-   "net": 165000
+   "net": 172500
   },
   {
    "item_external_id": "P005",
@@ -348,10 +430,10 @@
    "item_name": "Gringa de pastor",
    "period_from": "2026-10-11",
    "period_to": "2026-10-11",
-   "units": "19.000000",
-   "gross": 161500,
+   "units": "21.000000",
+   "gross": 178500,
    "discount": 0,
-   "net": 161500
+   "net": 178500
   },
   {
    "item_external_id": "P010",
@@ -378,10 +460,10 @@
    "item_name": "Quesadilla de queso",
    "period_from": "2026-10-11",
    "period_to": "2026-10-11",
-   "units": "22.000000",
-   "gross": 99000,
+   "units": "24.000000",
+   "gross": 108000,
    "discount": 0,
-   "net": 99000
+   "net": 108000
   },
   {
    "item_external_id": "P021",
@@ -498,20 +580,20 @@
    "item_name": "Agua de horchata",
    "period_from": "2026-10-11",
    "period_to": "2026-10-11",
-   "units": "32.000000",
-   "gross": 112000,
+   "units": "33.000000",
+   "gross": 115500,
    "discount": 0,
-   "net": 112000
+   "net": 115500
   },
   {
    "item_external_id": "P041",
    "item_name": "Agua de jamaica",
    "period_from": "2026-10-11",
    "period_to": "2026-10-11",
-   "units": "21.000000",
-   "gross": 73500,
+   "units": "22.000000",
+   "gross": 77000,
    "discount": 0,
-   "net": 73500
+   "net": 77000
   },
   {
    "item_external_id": "P042",
@@ -528,10 +610,10 @@
    "item_name": "Coca-Cola",
    "period_from": "2026-10-11",
    "period_to": "2026-10-11",
-   "units": "53.000000",
-   "gross": 159000,
+   "units": "55.000000",
+   "gross": 165000,
    "discount": 0,
-   "net": 159000
+   "net": 165000
   },
   {
    "item_external_id": "P044",
@@ -568,40 +650,40 @@
    "item_name": "Agua natural",
    "period_from": "2026-10-11",
    "period_to": "2026-10-11",
-   "units": "304.000000",
-   "gross": 760000,
+   "units": "7.000000",
+   "gross": 17500,
    "discount": 0,
-   "net": 760000
+   "net": 17500
   },
   {
    "item_external_id": "P048",
    "item_name": "Cerveza Corona",
    "period_from": "2026-10-11",
    "period_to": "2026-10-11",
-   "units": "22.000000",
-   "gross": 99000,
+   "units": "24.000000",
+   "gross": 108000,
    "discount": 0,
-   "net": 99000
+   "net": 108000
   },
   {
    "item_external_id": "P049",
    "item_name": "Cerveza Victoria",
    "period_from": "2026-10-11",
    "period_to": "2026-10-11",
-   "units": "8.000000",
-   "gross": 36000,
+   "units": "9.000000",
+   "gross": 40500,
    "discount": 0,
-   "net": 36000
+   "net": 40500
   },
   {
    "item_external_id": "P050",
    "item_name": "Michelada",
    "period_from": "2026-10-11",
    "period_to": "2026-10-11",
-   "units": "5.000000",
-   "gross": 32500,
+   "units": "6.000000",
+   "gross": 39000,
    "discount": 0,
-   "net": 32500
+   "net": 39000
   },
   {
    "item_external_id": "P051",
@@ -668,10 +750,15 @@
    "item_name": "Orden de tortillas",
    "period_from": "2026-10-11",
    "period_to": "2026-10-11",
-   "units": "5.000000",
-   "gross": 7500,
+   "units": "6.000000",
+   "gross": 9000,
    "discount": 0,
-   "net": 7500
+   "net": 9000
   }
- ]
+ ],
+ "daily_sales": [],
+ "tickets": [],
+ "purchases": [],
+ "recipes": [],
+ "issues": []
 }

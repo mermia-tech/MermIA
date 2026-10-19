@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from mermia_fixtures.emit import REPO, render
+from mermia_fixtures.emit import REPO, orphans, render
 
 
 def main() -> int:
@@ -18,12 +18,18 @@ def main() -> int:
         for p, data in files.items()
         if not (REPO / p).is_file() or (REPO / p).read_bytes() != data
     ]
+    extra = orphans(files)
     if args.check:
         for p in stale:
             print(f"stale: {p}", file=sys.stderr)
-        if stale:
+        for p in extra:
+            print(f"no longer generated: {p}", file=sys.stderr)
+        if stale or extra:
             print("run: uv run python -m mermia_fixtures", file=sys.stderr)
-        return 1 if stale else 0
+        return 1 if stale or extra else 0
+    for p in extra:
+        (REPO / p).unlink()
+        print(f"deleted {p}")
     for p in stale:
         (REPO / p).parent.mkdir(parents=True, exist_ok=True)
         (REPO / p).write_bytes(files[p])

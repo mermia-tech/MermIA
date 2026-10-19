@@ -25839,10 +25839,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
-  "units": "48.000000",
-  "gross": 312000,
+  "units": "45.000000",
+  "gross": 292500,
   "discount": 0,
-  "net": 312000
+  "net": 292500
  },
  {
   "id": "90af1801-17c7-5931-aae3-e61954619e4c",
@@ -25854,10 +25854,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8",
-  "units": "16.000000",
-  "gross": 120000,
+  "units": "15.000000",
+  "gross": 112500,
   "discount": 0,
-  "net": 120000
+  "net": 112500
  },
  {
   "id": "084ad20a-e692-53e7-92fb-dfb1a12eb633",
@@ -25869,10 +25869,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
-  "units": "16.000000",
-  "gross": 112000,
+  "units": "15.000000",
+  "gross": 105000,
   "discount": 0,
-  "net": 112000
+  "net": 105000
  },
  {
   "id": "2c701645-9af1-57bb-941c-02f0ebcabd45",
@@ -25884,10 +25884,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "a825d126-082a-5b37-a763-784cbb733ba2",
-  "units": "12.000000",
-  "gross": 90000,
+  "units": "11.000000",
+  "gross": 82500,
   "discount": 0,
-  "net": 90000
+  "net": 82500
  },
  {
   "id": "01f2e3c0-277c-58bd-9d2e-e870efca6bb4",
@@ -25989,10 +25989,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "dae5c370-12a2-52d9-97da-7841e565845e",
-  "units": "5.000000",
-  "gross": 27500,
+  "units": "4.000000",
+  "gross": 22000,
   "discount": 0,
-  "net": 27500
+  "net": 22000
  },
  {
   "id": "e0124e73-2285-5779-a569-0ae2c1e039ca",
@@ -26004,10 +26004,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
-  "units": "13.000000",
-  "gross": 58500,
+  "units": "12.000000",
+  "gross": 54000,
   "discount": 0,
-  "net": 58500
+  "net": 54000
  },
  {
   "id": "a8578112-0158-50c5-9934-34ac4215c95e",
@@ -26019,10 +26019,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "a11a23db-3424-5073-9c64-5465605cbad1",
-  "units": "4.000000",
-  "gross": 22000,
+  "units": "3.000000",
+  "gross": 16500,
   "discount": 0,
-  "net": 22000
+  "net": 16500
  },
  {
   "id": "3cf7dc22-46c1-513a-832f-54b0489e877d",
@@ -26034,10 +26034,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "4b0ed652-4bef-5511-bba9-2952b3810e83",
-  "units": "3.000000",
-  "gross": 15000,
+  "units": "2.000000",
+  "gross": 10000,
   "discount": 0,
-  "net": 15000
+  "net": 10000
  },
  {
   "id": "87b6ed0c-5c22-5382-8c8b-3c23b4f4bfa9",
@@ -26064,10 +26064,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "16544bcb-7aa7-5dad-9708-adb3680e63e0",
-  "units": "5.000000",
-  "gross": 62500,
+  "units": "4.000000",
+  "gross": 50000,
   "discount": 0,
-  "net": 62500
+  "net": 50000
  },
  {
   "id": "797f7944-b0aa-537c-bc70-083888e3a187",
@@ -26079,10 +26079,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
-  "units": "8.000000",
-  "gross": 64000,
+  "units": "7.000000",
+  "gross": 56000,
   "discount": 0,
-  "net": 64000
+  "net": 56000
  },
  {
   "id": "3113c5b1-b6a3-580f-b41d-6f5dede5fd17",
@@ -26184,10 +26184,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "13523ead-5ebf-552d-b723-0701a893c6e4",
-  "units": "18.000000",
-  "gross": 63000,
+  "units": "17.000000",
+  "gross": 59500,
   "discount": 0,
-  "net": 63000
+  "net": 59500
  },
  {
   "id": "d00035a4-973f-534b-a5f1-9e40215a3b4d",
@@ -26199,10 +26199,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "88bab77a-1b10-5d6f-bd92-14f28fddb78d",
-  "units": "12.000000",
-  "gross": 42000,
+  "units": "11.000000",
+  "gross": 38500,
   "discount": 0,
-  "net": 42000
+  "net": 38500
  },
  {
   "id": "d8fa1ff8-2dc7-5600-9439-170a98d65aac",
@@ -26214,10 +26214,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "fe1e8153-67eb-5ba5-bb08-c84a3d180d53",
-  "units": "4.000000",
-  "gross": 14000,
+  "units": "3.000000",
+  "gross": 10500,
   "discount": 0,
-  "net": 14000
+  "net": 10500
  },
  {
   "id": "5e82ec21-3838-5ad1-8de1-4ffaa82a7008",
@@ -26229,10 +26229,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
-  "units": "26.000000",
-  "gross": 78000,
+  "units": "25.000000",
+  "gross": 75000,
   "discount": 0,
-  "net": 78000
+  "net": 75000
  },
  {
   "id": "9d70a48f-80fc-5141-ac32-44e5e205a5c6",
@@ -26274,10 +26274,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "1ea4dd32-cfd7-50b4-bdb0-3fa128bb154a",
-  "units": "10.000000",
-  "gross": 30000,
+  "units": "9.000000",
+  "gross": 27000,
   "discount": 0,
-  "net": 30000
+  "net": 27000
  },
  {
   "id": "411e0eff-4eb0-5f6c-8592-2a08f3f5cce7",
@@ -26304,10 +26304,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "b55371fc-3a78-55c0-8edc-ed56d117914d",
-  "units": "13.000000",
-  "gross": 58500,
+  "units": "12.000000",
+  "gross": 54000,
   "discount": 0,
-  "net": 58500
+  "net": 54000
  },
  {
   "id": "b7f17b6d-8417-5b32-accb-fcdef485609f",
@@ -26379,10 +26379,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "d54c49ce-7ef2-568e-ba98-f4e32f30ad13",
-  "units": "3.000000",
-  "gross": 12000,
+  "units": "2.000000",
+  "gross": 8000,
   "discount": 0,
-  "net": 12000
+  "net": 8000
  },
  {
   "id": "40b22aad-9589-5fc7-a35e-3a01d1dd8e5a",
@@ -26409,10 +26409,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "8e78aef5-7af2-5722-b908-d6929161e6cf",
-  "units": "4.000000",
-  "gross": 6000,
+  "units": "5.000000",
+  "gross": 7500,
   "discount": 0,
-  "net": 6000
+  "net": 7500
  },
  {
   "id": "ddf64ef8-aeb7-5a78-b94d-f910c75f13d9",
@@ -26424,10 +26424,10 @@
   "period_from": "2026-09-28",
   "period_to": "2026-09-28",
   "menu_item_id": "1b376cec-616e-5aa4-8165-026eadf08c20",
-  "units": "3.000000",
-  "gross": 6000,
+  "units": "2.000000",
+  "gross": 4000,
   "discount": 0,
-  "net": 6000
+  "net": 4000
  },
  {
   "id": "e8dd0807-16fd-53a7-8c2d-cb9f2bad5e55",
@@ -26454,10 +26454,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
-  "units": "48.000000",
-  "gross": 312000,
-  "discount": 46800,
-  "net": 265200
+  "units": "45.000000",
+  "gross": 292500,
+  "discount": 42900,
+  "net": 249600
  },
  {
   "id": "6d06886f-2831-5252-9004-e9f9f5f6b272",
@@ -26484,10 +26484,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
-  "units": "19.000000",
-  "gross": 133000,
+  "units": "18.000000",
+  "gross": 126000,
   "discount": 0,
-  "net": 133000
+  "net": 126000
  },
  {
   "id": "b3bc62a8-fe86-5c1e-9157-a718cb1b48c3",
@@ -26499,10 +26499,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "a825d126-082a-5b37-a763-784cbb733ba2",
-  "units": "15.000000",
-  "gross": 112500,
+  "units": "14.000000",
+  "gross": 105000,
   "discount": 0,
-  "net": 112500
+  "net": 105000
  },
  {
   "id": "2ef182c7-311b-5a2f-971a-a938b32f4dbf",
@@ -26514,10 +26514,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "f5fea202-65b8-55a9-81fe-f47369aad159",
-  "units": "7.000000",
-  "gross": 45500,
+  "units": "6.000000",
+  "gross": 39000,
   "discount": 0,
-  "net": 45500
+  "net": 39000
  },
  {
   "id": "4932ea8f-28cb-5023-98c9-c6feca50ee22",
@@ -26574,10 +26574,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "e6e3bfbc-32bd-5345-aa3b-de89839dd88f",
-  "units": "12.000000",
-  "gross": 102000,
+  "units": "11.000000",
+  "gross": 93500,
   "discount": 0,
-  "net": 102000
+  "net": 93500
  },
  {
   "id": "f292fad7-7ee0-57b1-bf54-c85f3e4d8103",
@@ -26589,10 +26589,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
-  "units": "11.000000",
-  "gross": 49500,
+  "units": "10.000000",
+  "gross": 45000,
   "discount": 0,
-  "net": 49500
+  "net": 45000
  },
  {
   "id": "8bb7f4d5-da11-5835-a8ff-1f6e4bf1d5f3",
@@ -26604,10 +26604,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "dae5c370-12a2-52d9-97da-7841e565845e",
-  "units": "5.000000",
-  "gross": 27500,
+  "units": "4.000000",
+  "gross": 22000,
   "discount": 0,
-  "net": 27500
+  "net": 22000
  },
  {
   "id": "94726813-eeed-5bcd-9ff6-d399283f5ba5",
@@ -26619,10 +26619,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
-  "units": "13.000000",
-  "gross": 58500,
+  "units": "12.000000",
+  "gross": 54000,
   "discount": 0,
-  "net": 58500
+  "net": 54000
  },
  {
   "id": "14117ebd-8bba-5107-93e8-355809b82729",
@@ -26679,10 +26679,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "16544bcb-7aa7-5dad-9708-adb3680e63e0",
-  "units": "5.000000",
-  "gross": 62500,
+  "units": "4.000000",
+  "gross": 50000,
   "discount": 0,
-  "net": 62500
+  "net": 50000
  },
  {
   "id": "83791856-ceb7-5d51-a8af-b94cffb6a966",
@@ -26694,10 +26694,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
-  "units": "9.000000",
-  "gross": 72000,
+  "units": "8.000000",
+  "gross": 64000,
   "discount": 0,
-  "net": 72000
+  "net": 64000
  },
  {
   "id": "1a8ace0c-5387-538f-95d6-008e2d721968",
@@ -26709,10 +26709,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "a88d57f4-0d46-5a47-84ca-be0d3f24e680",
-  "units": "5.000000",
-  "gross": 47500,
+  "units": "4.000000",
+  "gross": 38000,
   "discount": 0,
-  "net": 47500
+  "net": 38000
  },
  {
   "id": "f01536a9-518f-5383-af14-ffee4ae93c55",
@@ -26739,10 +26739,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "5b173856-fc01-5ae6-951a-95c551609843",
-  "units": "3.000000",
-  "gross": 13500,
+  "units": "2.000000",
+  "gross": 9000,
   "discount": 0,
-  "net": 13500
+  "net": 9000
  },
  {
   "id": "464d1cbe-f5ad-5e07-9625-4f053686e75f",
@@ -26844,10 +26844,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
-  "units": "25.000000",
-  "gross": 75000,
+  "units": "24.000000",
+  "gross": 72000,
   "discount": 0,
-  "net": 75000
+  "net": 72000
  },
  {
   "id": "c8e0b88e-cc02-5c0a-9365-53be1046c122",
@@ -26859,10 +26859,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "da887536-8f4f-5c71-9a9e-6227f1ae0a2f",
-  "units": "7.000000",
-  "gross": 21000,
+  "units": "6.000000",
+  "gross": 18000,
   "discount": 0,
-  "net": 21000
+  "net": 18000
  },
  {
   "id": "45e84905-b946-5cc3-977e-6feef2030543",
@@ -26919,10 +26919,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "b55371fc-3a78-55c0-8edc-ed56d117914d",
-  "units": "14.000000",
-  "gross": 63000,
+  "units": "13.000000",
+  "gross": 58500,
   "discount": 0,
-  "net": 63000
+  "net": 58500
  },
  {
   "id": "5124ef14-3356-5d62-9095-342d369c1eda",
@@ -26964,10 +26964,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "824e6447-6259-5db4-9acd-4a1de7819568",
-  "units": "6.000000",
-  "gross": 18000,
+  "units": "5.000000",
+  "gross": 15000,
   "discount": 0,
-  "net": 18000
+  "net": 15000
  },
  {
   "id": "1a620de8-9b8d-5ab7-8ed7-cf265ba5af2c",
@@ -26979,10 +26979,10 @@
   "period_from": "2026-09-29",
   "period_to": "2026-09-29",
   "menu_item_id": "5b32108b-bb50-5f0d-be50-20445b00b7bb",
-  "units": "4.000000",
-  "gross": 18000,
+  "units": "3.000000",
+  "gross": 13500,
   "discount": 0,
-  "net": 18000
+  "net": 13500
  },
  {
   "id": "a5b95d84-3d10-581b-9cdd-1d152c79d6ec",
@@ -27069,10 +27069,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
-  "units": "51.000000",
-  "gross": 331500,
+  "units": "48.000000",
+  "gross": 312000,
   "discount": 0,
-  "net": 331500
+  "net": 312000
  },
  {
   "id": "e4aebf1a-cdbf-57c9-88fd-9b24dfb52b4c",
@@ -27099,10 +27099,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
-  "units": "20.000000",
-  "gross": 140000,
+  "units": "19.000000",
+  "gross": 133000,
   "discount": 0,
-  "net": 140000
+  "net": 133000
  },
  {
   "id": "569f759a-fa0a-5880-8e28-ca6c7ad122b8",
@@ -27114,10 +27114,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "a825d126-082a-5b37-a763-784cbb733ba2",
-  "units": "16.000000",
-  "gross": 120000,
+  "units": "15.000000",
+  "gross": 112500,
   "discount": 0,
-  "net": 120000
+  "net": 112500
  },
  {
   "id": "5198db6e-8e8a-5b1d-a092-823a76bae491",
@@ -27189,10 +27189,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "e6e3bfbc-32bd-5345-aa3b-de89839dd88f",
-  "units": "13.000000",
-  "gross": 110500,
+  "units": "12.000000",
+  "gross": 102000,
   "discount": 0,
-  "net": 110500
+  "net": 102000
  },
  {
   "id": "de6dea52-e55c-551d-a02d-3d9c2e5bf879",
@@ -27204,10 +27204,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
-  "units": "10.000000",
-  "gross": 45000,
+  "units": "9.000000",
+  "gross": 40500,
   "discount": 0,
-  "net": 45000
+  "net": 40500
  },
  {
   "id": "23086b9f-495d-5e98-af6f-a4a04d7d6e00",
@@ -27219,10 +27219,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "dae5c370-12a2-52d9-97da-7841e565845e",
-  "units": "5.000000",
-  "gross": 27500,
+  "units": "4.000000",
+  "gross": 22000,
   "discount": 0,
-  "net": 27500
+  "net": 22000
  },
  {
   "id": "aff41b64-ce87-56b7-8302-c42b44bde402",
@@ -27234,10 +27234,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
-  "units": "14.000000",
-  "gross": 63000,
+  "units": "13.000000",
+  "gross": 58500,
   "discount": 0,
-  "net": 63000
+  "net": 58500
  },
  {
   "id": "dd04e88f-1da0-59c3-be3d-1a06d428e3f3",
@@ -27309,10 +27309,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
-  "units": "11.000000",
-  "gross": 88000,
+  "units": "10.000000",
+  "gross": 80000,
   "discount": 0,
-  "net": 88000
+  "net": 80000
  },
  {
   "id": "7354c0b9-766a-55d8-865b-e8fd85d28ecb",
@@ -27324,10 +27324,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "a88d57f4-0d46-5a47-84ca-be0d3f24e680",
-  "units": "5.000000",
-  "gross": 47500,
+  "units": "4.000000",
+  "gross": 38000,
   "discount": 0,
-  "net": 47500
+  "net": 38000
  },
  {
   "id": "4b8f7b60-e76c-5bf8-88a5-de34d66ef6f4",
@@ -27414,10 +27414,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "13523ead-5ebf-552d-b723-0701a893c6e4",
-  "units": "23.000000",
-  "gross": 80500,
+  "units": "22.000000",
+  "gross": 77000,
   "discount": 0,
-  "net": 80500
+  "net": 77000
  },
  {
   "id": "3dc2f670-f308-5214-aa40-9e2b75628a6a",
@@ -27429,10 +27429,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "88bab77a-1b10-5d6f-bd92-14f28fddb78d",
-  "units": "12.000000",
-  "gross": 42000,
+  "units": "11.000000",
+  "gross": 38500,
   "discount": 0,
-  "net": 42000
+  "net": 38500
  },
  {
   "id": "f30a3dca-84ee-5d73-9a06-5ef86d3240e2",
@@ -27459,10 +27459,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
-  "units": "32.000000",
-  "gross": 96000,
+  "units": "30.000000",
+  "gross": 90000,
   "discount": 0,
-  "net": 96000
+  "net": 90000
  },
  {
   "id": "e42362f6-ce10-5f55-9457-6f65c39dc8e0",
@@ -27504,10 +27504,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "1ea4dd32-cfd7-50b4-bdb0-3fa128bb154a",
-  "units": "15.000000",
-  "gross": 45000,
+  "units": "14.000000",
+  "gross": 42000,
   "discount": 0,
-  "net": 45000
+  "net": 42000
  },
  {
   "id": "96ac4386-6ea2-53ee-b664-2badcc05051b",
@@ -27534,10 +27534,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "b55371fc-3a78-55c0-8edc-ed56d117914d",
-  "units": "16.000000",
-  "gross": 72000,
+  "units": "15.000000",
+  "gross": 67500,
   "discount": 0,
-  "net": 72000
+  "net": 67500
  },
  {
   "id": "16614ef9-0a34-577a-a43d-402bdee34057",
@@ -27549,10 +27549,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "b01f86fa-2e25-5958-951d-e2a0b346deb4",
-  "units": "5.000000",
-  "gross": 22500,
+  "units": "4.000000",
+  "gross": 18000,
   "discount": 0,
-  "net": 22500
+  "net": 18000
  },
  {
   "id": "e03c079d-b4f0-5ca6-a698-8064ffd800ac",
@@ -27579,10 +27579,10 @@
   "period_from": "2026-09-30",
   "period_to": "2026-09-30",
   "menu_item_id": "824e6447-6259-5db4-9acd-4a1de7819568",
-  "units": "5.000000",
-  "gross": 15000,
+  "units": "4.000000",
+  "gross": 12000,
   "discount": 0,
-  "net": 15000
+  "net": 12000
  },
  {
   "id": "c6133fd4-44d7-5f47-bd48-10d3e434a053",
@@ -27684,10 +27684,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
-  "units": "57.000000",
-  "gross": 370500,
+  "units": "54.000000",
+  "gross": 351000,
   "discount": 0,
-  "net": 370500
+  "net": 351000
  },
  {
   "id": "429e2721-d240-56d7-80f7-2d8e68fe8216",
@@ -27699,10 +27699,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8",
-  "units": "24.000000",
-  "gross": 180000,
+  "units": "23.000000",
+  "gross": 172500,
   "discount": 0,
-  "net": 180000
+  "net": 172500
  },
  {
   "id": "d822bfb7-3158-5acd-82a2-483d3ffed6f1",
@@ -27729,10 +27729,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "a825d126-082a-5b37-a763-784cbb733ba2",
-  "units": "13.000000",
-  "gross": 97500,
+  "units": "12.000000",
+  "gross": 90000,
   "discount": 0,
-  "net": 97500
+  "net": 90000
  },
  {
   "id": "f789add6-19e0-5f72-9b31-fb49da90a58e",
@@ -27744,10 +27744,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "f5fea202-65b8-55a9-81fe-f47369aad159",
-  "units": "10.000000",
-  "gross": 65000,
+  "units": "9.000000",
+  "gross": 58500,
   "discount": 0,
-  "net": 65000
+  "net": 58500
  },
  {
   "id": "137516a5-5e2f-5081-b84a-cdca338a6e51",
@@ -27759,10 +27759,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "c6b15bb1-c30a-5aaa-89b0-dafc57ad6974",
-  "units": "4.000000",
-  "gross": 38000,
+  "units": "3.000000",
+  "gross": 28500,
   "discount": 0,
-  "net": 38000
+  "net": 28500
  },
  {
   "id": "b08762e5-35af-5813-a25a-c2d79bb45e31",
@@ -27819,10 +27819,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
-  "units": "15.000000",
-  "gross": 67500,
+  "units": "14.000000",
+  "gross": 63000,
   "discount": 0,
-  "net": 67500
+  "net": 63000
  },
  {
   "id": "db2690b3-7958-55f8-a567-eb548f0537f7",
@@ -27834,10 +27834,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "dae5c370-12a2-52d9-97da-7841e565845e",
-  "units": "6.000000",
-  "gross": 33000,
+  "units": "5.000000",
+  "gross": 27500,
   "discount": 0,
-  "net": 33000
+  "net": 27500
  },
  {
   "id": "7284de74-a644-54b3-b2e3-0332a45b6de2",
@@ -27849,10 +27849,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
-  "units": "20.000000",
-  "gross": 90000,
+  "units": "19.000000",
+  "gross": 85500,
   "discount": 0,
-  "net": 90000
+  "net": 85500
  },
  {
   "id": "274ac94a-58a2-59b3-a043-38cecc47b1fa",
@@ -27864,10 +27864,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "a11a23db-3424-5073-9c64-5465605cbad1",
-  "units": "4.000000",
-  "gross": 22000,
+  "units": "3.000000",
+  "gross": 16500,
   "discount": 0,
-  "net": 22000
+  "net": 16500
  },
  {
   "id": "71eb6b90-a29b-5667-ab40-1e650a19fdae",
@@ -27894,10 +27894,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "81404715-16f4-518e-b9e7-07df075161eb",
-  "units": "11.000000",
-  "gross": 159500,
+  "units": "10.000000",
+  "gross": 145000,
   "discount": 0,
-  "net": 159500
+  "net": 145000
  },
  {
   "id": "55217717-723e-5eec-b3e8-548750e8f4c8",
@@ -27909,10 +27909,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "16544bcb-7aa7-5dad-9708-adb3680e63e0",
-  "units": "7.000000",
-  "gross": 87500,
+  "units": "6.000000",
+  "gross": 75000,
   "discount": 0,
-  "net": 87500
+  "net": 75000
  },
  {
   "id": "b70bd8b6-2ee3-568f-91ab-1f18186354cb",
@@ -27924,10 +27924,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
-  "units": "10.000000",
-  "gross": 80000,
+  "units": "9.000000",
+  "gross": 72000,
   "discount": 0,
-  "net": 80000
+  "net": 72000
  },
  {
   "id": "2ad8ce34-9471-52b5-ad9f-e2508108cbc8",
@@ -27954,10 +27954,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "43c7f151-02d1-5a6f-9cca-6760710b3bd4",
-  "units": "5.000000",
-  "gross": 30000,
+  "units": "4.000000",
+  "gross": 24000,
   "discount": 0,
-  "net": 30000
+  "net": 24000
  },
  {
   "id": "afa69e92-0d13-5bb6-a8b3-fc0976f655b6",
@@ -27984,10 +27984,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "00aab2fe-5645-5fae-92ca-d263adb5936b",
-  "units": "7.000000",
-  "gross": 28000,
+  "units": "6.000000",
+  "gross": 24000,
   "discount": 0,
-  "net": 28000
+  "net": 24000
  },
  {
   "id": "5a9ff967-9089-51a0-a7e6-9818a8dc9581",
@@ -27999,10 +27999,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "86d5db2b-7f85-51ab-9d06-49872ddfa200",
-  "units": "9.000000",
-  "gross": 67500,
+  "units": "8.000000",
+  "gross": 60000,
   "discount": 0,
-  "net": 67500
+  "net": 60000
  },
  {
   "id": "ba7f72c0-d585-59ba-84e8-280d992a6ae8",
@@ -28029,10 +28029,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "13523ead-5ebf-552d-b723-0701a893c6e4",
-  "units": "29.000000",
-  "gross": 101500,
+  "units": "28.000000",
+  "gross": 98000,
   "discount": 0,
-  "net": 101500
+  "net": 98000
  },
  {
   "id": "263fa53c-5ed6-55c1-a8d8-63a59882371f",
@@ -28074,10 +28074,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
-  "units": "34.000000",
-  "gross": 102000,
+  "units": "33.000000",
+  "gross": 99000,
   "discount": 0,
-  "net": 102000
+  "net": 99000
  },
  {
   "id": "80007963-f299-5fd6-b324-3d9abbcd2c52",
@@ -28089,10 +28089,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "da887536-8f4f-5c71-9a9e-6227f1ae0a2f",
-  "units": "8.000000",
-  "gross": 24000,
+  "units": "7.000000",
+  "gross": 21000,
   "discount": 0,
-  "net": 24000
+  "net": 21000
  },
  {
   "id": "4e9fa52e-53fc-514f-91a2-01bcf49ff80d",
@@ -28104,10 +28104,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "e5abc715-9d4d-5131-9c57-5a521cbf66c7",
-  "units": "7.000000",
-  "gross": 21000,
+  "units": "6.000000",
+  "gross": 18000,
   "discount": 0,
-  "net": 21000
+  "net": 18000
  },
  {
   "id": "1a43d5c6-5ffe-5af3-baa8-4e141ea4136d",
@@ -28119,10 +28119,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "1ea4dd32-cfd7-50b4-bdb0-3fa128bb154a",
-  "units": "14.000000",
-  "gross": 42000,
+  "units": "13.000000",
+  "gross": 39000,
   "discount": 0,
-  "net": 42000
+  "net": 39000
  },
  {
   "id": "be3cee03-c104-56b0-ab49-62b9de33e791",
@@ -28149,10 +28149,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "b55371fc-3a78-55c0-8edc-ed56d117914d",
-  "units": "22.000000",
-  "gross": 99000,
+  "units": "21.000000",
+  "gross": 94500,
   "discount": 0,
-  "net": 99000
+  "net": 94500
  },
  {
   "id": "5a029211-e4e8-589e-ad6c-41cd32b8e9cd",
@@ -28164,10 +28164,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "b01f86fa-2e25-5958-951d-e2a0b346deb4",
-  "units": "7.000000",
-  "gross": 31500,
+  "units": "6.000000",
+  "gross": 27000,
   "discount": 0,
-  "net": 31500
+  "net": 27000
  },
  {
   "id": "a29526bd-d474-5cd4-9d9c-96707d119a54",
@@ -28194,10 +28194,10 @@
   "period_from": "2026-10-01",
   "period_to": "2026-10-01",
   "menu_item_id": "824e6447-6259-5db4-9acd-4a1de7819568",
-  "units": "7.000000",
-  "gross": 21000,
+  "units": "6.000000",
+  "gross": 18000,
   "discount": 0,
-  "net": 21000
+  "net": 18000
  },
  {
   "id": "38802c01-beb8-53d3-82e6-8b7b8bae18fe",
@@ -28299,10 +28299,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
-  "units": "70.000000",
-  "gross": 455000,
+  "units": "66.000000",
+  "gross": 429000,
   "discount": 0,
-  "net": 455000
+  "net": 429000
  },
  {
   "id": "62b477f1-0b0a-5a8a-8bcb-a8bec8592ee8",
@@ -28314,10 +28314,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8",
-  "units": "29.000000",
-  "gross": 217500,
+  "units": "28.000000",
+  "gross": 210000,
   "discount": 0,
-  "net": 217500
+  "net": 210000
  },
  {
   "id": "1de37484-3231-5150-9cc0-46ec9a30eb70",
@@ -28329,10 +28329,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
-  "units": "27.000000",
-  "gross": 189000,
+  "units": "26.000000",
+  "gross": 182000,
   "discount": 0,
-  "net": 189000
+  "net": 182000
  },
  {
   "id": "5f69fd19-a3f2-5baf-b379-5957a25e7868",
@@ -28344,10 +28344,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "a825d126-082a-5b37-a763-784cbb733ba2",
-  "units": "22.000000",
-  "gross": 165000,
+  "units": "21.000000",
+  "gross": 157500,
   "discount": 0,
-  "net": 165000
+  "net": 157500
  },
  {
   "id": "e1b00a29-8e69-52ea-9dfc-744217830a23",
@@ -28359,10 +28359,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "f5fea202-65b8-55a9-81fe-f47369aad159",
-  "units": "14.000000",
-  "gross": 91000,
+  "units": "13.000000",
+  "gross": 84500,
   "discount": 0,
-  "net": 91000
+  "net": 84500
  },
  {
   "id": "e4f21a63-14f5-5c74-9dac-9aead678bd98",
@@ -28404,10 +28404,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "f29b7642-a735-5d9e-935b-41c973aaafe8",
-  "units": "7.000000",
-  "gross": 49000,
+  "units": "6.000000",
+  "gross": 42000,
   "discount": 0,
-  "net": 49000
+  "net": 42000
  },
  {
   "id": "e9904f2a-3ad8-51c7-97b3-6991e503d265",
@@ -28419,10 +28419,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "e6e3bfbc-32bd-5345-aa3b-de89839dd88f",
-  "units": "18.000000",
-  "gross": 153000,
+  "units": "17.000000",
+  "gross": 144500,
   "discount": 0,
-  "net": 153000
+  "net": 144500
  },
  {
   "id": "54d04610-ff2b-579b-9929-cbcbc57061cf",
@@ -28434,10 +28434,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
-  "units": "16.000000",
-  "gross": 72000,
+  "units": "15.000000",
+  "gross": 67500,
   "discount": 0,
-  "net": 72000
+  "net": 67500
  },
  {
   "id": "58fa3bc7-344d-5426-ae28-822f12240b93",
@@ -28464,10 +28464,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
-  "units": "19.000000",
-  "gross": 85500,
+  "units": "18.000000",
+  "gross": 81000,
   "discount": 0,
-  "net": 85500
+  "net": 81000
  },
  {
   "id": "86690ac5-e2a1-51c3-8790-92f0c213ebae",
@@ -28509,10 +28509,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "81404715-16f4-518e-b9e7-07df075161eb",
-  "units": "13.000000",
-  "gross": 188500,
+  "units": "12.000000",
+  "gross": 174000,
   "discount": 0,
-  "net": 188500
+  "net": 174000
  },
  {
   "id": "dba90ec9-2022-5c5a-8be7-9a94ffdc3ca8",
@@ -28524,10 +28524,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "16544bcb-7aa7-5dad-9708-adb3680e63e0",
-  "units": "8.000000",
-  "gross": 100000,
+  "units": "7.000000",
+  "gross": 87500,
   "discount": 0,
-  "net": 100000
+  "net": 87500
  },
  {
   "id": "2cb0f535-94e0-5f95-977f-8533c099c661",
@@ -28554,10 +28554,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "a88d57f4-0d46-5a47-84ca-be0d3f24e680",
-  "units": "7.000000",
-  "gross": 66500,
+  "units": "6.000000",
+  "gross": 57000,
   "discount": 0,
-  "net": 66500
+  "net": 57000
  },
  {
   "id": "7c05dcee-2138-5e36-95f8-506cd7eb9d1f",
@@ -28629,10 +28629,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "e8d89f5e-1edc-591a-9400-e9de9cb3555e",
-  "units": "5.000000",
-  "gross": 35000,
+  "units": "4.000000",
+  "gross": 28000,
   "discount": 0,
-  "net": 35000
+  "net": 28000
  },
  {
   "id": "faed04c9-644d-5819-90dd-ae1790835cd0",
@@ -28644,10 +28644,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "13523ead-5ebf-552d-b723-0701a893c6e4",
-  "units": "25.000000",
-  "gross": 87500,
+  "units": "24.000000",
+  "gross": 84000,
   "discount": 0,
-  "net": 87500
+  "net": 84000
  },
  {
   "id": "685c00f0-e76f-5e8b-980e-64a4401e784f",
@@ -28674,10 +28674,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "fe1e8153-67eb-5ba5-bb08-c84a3d180d53",
-  "units": "6.000000",
-  "gross": 21000,
+  "units": "5.000000",
+  "gross": 17500,
   "discount": 0,
-  "net": 21000
+  "net": 17500
  },
  {
   "id": "b04961c8-d10c-5fb0-aedd-533d4d6cc230",
@@ -28689,10 +28689,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
-  "units": "43.000000",
-  "gross": 129000,
+  "units": "41.000000",
+  "gross": 123000,
   "discount": 0,
-  "net": 129000
+  "net": 123000
  },
  {
   "id": "133e5922-f926-5411-ba61-a4ea53088afc",
@@ -28719,10 +28719,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "e5abc715-9d4d-5131-9c57-5a521cbf66c7",
-  "units": "7.000000",
-  "gross": 21000,
+  "units": "6.000000",
+  "gross": 18000,
   "discount": 0,
-  "net": 21000
+  "net": 18000
  },
  {
   "id": "ebab19ac-b334-5bed-998c-2e032a67f889",
@@ -28734,10 +28734,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "1ea4dd32-cfd7-50b4-bdb0-3fa128bb154a",
-  "units": "13.000000",
-  "gross": 39000,
+  "units": "12.000000",
+  "gross": 36000,
   "discount": 0,
-  "net": 39000
+  "net": 36000
  },
  {
   "id": "9022eea1-a2b8-5e0c-9385-8cc74ffbe6c3",
@@ -28764,10 +28764,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "b55371fc-3a78-55c0-8edc-ed56d117914d",
-  "units": "28.000000",
-  "gross": 126000,
+  "units": "27.000000",
+  "gross": 121500,
   "discount": 0,
-  "net": 126000
+  "net": 121500
  },
  {
   "id": "eb657e61-3c03-5efb-8459-e80f146db047",
@@ -28779,10 +28779,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "b01f86fa-2e25-5958-951d-e2a0b346deb4",
-  "units": "8.000000",
-  "gross": 36000,
+  "units": "7.000000",
+  "gross": 31500,
   "discount": 0,
-  "net": 36000
+  "net": 31500
  },
  {
   "id": "8e893a2b-5920-58e8-9191-bb87a2afbd0b",
@@ -28824,10 +28824,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "5b32108b-bb50-5f0d-be50-20445b00b7bb",
-  "units": "6.000000",
-  "gross": 27000,
+  "units": "5.000000",
+  "gross": 22500,
   "discount": 0,
-  "net": 27000
+  "net": 22500
  },
  {
   "id": "ea9ec78f-60ff-5dbd-b198-59471c76c56d",
@@ -28869,10 +28869,10 @@
   "period_from": "2026-10-02",
   "period_to": "2026-10-02",
   "menu_item_id": "8e78aef5-7af2-5722-b908-d6929161e6cf",
-  "units": "6.000000",
-  "gross": 9000,
+  "units": "5.000000",
+  "gross": 7500,
   "discount": 0,
-  "net": 9000
+  "net": 7500
  },
  {
   "id": "cf327554-f60b-5f50-afa5-f3a596c5d9b0",
@@ -28914,10 +28914,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
-  "units": "75.000000",
-  "gross": 487500,
+  "units": "70.000000",
+  "gross": 455000,
   "discount": 0,
-  "net": 487500
+  "net": 455000
  },
  {
   "id": "224f13d3-1d76-55d3-97bb-e74fbc71a6c0",
@@ -28929,10 +28929,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8",
-  "units": "41.000000",
-  "gross": 307500,
+  "units": "39.000000",
+  "gross": 292500,
   "discount": 0,
-  "net": 307500
+  "net": 292500
  },
  {
   "id": "bd1d1aab-4f4a-5718-bc8c-c98470be6a27",
@@ -28944,10 +28944,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
-  "units": "37.000000",
-  "gross": 259000,
+  "units": "36.000000",
+  "gross": 252000,
   "discount": 0,
-  "net": 259000
+  "net": 252000
  },
  {
   "id": "6841de94-3823-567e-860c-32e27faa60d8",
@@ -28959,10 +28959,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "a825d126-082a-5b37-a763-784cbb733ba2",
-  "units": "27.000000",
-  "gross": 202500,
+  "units": "26.000000",
+  "gross": 195000,
   "discount": 0,
-  "net": 202500
+  "net": 195000
  },
  {
   "id": "42b76708-b870-52bb-b667-d3f328ade359",
@@ -28974,10 +28974,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "f5fea202-65b8-55a9-81fe-f47369aad159",
-  "units": "16.000000",
-  "gross": 104000,
+  "units": "15.000000",
+  "gross": 97500,
   "discount": 0,
-  "net": 104000
+  "net": 97500
  },
  {
   "id": "2370d247-af93-5c38-b8df-a134274c1c7b",
@@ -29034,10 +29034,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "e6e3bfbc-32bd-5345-aa3b-de89839dd88f",
-  "units": "27.000000",
-  "gross": 229500,
+  "units": "26.000000",
+  "gross": 221000,
   "discount": 0,
-  "net": 229500
+  "net": 221000
  },
  {
   "id": "088fda3f-084f-5d89-b69a-f08461f421ff",
@@ -29049,10 +29049,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
-  "units": "15.000000",
-  "gross": 67500,
+  "units": "14.000000",
+  "gross": 63000,
   "discount": 0,
-  "net": 67500
+  "net": 63000
  },
  {
   "id": "0c713f63-fd95-5425-a6b6-9697ff05f319",
@@ -29079,10 +29079,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
-  "units": "29.000000",
-  "gross": 130500,
+  "units": "28.000000",
+  "gross": 126000,
   "discount": 0,
-  "net": 130500
+  "net": 126000
  },
  {
   "id": "05e6e2ca-c36a-5acb-aa4c-1f7b590cfd0e",
@@ -29094,10 +29094,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "a11a23db-3424-5073-9c64-5465605cbad1",
-  "units": "7.000000",
-  "gross": 38500,
+  "units": "6.000000",
+  "gross": 33000,
   "discount": 0,
-  "net": 38500
+  "net": 33000
  },
  {
   "id": "330c0284-41e0-5c5c-b3bd-a685e99f860c",
@@ -29124,10 +29124,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "81404715-16f4-518e-b9e7-07df075161eb",
-  "units": "14.000000",
-  "gross": 203000,
+  "units": "13.000000",
+  "gross": 188500,
   "discount": 0,
-  "net": 203000
+  "net": 188500
  },
  {
   "id": "68260acf-4463-51c2-a58e-6c1adcdb241e",
@@ -29139,10 +29139,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "16544bcb-7aa7-5dad-9708-adb3680e63e0",
-  "units": "8.000000",
-  "gross": 100000,
+  "units": "7.000000",
+  "gross": 87500,
   "discount": 0,
-  "net": 100000
+  "net": 87500
  },
  {
   "id": "0f7d610b-6be9-546e-9200-ca8652e7204e",
@@ -29154,10 +29154,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
-  "units": "19.000000",
-  "gross": 152000,
+  "units": "18.000000",
+  "gross": 144000,
   "discount": 0,
-  "net": 152000
+  "net": 144000
  },
  {
   "id": "20ad4685-bce8-53b8-97bb-dcaf955482dc",
@@ -29169,10 +29169,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "a88d57f4-0d46-5a47-84ca-be0d3f24e680",
-  "units": "8.000000",
-  "gross": 76000,
+  "units": "7.000000",
+  "gross": 66500,
   "discount": 0,
-  "net": 76000
+  "net": 66500
  },
  {
   "id": "b9043812-4ace-5986-a4cf-900070535ef7",
@@ -29184,10 +29184,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "43c7f151-02d1-5a6f-9cca-6760710b3bd4",
-  "units": "8.000000",
-  "gross": 48000,
+  "units": "7.000000",
+  "gross": 42000,
   "discount": 0,
-  "net": 48000
+  "net": 42000
  },
  {
   "id": "01b5ba77-22f3-5ae7-9a5e-b9c480b36ebb",
@@ -29199,10 +29199,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "5b173856-fc01-5ae6-951a-95c551609843",
-  "units": "4.000000",
-  "gross": 18000,
+  "units": "3.000000",
+  "gross": 13500,
   "discount": 0,
-  "net": 18000
+  "net": 13500
  },
  {
   "id": "8f787aae-efa1-5f02-8813-4c991718f75a",
@@ -29214,10 +29214,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "00aab2fe-5645-5fae-92ca-d263adb5936b",
-  "units": "9.000000",
-  "gross": 36000,
+  "units": "8.000000",
+  "gross": 32000,
   "discount": 0,
-  "net": 36000
+  "net": 32000
  },
  {
   "id": "330e8f8b-1a78-5336-b7e2-c9e753b712b7",
@@ -29229,10 +29229,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "86d5db2b-7f85-51ab-9d06-49872ddfa200",
-  "units": "11.000000",
-  "gross": 82500,
+  "units": "10.000000",
+  "gross": 75000,
   "discount": 0,
-  "net": 82500
+  "net": 75000
  },
  {
   "id": "26797bd2-0d29-54fd-8e79-07c5056cf403",
@@ -29259,10 +29259,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "13523ead-5ebf-552d-b723-0701a893c6e4",
-  "units": "32.000000",
-  "gross": 112000,
+  "units": "31.000000",
+  "gross": 108500,
   "discount": 0,
-  "net": 112000
+  "net": 108500
  },
  {
   "id": "a79f8e9b-fa7b-5bbb-94a7-e4ca6fbb9716",
@@ -29289,10 +29289,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "fe1e8153-67eb-5ba5-bb08-c84a3d180d53",
-  "units": "8.000000",
-  "gross": 28000,
+  "units": "7.000000",
+  "gross": 24500,
   "discount": 0,
-  "net": 28000
+  "net": 24500
  },
  {
   "id": "bafc04a5-353f-5f9b-9357-5216ee63e591",
@@ -29304,10 +29304,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
-  "units": "58.000000",
-  "gross": 174000,
+  "units": "55.000000",
+  "gross": 165000,
   "discount": 0,
-  "net": 174000
+  "net": 165000
  },
  {
   "id": "f3f11605-7f6f-5bdd-95be-7c3cdabfaf78",
@@ -29319,10 +29319,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "da887536-8f4f-5c71-9a9e-6227f1ae0a2f",
-  "units": "12.000000",
-  "gross": 36000,
+  "units": "11.000000",
+  "gross": 33000,
   "discount": 0,
-  "net": 36000
+  "net": 33000
  },
  {
   "id": "b803b7b3-cf10-50ff-a46a-30e853576d35",
@@ -29364,10 +29364,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "65d78189-e3d0-514e-ac4f-9917f93ce4d2",
-  "units": "9.000000",
-  "gross": 22500,
+  "units": "8.000000",
+  "gross": 20000,
   "discount": 0,
-  "net": 22500
+  "net": 20000
  },
  {
   "id": "ffd7d0b5-484a-59c3-a701-237e3e1b0f54",
@@ -29379,10 +29379,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "b55371fc-3a78-55c0-8edc-ed56d117914d",
-  "units": "27.000000",
-  "gross": 121500,
+  "units": "26.000000",
+  "gross": 117000,
   "discount": 0,
-  "net": 121500
+  "net": 117000
  },
  {
   "id": "1ba6fe16-1c3d-5862-a0f1-6d1b6f77c464",
@@ -29394,10 +29394,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "b01f86fa-2e25-5958-951d-e2a0b346deb4",
-  "units": "9.000000",
-  "gross": 40500,
+  "units": "8.000000",
+  "gross": 36000,
   "discount": 0,
-  "net": 40500
+  "net": 36000
  },
  {
   "id": "d225f5c4-0fde-5305-aa7c-ed653f4c1eef",
@@ -29409,10 +29409,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "20d2bbfa-a852-565f-a62c-1e09b7ecd826",
-  "units": "8.000000",
-  "gross": 52000,
+  "units": "7.000000",
+  "gross": 45500,
   "discount": 0,
-  "net": 52000
+  "net": 45500
  },
  {
   "id": "ece28038-66ff-5b91-9b90-a534b60af0f3",
@@ -29469,10 +29469,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "0bd3aa2e-92eb-55a9-8078-addcf7fc4171",
-  "units": "6.000000",
-  "gross": 27000,
+  "units": "5.000000",
+  "gross": 22500,
   "discount": 0,
-  "net": 27000
+  "net": 22500
  },
  {
   "id": "4c94c11a-9d98-549e-aa78-a9bbdca47410",
@@ -29484,10 +29484,10 @@
   "period_from": "2026-10-03",
   "period_to": "2026-10-03",
   "menu_item_id": "8e78aef5-7af2-5722-b908-d6929161e6cf",
-  "units": "8.000000",
-  "gross": 12000,
+  "units": "7.000000",
+  "gross": 10500,
   "discount": 0,
-  "net": 12000
+  "net": 10500
  },
  {
   "id": "6d5ef5da-5385-58dd-b467-ecde24f1c13d",
@@ -29529,10 +29529,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
-  "units": "79.000000",
-  "gross": 513500,
-  "discount": 1020200,
-  "net": -506700
+  "units": "74.000000",
+  "gross": 481000,
+  "discount": 1100,
+  "net": 479900
  },
  {
   "id": "f4596d41-3623-531d-b240-ff0144c03c78",
@@ -29544,10 +29544,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8",
-  "units": "32.000000",
-  "gross": 240000,
+  "units": "30.000000",
+  "gross": 225000,
   "discount": 0,
-  "net": 240000
+  "net": 225000
  },
  {
   "id": "b98ff72a-a8bb-56e6-90a1-d9aaf5ce8297",
@@ -29559,10 +29559,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
-  "units": "26.000000",
-  "gross": 182000,
+  "units": "25.000000",
+  "gross": 175000,
   "discount": 0,
-  "net": 182000
+  "net": 175000
  },
  {
   "id": "bb9e95a6-729f-57eb-822f-23861349caee",
@@ -29589,10 +29589,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "f5fea202-65b8-55a9-81fe-f47369aad159",
-  "units": "14.000000",
-  "gross": 91000,
+  "units": "13.000000",
+  "gross": 84500,
   "discount": 0,
-  "net": 91000
+  "net": 84500
  },
  {
   "id": "6b5f60aa-a56e-5f3b-9ea5-c3b815798772",
@@ -29604,10 +29604,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "c6b15bb1-c30a-5aaa-89b0-dafc57ad6974",
-  "units": "6.000000",
-  "gross": 57000,
+  "units": "5.000000",
+  "gross": 47500,
   "discount": 0,
-  "net": 57000
+  "net": 47500
  },
  {
   "id": "55003696-1cb8-5da9-9e31-1c0f80cc8c8c",
@@ -29634,10 +29634,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "f29b7642-a735-5d9e-935b-41c973aaafe8",
-  "units": "8.000000",
-  "gross": 56000,
+  "units": "7.000000",
+  "gross": 49000,
   "discount": 0,
-  "net": 56000
+  "net": 49000
  },
  {
   "id": "8c97f236-58e8-5c2f-8881-2ae0786fe073",
@@ -29649,10 +29649,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "e6e3bfbc-32bd-5345-aa3b-de89839dd88f",
-  "units": "22.000000",
-  "gross": 187000,
+  "units": "21.000000",
+  "gross": 178500,
   "discount": 0,
-  "net": 187000
+  "net": 178500
  },
  {
   "id": "e0789e14-a896-59f7-8bcd-5ec5c1c59737",
@@ -29679,10 +29679,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "dae5c370-12a2-52d9-97da-7841e565845e",
-  "units": "8.000000",
-  "gross": 44000,
+  "units": "7.000000",
+  "gross": 38500,
   "discount": 0,
-  "net": 44000
+  "net": 38500
  },
  {
   "id": "52bff490-c7d8-57d2-91ed-7d04bf959796",
@@ -29709,10 +29709,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "a11a23db-3424-5073-9c64-5465605cbad1",
-  "units": "6.000000",
-  "gross": 33000,
+  "units": "5.000000",
+  "gross": 27500,
   "discount": 0,
-  "net": 33000
+  "net": 27500
  },
  {
   "id": "64a9123f-83c2-5da6-8db9-05af2fef23f7",
@@ -29724,10 +29724,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "4b0ed652-4bef-5511-bba9-2952b3810e83",
-  "units": "5.000000",
-  "gross": 25000,
+  "units": "4.000000",
+  "gross": 20000,
   "discount": 0,
-  "net": 25000
+  "net": 20000
  },
  {
   "id": "af990281-44a5-5361-951b-2b72204df55f",
@@ -29739,10 +29739,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "81404715-16f4-518e-b9e7-07df075161eb",
-  "units": "15.000000",
-  "gross": 217500,
+  "units": "14.000000",
+  "gross": 203000,
   "discount": 0,
-  "net": 217500
+  "net": 203000
  },
  {
   "id": "b48b963d-5b46-543d-a0d5-44f2a4feb6d3",
@@ -29769,10 +29769,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
-  "units": "13.000000",
-  "gross": 104000,
+  "units": "12.000000",
+  "gross": 96000,
   "discount": 0,
-  "net": 104000
+  "net": 96000
  },
  {
   "id": "e59facca-ba51-5cdd-b286-3b802b74fcfa",
@@ -29784,10 +29784,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "a88d57f4-0d46-5a47-84ca-be0d3f24e680",
-  "units": "7.000000",
-  "gross": 66500,
+  "units": "6.000000",
+  "gross": 57000,
   "discount": 0,
-  "net": 66500
+  "net": 57000
  },
  {
   "id": "e97c318e-2667-5f42-a7e0-27dc79cec13d",
@@ -29814,10 +29814,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "5b173856-fc01-5ae6-951a-95c551609843",
-  "units": "4.000000",
-  "gross": 18000,
+  "units": "3.000000",
+  "gross": 13500,
   "discount": 0,
-  "net": 18000
+  "net": 13500
  },
  {
   "id": "223edd6b-9097-572e-97b8-373aa9858292",
@@ -29829,10 +29829,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "00aab2fe-5645-5fae-92ca-d263adb5936b",
-  "units": "9.000000",
-  "gross": 36000,
+  "units": "8.000000",
+  "gross": 32000,
   "discount": 0,
-  "net": 36000
+  "net": 32000
  },
  {
   "id": "91410656-6604-5eb9-9d7e-96b6e230500e",
@@ -29844,10 +29844,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "86d5db2b-7f85-51ab-9d06-49872ddfa200",
-  "units": "9.000000",
-  "gross": 67500,
+  "units": "8.000000",
+  "gross": 60000,
   "discount": 0,
-  "net": 67500
+  "net": 60000
  },
  {
   "id": "03ce12f6-164e-5d13-8f51-2bfd4e8721bf",
@@ -29874,10 +29874,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "13523ead-5ebf-552d-b723-0701a893c6e4",
-  "units": "30.000000",
-  "gross": 105000,
+  "units": "29.000000",
+  "gross": 101500,
   "discount": 0,
-  "net": 105000
+  "net": 101500
  },
  {
   "id": "23045bdd-ba94-52eb-9cee-8bb9055d2c64",
@@ -29919,10 +29919,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
-  "units": "48.000000",
-  "gross": 144000,
+  "units": "45.000000",
+  "gross": 135000,
   "discount": 0,
-  "net": 144000
+  "net": 135000
  },
  {
   "id": "26b814ab-6e75-520f-9f3d-3130f700017e",
@@ -29934,10 +29934,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "da887536-8f4f-5c71-9a9e-6227f1ae0a2f",
-  "units": "9.000000",
-  "gross": 27000,
+  "units": "8.000000",
+  "gross": 24000,
   "discount": 0,
-  "net": 27000
+  "net": 24000
  },
  {
   "id": "aa6e331d-965f-562a-a902-3e7ac547c06b",
@@ -29964,10 +29964,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "1ea4dd32-cfd7-50b4-bdb0-3fa128bb154a",
-  "units": "16.000000",
-  "gross": 48000,
+  "units": "15.000000",
+  "gross": 45000,
   "discount": 0,
-  "net": 48000
+  "net": 45000
  },
  {
   "id": "44b3e715-7c42-5701-a963-9d4cfd09379d",
@@ -29994,10 +29994,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "b55371fc-3a78-55c0-8edc-ed56d117914d",
-  "units": "27.000000",
-  "gross": 121500,
+  "units": "26.000000",
+  "gross": 117000,
   "discount": 0,
-  "net": 121500
+  "net": 117000
  },
  {
   "id": "2fe50d8a-7697-5b74-a2f6-52ce8c025aa0",
@@ -30009,10 +30009,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "b01f86fa-2e25-5958-951d-e2a0b346deb4",
-  "units": "8.000000",
-  "gross": 36000,
+  "units": "7.000000",
+  "gross": 31500,
   "discount": 0,
-  "net": 36000
+  "net": 31500
  },
  {
   "id": "3be79971-529f-53e8-aa99-061581ff99c8",
@@ -30024,10 +30024,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "20d2bbfa-a852-565f-a62c-1e09b7ecd826",
-  "units": "6.000000",
-  "gross": 39000,
+  "units": "5.000000",
+  "gross": 32500,
   "discount": 0,
-  "net": 39000
+  "net": 32500
  },
  {
   "id": "973c92ab-2e22-559b-be42-82a5c26aed9f",
@@ -30039,10 +30039,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "824e6447-6259-5db4-9acd-4a1de7819568",
-  "units": "8.000000",
-  "gross": 24000,
+  "units": "7.000000",
+  "gross": 21000,
   "discount": 0,
-  "net": 24000
+  "net": 21000
  },
  {
   "id": "3765046b-8e39-5107-86cc-c5ff385d67e6",
@@ -30129,10 +30129,10 @@
   "period_from": "2026-10-04",
   "period_to": "2026-10-04",
   "menu_item_id": "918dc21b-89f7-5abd-a1b9-3ae0c2ebe35b",
-  "units": "5.000000",
-  "gross": 7500,
+  "units": "4.000000",
+  "gross": 6000,
   "discount": 0,
-  "net": 7500
+  "net": 6000
  },
  {
   "id": "d5d4467e-c73b-5855-895e-6d3719883824",
@@ -30144,10 +30144,10 @@
   "period_from": "2026-10-05",
   "period_to": "2026-10-05",
   "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
-  "units": "35.000000",
-  "gross": 227500,
+  "units": "37.000000",
+  "gross": 240500,
   "discount": 0,
-  "net": 227500
+  "net": 240500
  },
  {
   "id": "4fb55664-4654-5157-a00b-73f7de774485",
@@ -30174,10 +30174,10 @@
   "period_from": "2026-10-05",
   "period_to": "2026-10-05",
   "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
-  "units": "16.000000",
-  "gross": 112000,
+  "units": "17.000000",
+  "gross": 119000,
   "discount": 0,
-  "net": 112000
+  "net": 119000
  },
  {
   "id": "f19fe39d-8152-50a5-b672-9e7b59889f68",
@@ -30309,10 +30309,10 @@
   "period_from": "2026-10-05",
   "period_to": "2026-10-05",
   "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
-  "units": "13.000000",
-  "gross": 58500,
+  "units": "14.000000",
+  "gross": 63000,
   "discount": 0,
-  "net": 58500
+  "net": 63000
  },
  {
   "id": "99261c3a-34d0-542c-9872-6689369139e7",
@@ -30339,10 +30339,10 @@
   "period_from": "2026-10-05",
   "period_to": "2026-10-05",
   "menu_item_id": "4b0ed652-4bef-5511-bba9-2952b3810e83",
-  "units": "2.000000",
-  "gross": 10000,
+  "units": "3.000000",
+  "gross": 15000,
   "discount": 0,
-  "net": 10000
+  "net": 15000
  },
  {
   "id": "e7050654-331e-5543-ad50-4b2ce8e8a83a",
@@ -30369,10 +30369,10 @@
   "period_from": "2026-10-05",
   "period_to": "2026-10-05",
   "menu_item_id": "16544bcb-7aa7-5dad-9708-adb3680e63e0",
-  "units": "4.000000",
-  "gross": 50000,
+  "units": "5.000000",
+  "gross": 62500,
   "discount": 0,
-  "net": 50000
+  "net": 62500
  },
  {
   "id": "756b18ac-4b73-5cce-8dcb-a339303f9df8",
@@ -30399,10 +30399,10 @@
   "period_from": "2026-10-05",
   "period_to": "2026-10-05",
   "menu_item_id": "a88d57f4-0d46-5a47-84ca-be0d3f24e680",
-  "units": "4.000000",
-  "gross": 38000,
+  "units": "5.000000",
+  "gross": 47500,
   "discount": 0,
-  "net": 38000
+  "net": 47500
  },
  {
   "id": "690086b8-ba36-5b85-a1c4-caf2b19adc2e",
@@ -30429,10 +30429,10 @@
   "period_from": "2026-10-05",
   "period_to": "2026-10-05",
   "menu_item_id": "5b173856-fc01-5ae6-951a-95c551609843",
-  "units": "2.000000",
-  "gross": 9000,
+  "units": "3.000000",
+  "gross": 13500,
   "discount": 0,
-  "net": 9000
+  "net": 13500
  },
  {
   "id": "9fafece7-b424-528e-a01f-d46465bec308",
@@ -30474,10 +30474,10 @@
   "period_from": "2026-10-05",
   "period_to": "2026-10-05",
   "menu_item_id": "e8d89f5e-1edc-591a-9400-e9de9cb3555e",
-  "units": "2.000000",
-  "gross": 14000,
+  "units": "3.000000",
+  "gross": 21000,
   "discount": 0,
-  "net": 14000
+  "net": 21000
  },
  {
   "id": "575ec77d-8840-5b42-9a7f-e785a7be6577",
@@ -30489,10 +30489,10 @@
   "period_from": "2026-10-05",
   "period_to": "2026-10-05",
   "menu_item_id": "13523ead-5ebf-552d-b723-0701a893c6e4",
-  "units": "16.000000",
-  "gross": 56000,
+  "units": "17.000000",
+  "gross": 59500,
   "discount": 0,
-  "net": 56000
+  "net": 59500
  },
  {
   "id": "ba88ac0e-e99e-5fe0-a976-10bc01c73f2a",
@@ -30534,10 +30534,10 @@
   "period_from": "2026-10-05",
   "period_to": "2026-10-05",
   "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
-  "units": "26.000000",
-  "gross": 78000,
+  "units": "27.000000",
+  "gross": 81000,
   "discount": 0,
-  "net": 78000
+  "net": 81000
  },
  {
   "id": "5ff9fd9f-6de3-58a1-80d2-7d630b1e68f0",
@@ -30609,10 +30609,10 @@
   "period_from": "2026-10-05",
   "period_to": "2026-10-05",
   "menu_item_id": "b55371fc-3a78-55c0-8edc-ed56d117914d",
-  "units": "18.000000",
-  "gross": 81000,
+  "units": "19.000000",
+  "gross": 85500,
   "discount": 0,
-  "net": 81000
+  "net": 85500
  },
  {
   "id": "1629890f-bda1-5865-b929-aaf65d9a1c57",
@@ -30744,10 +30744,10 @@
   "period_from": "2026-10-05",
   "period_to": "2026-10-05",
   "menu_item_id": "918dc21b-89f7-5abd-a1b9-3ae0c2ebe35b",
-  "units": "2.000000",
-  "gross": 3000,
+  "units": "3.000000",
+  "gross": 4500,
   "discount": 0,
-  "net": 3000
+  "net": 4500
  },
  {
   "id": "22a84aa7-c105-551a-89e1-3b037b0e0727",
@@ -30759,10 +30759,10 @@
   "period_from": "2026-10-06",
   "period_to": "2026-10-06",
   "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
-  "units": "41.000000",
-  "gross": 266500,
-  "discount": 39975,
-  "net": 226525
+  "units": "43.000000",
+  "gross": 279500,
+  "discount": 40950,
+  "net": 238550
  },
  {
   "id": "2fed912c-9826-5a22-b55c-28155c946fec",
@@ -30774,10 +30774,10 @@
   "period_from": "2026-10-06",
   "period_to": "2026-10-06",
   "menu_item_id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8",
-  "units": "22.000000",
-  "gross": 165000,
+  "units": "24.000000",
+  "gross": 180000,
   "discount": 0,
-  "net": 165000
+  "net": 180000
  },
  {
   "id": "d20fa219-e0e9-52de-a859-13e9d792943e",
@@ -30789,10 +30789,10 @@
   "period_from": "2026-10-06",
   "period_to": "2026-10-06",
   "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
-  "units": "19.000000",
-  "gross": 133000,
+  "units": "20.000000",
+  "gross": 140000,
   "discount": 0,
-  "net": 133000
+  "net": 140000
  },
  {
   "id": "a4c4e3a6-372e-5c20-923f-d3c431af0276",
@@ -30804,10 +30804,10 @@
   "period_from": "2026-10-06",
   "period_to": "2026-10-06",
   "menu_item_id": "a825d126-082a-5b37-a763-784cbb733ba2",
-  "units": "13.000000",
-  "gross": 97500,
+  "units": "14.000000",
+  "gross": 105000,
   "discount": 0,
-  "net": 97500
+  "net": 105000
  },
  {
   "id": "42952abb-3908-5138-8d9a-4aea7cef38b1",
@@ -30924,10 +30924,10 @@
   "period_from": "2026-10-06",
   "period_to": "2026-10-06",
   "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
-  "units": "12.000000",
-  "gross": 54000,
+  "units": "13.000000",
+  "gross": 58500,
   "discount": 0,
-  "net": 54000
+  "net": 58500
  },
  {
   "id": "847cc22c-0180-52c1-acf7-6d5952d0aeda",
@@ -31104,10 +31104,10 @@
   "period_from": "2026-10-06",
   "period_to": "2026-10-06",
   "menu_item_id": "13523ead-5ebf-552d-b723-0701a893c6e4",
-  "units": "20.000000",
-  "gross": 70000,
+  "units": "21.000000",
+  "gross": 73500,
   "discount": 0,
-  "net": 70000
+  "net": 73500
  },
  {
   "id": "13e4d292-f267-5bfb-b513-575054ae5862",
@@ -31119,10 +31119,10 @@
   "period_from": "2026-10-06",
   "period_to": "2026-10-06",
   "menu_item_id": "88bab77a-1b10-5d6f-bd92-14f28fddb78d",
-  "units": "12.000000",
-  "gross": 42000,
+  "units": "13.000000",
+  "gross": 45500,
   "discount": 0,
-  "net": 42000
+  "net": 45500
  },
  {
   "id": "9bc879ea-a00d-5bf6-951f-6d1f1b089a4f",
@@ -31149,10 +31149,10 @@
   "period_from": "2026-10-06",
   "period_to": "2026-10-06",
   "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
-  "units": "34.000000",
-  "gross": 102000,
+  "units": "36.000000",
+  "gross": 108000,
   "discount": 0,
-  "net": 102000
+  "net": 108000
  },
  {
   "id": "0371f4f1-9cd6-518d-9d65-73a78c4f96bb",
@@ -31194,10 +31194,10 @@
   "period_from": "2026-10-06",
   "period_to": "2026-10-06",
   "menu_item_id": "1ea4dd32-cfd7-50b4-bdb0-3fa128bb154a",
-  "units": "9.000000",
-  "gross": 27000,
+  "units": "10.000000",
+  "gross": 30000,
   "discount": 0,
-  "net": 27000
+  "net": 30000
  },
  {
   "id": "7db80245-d0de-51c7-8ea5-045fd53d082d",
@@ -31359,10 +31359,10 @@
   "period_from": "2026-10-06",
   "period_to": "2026-10-06",
   "menu_item_id": "918dc21b-89f7-5abd-a1b9-3ae0c2ebe35b",
-  "units": "2.000000",
-  "gross": 3000,
+  "units": "3.000000",
+  "gross": 4500,
   "discount": 0,
-  "net": 3000
+  "net": 4500
  },
  {
   "id": "f5479a9e-1765-5728-9bf6-205b84c9348b",
@@ -31374,10 +31374,10 @@
   "period_from": "2026-10-07",
   "period_to": "2026-10-07",
   "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
-  "units": "50.000000",
-  "gross": 325000,
+  "units": "53.000000",
+  "gross": 344500,
   "discount": 0,
-  "net": 325000
+  "net": 344500
  },
  {
   "id": "7a91b27f-86e1-5bf8-9a58-d7441f33e93c",
@@ -31389,10 +31389,10 @@
   "period_from": "2026-10-07",
   "period_to": "2026-10-07",
   "menu_item_id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8",
-  "units": "26.000000",
-  "gross": 195000,
+  "units": "27.000000",
+  "gross": 202500,
   "discount": 0,
-  "net": 195000
+  "net": 202500
  },
  {
   "id": "a24ac705-4ef9-50fc-a78e-24ae0d70289f",
@@ -31404,10 +31404,10 @@
   "period_from": "2026-10-07",
   "period_to": "2026-10-07",
   "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
-  "units": "16.000000",
-  "gross": 112000,
+  "units": "17.000000",
+  "gross": 119000,
   "discount": 0,
-  "net": 112000
+  "net": 119000
  },
  {
   "id": "91692447-2ff5-5dfc-8d87-d9bce8be35c6",
@@ -31419,10 +31419,10 @@
   "period_from": "2026-10-07",
   "period_to": "2026-10-07",
   "menu_item_id": "a825d126-082a-5b37-a763-784cbb733ba2",
-  "units": "12.000000",
-  "gross": 90000,
+  "units": "13.000000",
+  "gross": 97500,
   "discount": 0,
-  "net": 90000
+  "net": 97500
  },
  {
   "id": "83f0aa8e-cfaf-59c0-afd9-b3bb117559dc",
@@ -31494,10 +31494,10 @@
   "period_from": "2026-10-07",
   "period_to": "2026-10-07",
   "menu_item_id": "e6e3bfbc-32bd-5345-aa3b-de89839dd88f",
-  "units": "11.000000",
-  "gross": 93500,
+  "units": "12.000000",
+  "gross": 102000,
   "discount": 0,
-  "net": 93500
+  "net": 102000
  },
  {
   "id": "7d7115ca-992e-585e-a242-f94e98b4827f",
@@ -31509,10 +31509,10 @@
   "period_from": "2026-10-07",
   "period_to": "2026-10-07",
   "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
-  "units": "12.000000",
-  "gross": 54000,
+  "units": "13.000000",
+  "gross": 58500,
   "discount": 0,
-  "net": 54000
+  "net": 58500
  },
  {
   "id": "3381bd0e-ae61-5bfc-ba5e-7d27cc284b8e",
@@ -31539,10 +31539,10 @@
   "period_from": "2026-10-07",
   "period_to": "2026-10-07",
   "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
-  "units": "16.000000",
-  "gross": 72000,
+  "units": "17.000000",
+  "gross": 76500,
   "discount": 0,
-  "net": 72000
+  "net": 76500
  },
  {
   "id": "f7437810-1d4e-53c6-a5df-005bc79aef0b",
@@ -31599,10 +31599,10 @@
   "period_from": "2026-10-07",
   "period_to": "2026-10-07",
   "menu_item_id": "16544bcb-7aa7-5dad-9708-adb3680e63e0",
-  "units": "6.000000",
-  "gross": 75000,
+  "units": "7.000000",
+  "gross": 87500,
   "discount": 0,
-  "net": 75000
+  "net": 87500
  },
  {
   "id": "a735fabb-d8e5-595d-b20e-ff367efefc1a",
@@ -31644,10 +31644,10 @@
   "period_from": "2026-10-07",
   "period_to": "2026-10-07",
   "menu_item_id": "43c7f151-02d1-5a6f-9cca-6760710b3bd4",
-  "units": "3.000000",
-  "gross": 18000,
+  "units": "4.000000",
+  "gross": 24000,
   "discount": 0,
-  "net": 18000
+  "net": 24000
  },
  {
   "id": "e90bcbac-d124-5dba-bf2c-219f8af94812",
@@ -31719,10 +31719,10 @@
   "period_from": "2026-10-07",
   "period_to": "2026-10-07",
   "menu_item_id": "13523ead-5ebf-552d-b723-0701a893c6e4",
-  "units": "20.000000",
-  "gross": 70000,
+  "units": "21.000000",
+  "gross": 73500,
   "discount": 0,
-  "net": 70000
+  "net": 73500
  },
  {
   "id": "df60bfd6-d6bd-5b03-b48a-d2fb8191113f",
@@ -31764,10 +31764,10 @@
   "period_from": "2026-10-07",
   "period_to": "2026-10-07",
   "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
-  "units": "31.000000",
-  "gross": 93000,
+  "units": "33.000000",
+  "gross": 99000,
   "discount": 0,
-  "net": 93000
+  "net": 99000
  },
  {
   "id": "d7589001-4346-5765-8bd6-839ceb438fc8",
@@ -31824,10 +31824,10 @@
   "period_from": "2026-10-07",
   "period_to": "2026-10-07",
   "menu_item_id": "65d78189-e3d0-514e-ac4f-9917f93ce4d2",
-  "units": "5.000000",
-  "gross": 12500,
+  "units": "6.000000",
+  "gross": 15000,
   "discount": 0,
-  "net": 12500
+  "net": 15000
  },
  {
   "id": "9b0b4e13-8c90-5e7b-a183-ce71d8b41a1d",
@@ -31854,10 +31854,10 @@
   "period_from": "2026-10-07",
   "period_to": "2026-10-07",
   "menu_item_id": "b01f86fa-2e25-5958-951d-e2a0b346deb4",
-  "units": "6.000000",
-  "gross": 27000,
+  "units": "7.000000",
+  "gross": 31500,
   "discount": 0,
-  "net": 27000
+  "net": 31500
  },
  {
   "id": "8610ed86-2e33-5e03-aaa7-75f5b4dc7d88",
@@ -31989,10 +31989,10 @@
   "period_from": "2026-10-08",
   "period_to": "2026-10-08",
   "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
-  "units": "46.000000",
-  "gross": 299000,
+  "units": "49.000000",
+  "gross": 318500,
   "discount": 0,
-  "net": 299000
+  "net": 318500
  },
  {
   "id": "8a13bf9c-fea0-57b1-bee4-c6796e64bb4f",
@@ -32004,10 +32004,10 @@
   "period_from": "2026-10-08",
   "period_to": "2026-10-08",
   "menu_item_id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8",
-  "units": "22.000000",
-  "gross": 165000,
+  "units": "23.000000",
+  "gross": 172500,
   "discount": 0,
-  "net": 165000
+  "net": 172500
  },
  {
   "id": "68ca2e8b-3688-59d3-b1b1-c56d704b49c0",
@@ -32019,10 +32019,10 @@
   "period_from": "2026-10-08",
   "period_to": "2026-10-08",
   "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
-  "units": "18.000000",
-  "gross": 126000,
+  "units": "20.000000",
+  "gross": 140000,
   "discount": 0,
-  "net": 126000
+  "net": 140000
  },
  {
   "id": "4a79323b-3aae-5b62-a070-e449e5d9c71b",
@@ -32034,10 +32034,10 @@
   "period_from": "2026-10-08",
   "period_to": "2026-10-08",
   "menu_item_id": "a825d126-082a-5b37-a763-784cbb733ba2",
-  "units": "19.000000",
-  "gross": 142500,
+  "units": "20.000000",
+  "gross": 150000,
   "discount": 0,
-  "net": 142500
+  "net": 150000
  },
  {
   "id": "71767043-e291-58a1-9293-d2c47b972345",
@@ -32124,10 +32124,10 @@
   "period_from": "2026-10-08",
   "period_to": "2026-10-08",
   "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
-  "units": "14.000000",
-  "gross": 63000,
+  "units": "15.000000",
+  "gross": 67500,
   "discount": 0,
-  "net": 63000
+  "net": 67500
  },
  {
   "id": "7f559e13-3170-500f-990f-0535d0ddbbe7",
@@ -32154,10 +32154,10 @@
   "period_from": "2026-10-08",
   "period_to": "2026-10-08",
   "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
-  "units": "18.000000",
-  "gross": 81000,
+  "units": "20.000000",
+  "gross": 90000,
   "discount": 0,
-  "net": 81000
+  "net": 90000
  },
  {
   "id": "5f75c0ec-bcdd-5d18-96e1-e8efe5e725f7",
@@ -32244,10 +32244,10 @@
   "period_from": "2026-10-08",
   "period_to": "2026-10-08",
   "menu_item_id": "a88d57f4-0d46-5a47-84ca-be0d3f24e680",
-  "units": "5.000000",
-  "gross": 47500,
+  "units": "6.000000",
+  "gross": 57000,
   "discount": 0,
-  "net": 47500
+  "net": 57000
  },
  {
   "id": "c4fe9ac6-434d-5cef-83de-7bc08109dcc7",
@@ -32289,10 +32289,10 @@
   "period_from": "2026-10-08",
   "period_to": "2026-10-08",
   "menu_item_id": "00aab2fe-5645-5fae-92ca-d263adb5936b",
-  "units": "6.000000",
-  "gross": 24000,
+  "units": "7.000000",
+  "gross": 28000,
   "discount": 0,
-  "net": 24000
+  "net": 28000
  },
  {
   "id": "6dafd1cc-1dd8-5e91-874e-5ebf7dad910c",
@@ -32334,10 +32334,10 @@
   "period_from": "2026-10-08",
   "period_to": "2026-10-08",
   "menu_item_id": "13523ead-5ebf-552d-b723-0701a893c6e4",
-  "units": "28.000000",
-  "gross": 98000,
+  "units": "30.000000",
+  "gross": 105000,
   "discount": 0,
-  "net": 98000
+  "net": 105000
  },
  {
   "id": "1f976efe-df13-53e2-afbf-b350f2ec1a1d",
@@ -32379,10 +32379,10 @@
   "period_from": "2026-10-08",
   "period_to": "2026-10-08",
   "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
-  "units": "37.000000",
-  "gross": 111000,
+  "units": "39.000000",
+  "gross": 117000,
   "discount": 0,
-  "net": 111000
+  "net": 117000
  },
  {
   "id": "f124ce58-69f1-5c22-8e14-c51c3474f8d3",
@@ -32409,10 +32409,10 @@
   "period_from": "2026-10-08",
   "period_to": "2026-10-08",
   "menu_item_id": "e5abc715-9d4d-5131-9c57-5a521cbf66c7",
-  "units": "5.000000",
-  "gross": 15000,
+  "units": "6.000000",
+  "gross": 18000,
   "discount": 0,
-  "net": 15000
+  "net": 18000
  },
  {
   "id": "0f021d90-9c33-5b35-9871-8cad43d70584",
@@ -32454,10 +32454,10 @@
   "period_from": "2026-10-08",
   "period_to": "2026-10-08",
   "menu_item_id": "b55371fc-3a78-55c0-8edc-ed56d117914d",
-  "units": "16.000000",
-  "gross": 72000,
+  "units": "17.000000",
+  "gross": 76500,
   "discount": 0,
-  "net": 72000
+  "net": 76500
  },
  {
   "id": "3373091a-8b4e-57b0-a7df-990c29228d89",
@@ -32484,10 +32484,10 @@
   "period_from": "2026-10-08",
   "period_to": "2026-10-08",
   "menu_item_id": "20d2bbfa-a852-565f-a62c-1e09b7ecd826",
-  "units": "4.000000",
-  "gross": 26000,
+  "units": "5.000000",
+  "gross": 32500,
   "discount": 0,
-  "net": 26000
+  "net": 32500
  },
  {
   "id": "b67c2618-7f8d-529b-8e05-4705646ec2e5",
@@ -32604,10 +32604,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
-  "units": "64.000000",
-  "gross": 416000,
+  "units": "67.000000",
+  "gross": 435500,
   "discount": 0,
-  "net": 416000
+  "net": 435500
  },
  {
   "id": "f54eec3d-0808-5add-b636-3b615327847b",
@@ -32619,10 +32619,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8",
-  "units": "28.000000",
-  "gross": 210000,
+  "units": "30.000000",
+  "gross": 225000,
   "discount": 0,
-  "net": 210000
+  "net": 225000
  },
  {
   "id": "fa595150-dc4c-5104-9520-9b89b686745b",
@@ -32634,10 +32634,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
-  "units": "21.000000",
-  "gross": 147000,
+  "units": "22.000000",
+  "gross": 154000,
   "discount": 0,
-  "net": 147000
+  "net": 154000
  },
  {
   "id": "b9df3275-7aa5-5d50-8585-d47373cb10ab",
@@ -32649,10 +32649,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "a825d126-082a-5b37-a763-784cbb733ba2",
-  "units": "18.000000",
-  "gross": 135000,
+  "units": "19.000000",
+  "gross": 142500,
   "discount": 0,
-  "net": 135000
+  "net": 142500
  },
  {
   "id": "495f6d10-6ad1-5a22-be26-1d6b221c3e55",
@@ -32724,10 +32724,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "e6e3bfbc-32bd-5345-aa3b-de89839dd88f",
-  "units": "21.000000",
-  "gross": 178500,
+  "units": "23.000000",
+  "gross": 195500,
   "discount": 0,
-  "net": 178500
+  "net": 195500
  },
  {
   "id": "1227419e-49a1-5009-b774-5138b05c4416",
@@ -32739,10 +32739,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
-  "units": "17.000000",
-  "gross": 76500,
+  "units": "18.000000",
+  "gross": 81000,
   "discount": 0,
-  "net": 76500
+  "net": 81000
  },
  {
   "id": "5cc93430-5a48-5d9d-b26d-6651f142fdf6",
@@ -32769,10 +32769,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
-  "units": "21.000000",
-  "gross": 94500,
+  "units": "23.000000",
+  "gross": 103500,
   "discount": 0,
-  "net": 94500
+  "net": 103500
  },
  {
   "id": "7c78fe6e-935e-574f-ada2-53d426e81107",
@@ -32889,10 +32889,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "5b173856-fc01-5ae6-951a-95c551609843",
-  "units": "3.000000",
-  "gross": 13500,
+  "units": "4.000000",
+  "gross": 18000,
   "discount": 0,
-  "net": 13500
+  "net": 18000
  },
  {
   "id": "b1f05921-1913-547c-b4d5-e095aebe94e9",
@@ -32904,10 +32904,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "00aab2fe-5645-5fae-92ca-d263adb5936b",
-  "units": "9.000000",
-  "gross": 36000,
+  "units": "10.000000",
+  "gross": 40000,
   "discount": 0,
-  "net": 36000
+  "net": 40000
  },
  {
   "id": "883fd8b8-6bb3-5489-99aa-51e5776239a0",
@@ -32919,10 +32919,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "86d5db2b-7f85-51ab-9d06-49872ddfa200",
-  "units": "8.000000",
-  "gross": 60000,
+  "units": "9.000000",
+  "gross": 67500,
   "discount": 0,
-  "net": 60000
+  "net": 67500
  },
  {
   "id": "8a4cd982-7e92-5582-875f-4d94d686fd07",
@@ -32934,10 +32934,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "e8d89f5e-1edc-591a-9400-e9de9cb3555e",
-  "units": "4.000000",
-  "gross": 28000,
+  "units": "5.000000",
+  "gross": 35000,
   "discount": 0,
-  "net": 28000
+  "net": 35000
  },
  {
   "id": "70a9b515-0ca5-5501-a2ad-d758d1cca5f7",
@@ -32949,10 +32949,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "13523ead-5ebf-552d-b723-0701a893c6e4",
-  "units": "26.000000",
-  "gross": 91000,
+  "units": "28.000000",
+  "gross": 98000,
   "discount": 0,
-  "net": 91000
+  "net": 98000
  },
  {
   "id": "c97b77ff-0304-5cd4-a134-045251ddd313",
@@ -32979,10 +32979,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "fe1e8153-67eb-5ba5-bb08-c84a3d180d53",
-  "units": "8.000000",
-  "gross": 28000,
+  "units": "9.000000",
+  "gross": 31500,
   "discount": 0,
-  "net": 28000
+  "net": 31500
  },
  {
   "id": "e3faa798-0335-5b84-8583-2a7078f4c31b",
@@ -32994,10 +32994,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
-  "units": "35.000000",
-  "gross": 105000,
+  "units": "37.000000",
+  "gross": 111000,
   "discount": 0,
-  "net": 105000
+  "net": 111000
  },
  {
   "id": "e88d5256-61bd-5e32-bcc9-a72fb4820afd",
@@ -33039,10 +33039,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "1ea4dd32-cfd7-50b4-bdb0-3fa128bb154a",
-  "units": "19.000000",
-  "gross": 57000,
+  "units": "20.000000",
+  "gross": 60000,
   "discount": 0,
-  "net": 57000
+  "net": 60000
  },
  {
   "id": "a661de5f-9e53-5737-96fe-4b684f0ea2aa",
@@ -33069,10 +33069,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "b55371fc-3a78-55c0-8edc-ed56d117914d",
-  "units": "27.000000",
-  "gross": 121500,
+  "units": "29.000000",
+  "gross": 130500,
   "discount": 0,
-  "net": 121500
+  "net": 130500
  },
  {
   "id": "57b6b0b2-1215-5425-b541-841a6b6ba1fb",
@@ -33084,10 +33084,10 @@
   "period_from": "2026-10-09",
   "period_to": "2026-10-09",
   "menu_item_id": "b01f86fa-2e25-5958-951d-e2a0b346deb4",
-  "units": "8.000000",
-  "gross": 36000,
+  "units": "9.000000",
+  "gross": 40500,
   "discount": 0,
-  "net": 36000
+  "net": 40500
  },
  {
   "id": "515ea46c-270a-5930-be83-86e675c49d28",
@@ -33219,10 +33219,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
-  "units": "85.000000",
-  "gross": 552500,
+  "units": "88.000000",
+  "gross": 572000,
   "discount": 0,
-  "net": 552500
+  "net": 572000
  },
  {
   "id": "3e17ba97-d97a-5e34-abd1-c3afe6599b7f",
@@ -33234,10 +33234,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8",
-  "units": "36.000000",
-  "gross": 270000,
+  "units": "38.000000",
+  "gross": 285000,
   "discount": 0,
-  "net": 270000
+  "net": 285000
  },
  {
   "id": "907afc8c-d72b-58ba-889c-507c8324e6df",
@@ -33249,10 +33249,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
-  "units": "33.000000",
-  "gross": 231000,
+  "units": "35.000000",
+  "gross": 245000,
   "discount": 0,
-  "net": 231000
+  "net": 245000
  },
  {
   "id": "73d46464-da48-584f-aca0-c1b3b3e319f3",
@@ -33264,10 +33264,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "a825d126-082a-5b37-a763-784cbb733ba2",
-  "units": "17.000000",
-  "gross": 127500,
+  "units": "18.000000",
+  "gross": 135000,
   "discount": 0,
-  "net": 127500
+  "net": 135000
  },
  {
   "id": "62e80a00-7c63-55eb-8dab-0a39267515f8",
@@ -33339,10 +33339,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "e6e3bfbc-32bd-5345-aa3b-de89839dd88f",
-  "units": "25.000000",
-  "gross": 212500,
+  "units": "27.000000",
+  "gross": 229500,
   "discount": 0,
-  "net": 212500
+  "net": 229500
  },
  {
   "id": "cf2d97f0-9523-5df6-82c3-ff766f29518b",
@@ -33354,10 +33354,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
-  "units": "19.000000",
-  "gross": 85500,
+  "units": "21.000000",
+  "gross": 94500,
   "discount": 0,
-  "net": 85500
+  "net": 94500
  },
  {
   "id": "2be4b9ee-eef6-50f4-b3d7-ed4a5c095932",
@@ -33384,10 +33384,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
-  "units": "26.000000",
-  "gross": 117000,
+  "units": "28.000000",
+  "gross": 126000,
   "discount": 0,
-  "net": 117000
+  "net": 126000
  },
  {
   "id": "f63609be-f364-5264-97fa-c72d599bb14c",
@@ -33414,10 +33414,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "4b0ed652-4bef-5511-bba9-2952b3810e83",
-  "units": "5.000000",
-  "gross": 25000,
+  "units": "6.000000",
+  "gross": 30000,
   "discount": 0,
-  "net": 25000
+  "net": 30000
  },
  {
   "id": "08eec689-ae36-56b3-af20-302c43f7947d",
@@ -33459,10 +33459,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
-  "units": "16.000000",
-  "gross": 128000,
+  "units": "17.000000",
+  "gross": 136000,
   "discount": 0,
-  "net": 128000
+  "net": 136000
  },
  {
   "id": "f30c655c-c523-51c3-827b-dc18a102c128",
@@ -33474,10 +33474,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "a88d57f4-0d46-5a47-84ca-be0d3f24e680",
-  "units": "10.000000",
-  "gross": 95000,
+  "units": "11.000000",
+  "gross": 104500,
   "discount": 0,
-  "net": 95000
+  "net": 104500
  },
  {
   "id": "11c549b4-903d-5abe-8476-0451f82121a8",
@@ -33489,10 +33489,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "43c7f151-02d1-5a6f-9cca-6760710b3bd4",
-  "units": "7.000000",
-  "gross": 42000,
+  "units": "8.000000",
+  "gross": 48000,
   "discount": 0,
-  "net": 42000
+  "net": 48000
  },
  {
   "id": "b6969412-827c-52b5-9727-19b0e316cfe8",
@@ -33519,10 +33519,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "00aab2fe-5645-5fae-92ca-d263adb5936b",
-  "units": "11.000000",
-  "gross": 44000,
+  "units": "12.000000",
+  "gross": 48000,
   "discount": 0,
-  "net": 44000
+  "net": 48000
  },
  {
   "id": "1e0889e4-1761-5aad-95fb-871ce2e60263",
@@ -33564,10 +33564,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "13523ead-5ebf-552d-b723-0701a893c6e4",
-  "units": "33.000000",
-  "gross": 115500,
+  "units": "34.000000",
+  "gross": 119000,
   "discount": 0,
-  "net": 115500
+  "net": 119000
  },
  {
   "id": "d4a396bb-eec6-5b4e-aa1a-179e527ab7a9",
@@ -33579,10 +33579,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "88bab77a-1b10-5d6f-bd92-14f28fddb78d",
-  "units": "21.000000",
-  "gross": 73500,
+  "units": "22.000000",
+  "gross": 77000,
   "discount": 0,
-  "net": 73500
+  "net": 77000
  },
  {
   "id": "61345599-d222-52bd-857f-ae409e96d179",
@@ -33609,10 +33609,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
-  "units": "53.000000",
-  "gross": 159000,
+  "units": "55.000000",
+  "gross": 165000,
   "discount": 0,
-  "net": 159000
+  "net": 165000
  },
  {
   "id": "057dda7d-888d-5fc4-ac4d-51fa188c22ee",
@@ -33624,10 +33624,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "da887536-8f4f-5c71-9a9e-6227f1ae0a2f",
-  "units": "12.000000",
-  "gross": 36000,
+  "units": "13.000000",
+  "gross": 39000,
   "discount": 0,
-  "net": 36000
+  "net": 39000
  },
  {
   "id": "6f1c5f15-e178-5fa9-bfd6-d1bdd159e646",
@@ -33654,10 +33654,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "1ea4dd32-cfd7-50b4-bdb0-3fa128bb154a",
-  "units": "19.000000",
-  "gross": 57000,
+  "units": "21.000000",
+  "gross": 63000,
   "discount": 0,
-  "net": 57000
+  "net": 63000
  },
  {
   "id": "4948a4cb-94a5-5fca-ab0b-3ae850d1412f",
@@ -33684,10 +33684,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "b55371fc-3a78-55c0-8edc-ed56d117914d",
-  "units": "38.000000",
-  "gross": 171000,
+  "units": "40.000000",
+  "gross": 180000,
   "discount": 0,
-  "net": 171000
+  "net": 180000
  },
  {
   "id": "fda0c42a-2f5f-58ec-a663-d4c3869e34ee",
@@ -33699,10 +33699,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "b01f86fa-2e25-5958-951d-e2a0b346deb4",
-  "units": "11.000000",
-  "gross": 49500,
+  "units": "12.000000",
+  "gross": 54000,
   "discount": 0,
-  "net": 49500
+  "net": 54000
  },
  {
   "id": "52822654-63f7-599a-b4ed-6193343c4151",
@@ -33819,10 +33819,10 @@
   "period_from": "2026-10-10",
   "period_to": "2026-10-10",
   "menu_item_id": "918dc21b-89f7-5abd-a1b9-3ae0c2ebe35b",
-  "units": "5.000000",
-  "gross": 7500,
+  "units": "6.000000",
+  "gross": 9000,
   "discount": 0,
-  "net": 7500
+  "net": 9000
  },
  {
   "id": "c8b89b03-8dd7-5fe0-8895-0c7a447572ab",
@@ -33834,10 +33834,10 @@
   "period_from": "2026-10-11",
   "period_to": "2026-10-11",
   "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
-  "units": "54.000000",
-  "gross": 351000,
-  "discount": 975,
-  "net": 350025
+  "units": "56.000000",
+  "gross": 364000,
+  "discount": 0,
+  "net": 364000
  },
  {
   "id": "dd8ba868-3461-5e7f-84fd-d1f8357bcfff",
@@ -33849,10 +33849,10 @@
   "period_from": "2026-10-11",
   "period_to": "2026-10-11",
   "menu_item_id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8",
-  "units": "28.000000",
-  "gross": 210000,
+  "units": "30.000000",
+  "gross": 225000,
   "discount": 0,
-  "net": 210000
+  "net": 225000
  },
  {
   "id": "3a6f5e83-1893-523e-90b7-9ce789432ce4",
@@ -33864,10 +33864,10 @@
   "period_from": "2026-10-11",
   "period_to": "2026-10-11",
   "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
-  "units": "31.000000",
-  "gross": 217000,
+  "units": "33.000000",
+  "gross": 231000,
   "discount": 0,
-  "net": 217000
+  "net": 231000
  },
  {
   "id": "a8384b24-18af-5fc4-aafc-46eabf10532c",
@@ -33879,10 +33879,10 @@
   "period_from": "2026-10-11",
   "period_to": "2026-10-11",
   "menu_item_id": "a825d126-082a-5b37-a763-784cbb733ba2",
-  "units": "22.000000",
-  "gross": 165000,
+  "units": "23.000000",
+  "gross": 172500,
   "discount": 0,
-  "net": 165000
+  "net": 172500
  },
  {
   "id": "869d4ed1-a846-5f77-8287-453723d87eb1",
@@ -33954,10 +33954,10 @@
   "period_from": "2026-10-11",
   "period_to": "2026-10-11",
   "menu_item_id": "e6e3bfbc-32bd-5345-aa3b-de89839dd88f",
-  "units": "19.000000",
-  "gross": 161500,
+  "units": "21.000000",
+  "gross": 178500,
   "discount": 0,
-  "net": 161500
+  "net": 178500
  },
  {
   "id": "b7b13ecc-c5b5-5140-8eda-8c19769100b9",
@@ -33999,10 +33999,10 @@
   "period_from": "2026-10-11",
   "period_to": "2026-10-11",
   "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
-  "units": "22.000000",
-  "gross": 99000,
+  "units": "24.000000",
+  "gross": 108000,
   "discount": 0,
-  "net": 99000
+  "net": 108000
  },
  {
   "id": "0954873c-0194-57b5-9c30-9ba24d5b38bc",
@@ -34179,10 +34179,10 @@
   "period_from": "2026-10-11",
   "period_to": "2026-10-11",
   "menu_item_id": "13523ead-5ebf-552d-b723-0701a893c6e4",
-  "units": "32.000000",
-  "gross": 112000,
+  "units": "33.000000",
+  "gross": 115500,
   "discount": 0,
-  "net": 112000
+  "net": 115500
  },
  {
   "id": "c211aa9b-5cad-5ba7-941d-525bee4d1bcc",
@@ -34194,10 +34194,10 @@
   "period_from": "2026-10-11",
   "period_to": "2026-10-11",
   "menu_item_id": "88bab77a-1b10-5d6f-bd92-14f28fddb78d",
-  "units": "21.000000",
-  "gross": 73500,
+  "units": "22.000000",
+  "gross": 77000,
   "discount": 0,
-  "net": 73500
+  "net": 77000
  },
  {
   "id": "2c107bd2-3752-551b-a54e-d645d5088c39",
@@ -34224,10 +34224,10 @@
   "period_from": "2026-10-11",
   "period_to": "2026-10-11",
   "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
-  "units": "53.000000",
-  "gross": 159000,
+  "units": "55.000000",
+  "gross": 165000,
   "discount": 0,
-  "net": 159000
+  "net": 165000
  },
  {
   "id": "76ad5704-abd8-5ac3-b06c-0845a912e9d9",
@@ -34284,10 +34284,10 @@
   "period_from": "2026-10-11",
   "period_to": "2026-10-11",
   "menu_item_id": "65d78189-e3d0-514e-ac4f-9917f93ce4d2",
-  "units": "304.000000",
-  "gross": 760000,
+  "units": "7.000000",
+  "gross": 17500,
   "discount": 0,
-  "net": 760000
+  "net": 17500
  },
  {
   "id": "8f8eef53-1060-5562-97ac-01b5295dbaa8",
@@ -34299,10 +34299,10 @@
   "period_from": "2026-10-11",
   "period_to": "2026-10-11",
   "menu_item_id": "b55371fc-3a78-55c0-8edc-ed56d117914d",
-  "units": "22.000000",
-  "gross": 99000,
+  "units": "24.000000",
+  "gross": 108000,
   "discount": 0,
-  "net": 99000
+  "net": 108000
  },
  {
   "id": "b9f31336-262f-5f5b-b31c-aaf42d9dce7e",
@@ -34314,10 +34314,10 @@
   "period_from": "2026-10-11",
   "period_to": "2026-10-11",
   "menu_item_id": "b01f86fa-2e25-5958-951d-e2a0b346deb4",
-  "units": "8.000000",
-  "gross": 36000,
+  "units": "9.000000",
+  "gross": 40500,
   "discount": 0,
-  "net": 36000
+  "net": 40500
  },
  {
   "id": "a5c2b681-0dc7-53a8-80b7-818138efc743",
@@ -34329,10 +34329,10 @@
   "period_from": "2026-10-11",
   "period_to": "2026-10-11",
   "menu_item_id": "20d2bbfa-a852-565f-a62c-1e09b7ecd826",
-  "units": "5.000000",
-  "gross": 32500,
+  "units": "6.000000",
+  "gross": 39000,
   "discount": 0,
-  "net": 32500
+  "net": 39000
  },
  {
   "id": "3c7d2d37-36ba-52cd-8468-cbed6c6f429f",
@@ -34434,10 +34434,10 @@
   "period_from": "2026-10-11",
   "period_to": "2026-10-11",
   "menu_item_id": "918dc21b-89f7-5abd-a1b9-3ae0c2ebe35b",
-  "units": "5.000000",
-  "gross": 7500,
+  "units": "6.000000",
+  "gross": 9000,
   "discount": 0,
-  "net": 7500
+  "net": 9000
  },
  {
   "id": "ed954099-c69b-538d-b0eb-de3c698537c3",

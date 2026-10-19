@@ -21,6 +21,7 @@ from typing import Any
 
 from openpyxl import Workbook
 
+from mermia_contracts.batch import NormalizedBatch
 from mermia_fixtures import build as b
 from mermia_fixtures import restaurant as r
 
@@ -42,15 +43,19 @@ SAMPLE_DAILY_FROM = dt.date(2026, 10, 5)
 
 def render() -> dict[Path, bytes]:
     """Every generated file, keyed by its path relative to the repo root."""
-    data = b.build()
-    items = b.generate_sales()
-    days = b.daily_totals(items)
+    data, items, days = b.build()
     files: dict[Path, bytes] = {SEED_SQL: seed_sql(data).encode()}
     for table, rows in data.items():
         files[JSON_DIR / f"{table}.json"] = dump(rows)
     files[JSON_DIR / "expected.json"] = dump(expected(items, days))
     files.update(samples(items, days))
     return files
+
+
+def orphans(paths: dict[Path, bytes]) -> list[Path]:
+    """Files in the generated folders that the generator no longer produces."""
+    found = [p.relative_to(REPO) for d in (JSON_DIR, SR_DIR) for p in (REPO / d).glob("*")]
+    return sorted(p for p in found if p not in paths)
 
 
 def dump(value: Any) -> bytes:
@@ -195,10 +200,16 @@ def samples(items: list[b.ItemDay], days: list[b.Day]) -> dict[Path, bytes]:
     stem_d = f"ventas_por_dia_{lo.key}_{SAMPLE_DAILY_FROM.isoformat()}"
     return {
         SR_DIR / f"{stem_i}.xlsx": items_xlsx(lo, sold),
-        SR_DIR / f"{stem_i}.golden.json": dump(items_golden(lo, sold)),
+        SR_DIR / f"{stem_i}.golden.json": golden(items_golden(lo, sold)),
         SR_DIR / f"{stem_d}.xlsx": daily_xlsx(lo, week, items),
-        SR_DIR / f"{stem_d}.golden.json": dump(daily_golden(lo, week)),
+        SR_DIR / f"{stem_d}.golden.json": golden(daily_golden(lo, week)),
     }
+
+
+def golden(batch: dict[str, Any]) -> bytes:
+    """Writes a golden batch through the contract, so a contract change fails here first."""
+    model = NormalizedBatch.model_validate_json(json.dumps(batch))
+    return dump(model.model_dump(mode="json"))
 
 
 def items_golden(lo: r.Location, sold: list[b.ItemDay]) -> dict[str, Any]:
@@ -373,10 +384,11 @@ def save(wb: Workbook) -> bytes:
     raw = io.BytesIO()
     wb.save(raw)
     out = io.BytesIO()
-    with zipfile.ZipFile(raw) as src, zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as dst:
+    with zipfile.ZipFile(raw) as src, zipfile.ZipFile(out, "w", zipfile.ZIP_STORED) as dst:
         for info in src.infolist():
             fixed = zipfile.ZipInfo(info.filename, date_time=(1980, 1, 1, 0, 0, 0))
-            fixed.compress_type = zipfile.ZIP_DEFLATED
+            # stored, not deflated: deflate output varies with the zlib build
+            fixed.compress_type = zipfile.ZIP_STORED
             content = src.read(info.filename)
             if info.filename == "docProps/core.xml":
                 # openpyxl stamps "modified" with the current time on save.

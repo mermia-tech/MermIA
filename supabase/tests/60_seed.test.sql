@@ -78,10 +78,16 @@ select is((select count(*) from public.ingredient_price p join public.ingredient
            join t on t.id = i.tenant_id where i.name in ('Carne al pastor (adobada)', 'Aguacate Hass')),
           4::bigint, 'two ingredients have a price jump');
 
--- the seed's own memberships work with RLS: a Centro manager sees Centro and nothing of Polanco
-select set_config('request.jwt.claims', json_build_object(
-  'role', 'authenticated', 'tenant_id', (select id from t),
-  'location_ids', json_build_array((select id from l where name = 'Centro')))::text, true);
+-- the seed's own memberships work with RLS: claims built from the Centro manager's membership
+-- see Centro and nothing of Polanco
+select is((select m.location_ids from public.membership m join t on t.id = m.tenant_id
+           where m.role = 'manager' and m.location_ids = array[(select id from l where name = 'Centro')]),
+          array[(select id from l where name = 'Centro')], 'the Centro manager''s membership is scoped to Centro');
+select set_config('request.jwt.claims', (
+  select json_build_object('role', 'authenticated', 'tenant_id', m.tenant_id, 'app_role', m.role,
+                           'location_ids', to_json(m.location_ids))::text
+  from public.membership m join t on t.id = m.tenant_id
+  where m.role = 'manager' and (select id from l where name = 'Centro') = any (m.location_ids)), true);
 set local role authenticated;
 select is((select count(distinct location_id) from public.item_sales_agg), 1::bigint,
           'a Centro manager sees one location');
