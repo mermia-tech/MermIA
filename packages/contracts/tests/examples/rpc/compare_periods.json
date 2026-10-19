@@ -2,41 +2,42 @@
   "args": {
     "metric": "net_sales",
     "period_a": "last_week",
-    "period_b": "prev_week"
+    "period_b": "prev_week",
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
   },
   "response": {
     "ok": true,
     "data": {
       "metric": "net_sales",
       "period_a": {
-        "from": "2026-10-12",
-        "to": "2026-10-18"
-      },
-      "period_b": {
         "from": "2026-10-05",
         "to": "2026-10-11"
+      },
+      "period_b": {
+        "from": "2026-09-28",
+        "to": "2026-10-04"
       },
       "a": {
         "raw": 18432050,
         "text": "$184,320.50"
       },
       "b": {
-        "raw": 17190000,
-        "text": "$171,900.00"
+        "raw": 17190500,
+        "text": "$171,905.00"
       },
       "abs_change": {
-        "raw": 1242050,
-        "text": "+$12,420.50"
+        "raw": 1241550,
+        "text": "+$12,415.50"
       },
       "pct_change": {
-        "raw": 7.2252,
+        "raw": 7.2223,
         "text": "+7.2%"
       }
     },
     "flags": [],
     "meta": {
-      "as_of": "2026-10-19T08:00:00-06:00",
-      "coverage_pct": 87.5,
+      "as_of": "2026-10-12T10:00:00-06:00",
+      "coverage_pct": 72.084,
       "period_resolved": null
     }
   }

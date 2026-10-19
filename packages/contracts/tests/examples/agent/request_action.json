@@ -1,12 +1,13 @@
 {
-  "tenant_id": "0f7a1c52-3b6e-7c1a-9d44-000000000001",
-  "user_id": "0f7a1c52-3b6e-7c1a-9d44-000000000002",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "user_id": "eb52f6ad-4d75-5b06-9881-9f68f4fb05a0",
   "location_ids": [
-    "0f7a1c52-3b6e-7c1a-9d44-000000000003"
+    "705e8e51-376b-5785-adbb-405eff4e2a22",
+    "fdda5e3b-6bcd-5c48-a6de-f524be37463e"
   ],
   "channel": "whatsapp",
   "conversation_id": "0f7a1c52-3b6e-7c1a-9d44-000000000004",
-  "window_open_until": "2026-10-20T08:00:00-06:00",
+  "window_open_until": "2026-10-13T10:00:00-06:00",
   "input": {
     "type": "action",
     "action_id": "pc:0f7a1c52-3b6e-7c1a-9d33-000000000001:approve"

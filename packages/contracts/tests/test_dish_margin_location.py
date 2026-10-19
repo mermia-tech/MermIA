@@ -18,9 +18,9 @@ from mermia_contracts.agent import MetricCardMsg
 from mermia_contracts.rpc import RPCS, DishMarginNeedsLocation, DishMarginResolved, RpcEnvelope
 
 EXAMPLES = Path(__file__).parent / "examples" / "rpc"
-DISH = "0f7a1c52-3b6e-7c1a-9d22-000000000001"
-CENTRO = "0f7a1c52-3b6e-7c1a-9d11-000000000001"
-POLANCO = "0f7a1c52-3b6e-7c1a-9d11-000000000002"
+DISH = "f496f051-9f85-5f8a-a4b6-c1a814d37c73"  # El Güero seed: Tacos al pastor
+CENTRO = "705e8e51-376b-5785-adbb-405eff4e2a22"  # El Güero seed: L1 Centro
+POLANCO = "fdda5e3b-6bcd-5c48-a6de-f524be37463e"  # El Güero seed: L2 Polanco
 
 
 def _adapter(tp: Any) -> TypeAdapter[Any]:

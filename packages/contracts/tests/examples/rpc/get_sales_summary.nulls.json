@@ -1,13 +1,14 @@
 {
   "args": {
-    "period": "yesterday"
+    "period": "yesterday",
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
   },
   "response": {
     "ok": true,
     "data": {
       "net_sales": {
-        "raw": 184320,
-        "text": "$1,843.20"
+        "raw": 3119500,
+        "text": "$31,195.00"
       },
       "tickets": null,
       "avg_ticket": null,
@@ -23,11 +24,11 @@
       }
     ],
     "meta": {
-      "as_of": "2026-10-19T08:00:00-06:00",
-      "coverage_pct": 87.5,
+      "as_of": "2026-10-12T10:00:00-06:00",
+      "coverage_pct": 71.3736,
       "period_resolved": {
-        "from": "2026-10-18",
-        "to": "2026-10-18"
+        "from": "2026-10-11",
+        "to": "2026-10-11"
       }
     }
   }

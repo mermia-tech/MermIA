@@ -1,45 +1,89 @@
 {
   "args": {
-    "period": "last_7d",
-    "kind": "discounts"
+    "period": {
+      "from": "2026-10-10",
+      "to": "2026-10-10"
+    },
+    "kind": "cancellations",
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
   },
   "response": {
     "ok": true,
     "data": {
-      "kind": "discounts",
-      "count": 14,
+      "kind": "cancellations",
+      "count": 17,
       "amount": {
-        "raw": 215000,
-        "text": "$2,150.00"
+        "raw": 265500,
+        "text": "$2,655.00"
       },
       "top_items": [
         {
-          "name": "Gringa",
+          "name": "Tacos al pastor (orden de 3)",
+          "count": 7,
+          "amount": {
+            "raw": 45500,
+            "text": "$455.00"
+          }
+        },
+        {
+          "name": "Huarache de bistec",
+          "count": 4,
+          "amount": {
+            "raw": 38000,
+            "text": "$380.00"
+          }
+        },
+        {
+          "name": "Churros (orden de 3)",
           "count": 6,
           "amount": {
-            "raw": 90000,
-            "text": "$900.00"
+            "raw": 27000,
+            "text": "$270.00"
           }
         }
       ],
       "by_staff": [
         {
-          "name": "Ana",
-          "count": 9,
+          "name": "Pepe",
+          "count": 8,
           "amount": {
-            "raw": 140000,
-            "text": "$1,400.00"
+            "raw": 152000,
+            "text": "$1,520.00"
+          }
+        },
+        {
+          "name": "Luis",
+          "count": 5,
+          "amount": {
+            "raw": 46500,
+            "text": "$465.00"
+          }
+        },
+        {
+          "name": "Ana",
+          "count": 3,
+          "amount": {
+            "raw": 55500,
+            "text": "$555.00"
+          }
+        },
+        {
+          "name": "Marta",
+          "count": 1,
+          "amount": {
+            "raw": 11500,
+            "text": "$115.00"
           }
         }
       ]
     },
     "flags": [],
     "meta": {
-      "as_of": "2026-10-19T08:00:00-06:00",
-      "coverage_pct": 87.5,
+      "as_of": "2026-10-12T10:00:00-06:00",
+      "coverage_pct": 72.3182,
       "period_resolved": {
-        "from": "2026-10-12",
-        "to": "2026-10-18"
+        "from": "2026-10-10",
+        "to": "2026-10-10"
       }
     }
   }

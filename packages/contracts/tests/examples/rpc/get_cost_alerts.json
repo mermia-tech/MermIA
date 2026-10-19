@@ -1,29 +1,140 @@
 {
-  "args": {},
+  "args": {
+    "since": "last_30d",
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
+  },
   "response": {
     "ok": true,
     "data": {
       "price_moves": [
         {
-          "ingredient": "Carne al pastor",
+          "ingredient": "Carne al pastor (adobada)",
           "change": {
-            "raw": 22.2,
-            "text": "+22.2%"
+            "raw": 14.7059,
+            "text": "+14.7%"
           },
           "new_unit_price": {
-            "raw": 0.22,
+            "raw": 0.195,
             "base_unit": "g",
-            "text": "$220.00/kg"
+            "text": "$195.00/kg"
+          }
+        },
+        {
+          "ingredient": "Aguacate Hass",
+          "change": {
+            "raw": 61.8182,
+            "text": "+61.8%"
+          },
+          "new_unit_price": {
+            "raw": 0.089,
+            "base_unit": "g",
+            "text": "$89.00/kg"
           }
         }
       ],
       "breaches": [
         {
-          "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000001",
-          "name": "Taco al pastor",
+          "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
+          "name": "Coca-Cola",
           "food_cost": {
-            "raw": 36.4,
-            "text": "36.4%"
+            "raw": 54.1377,
+            "text": "54.1%"
+          },
+          "target": {
+            "raw": 32.0,
+            "text": "32.0%"
+          }
+        },
+        {
+          "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
+          "name": "Torta de pastor",
+          "food_cost": {
+            "raw": 50.0072,
+            "text": "50.0%"
+          },
+          "target": {
+            "raw": 32.0,
+            "text": "32.0%"
+          }
+        },
+        {
+          "menu_item_id": "81404715-16f4-518e-b9e7-07df075161eb",
+          "name": "Alambre de res",
+          "food_cost": {
+            "raw": 49.088,
+            "text": "49.1%"
+          },
+          "target": {
+            "raw": 32.0,
+            "text": "32.0%"
+          }
+        },
+        {
+          "menu_item_id": "1ea4dd32-cfd7-50b4-bdb0-3fa128bb154a",
+          "name": "Agua mineral",
+          "food_cost": {
+            "raw": 46.4037,
+            "text": "46.4%"
+          },
+          "target": {
+            "raw": 32.0,
+            "text": "32.0%"
+          }
+        },
+        {
+          "menu_item_id": "b55371fc-3a78-55c0-8edc-ed56d117914d",
+          "name": "Cerveza Corona",
+          "food_cost": {
+            "raw": 46.4037,
+            "text": "46.4%"
+          },
+          "target": {
+            "raw": 32.0,
+            "text": "32.0%"
+          }
+        },
+        {
+          "menu_item_id": "e6e3bfbc-32bd-5345-aa3b-de89839dd88f",
+          "name": "Gringa de pastor",
+          "food_cost": {
+            "raw": 43.054,
+            "text": "43.1%"
+          },
+          "target": {
+            "raw": 32.0,
+            "text": "32.0%"
+          }
+        },
+        {
+          "menu_item_id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8",
+          "name": "Tacos de bistec (orden de 3)",
+          "food_cost": {
+            "raw": 39.1587,
+            "text": "39.2%"
+          },
+          "target": {
+            "raw": 32.0,
+            "text": "32.0%"
+          }
+        },
+        {
+          "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
+          "name": "Tacos de suadero (orden de 3)",
+          "food_cost": {
+            "raw": 38.83,
+            "text": "38.8%"
+          },
+          "target": {
+            "raw": 32.0,
+            "text": "32.0%"
+          }
+        },
+        {
+          "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
+          "name": "Volcán de pastor",
+          "food_cost": {
+            "raw": 37.6901,
+            "text": "37.7%"
           },
           "target": {
             "raw": 32.0,
@@ -33,26 +144,26 @@
       ],
       "suggestions": [
         {
-          "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000001",
-          "name": "Taco al pastor",
+          "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
+          "name": "Coca-Cola",
           "current_price": {
-            "raw": 5000,
-            "text": "$50.00"
+            "raw": 3000,
+            "text": "$30.00"
           },
           "suggested_price": {
-            "raw": 5500,
-            "text": "$55.00"
+            "raw": 3300,
+            "text": "$33.00"
           }
         }
       ]
     },
     "flags": [],
     "meta": {
-      "as_of": "2026-10-19T08:00:00-06:00",
-      "coverage_pct": 87.5,
+      "as_of": "2026-10-12T10:00:00-06:00",
+      "coverage_pct": 72.6418,
       "period_resolved": {
-        "from": "2026-10-12",
-        "to": "2026-10-18"
+        "from": "2026-09-12",
+        "to": "2026-10-11"
       }
     }
   }

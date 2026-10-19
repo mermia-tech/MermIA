@@ -1,6 +1,6 @@
 {
   "args": {
-    "dish": "al pastor"
+    "dish": "pastor"
   },
   "response": {
     "ok": true,
@@ -8,18 +8,26 @@
       "match": "ambiguous",
       "candidates": [
         {
-          "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000001",
-          "name": "Taco al pastor"
+          "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
+          "name": "Tacos al pastor (orden de 3)"
         },
         {
-          "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000002",
-          "name": "Gringa al pastor"
+          "menu_item_id": "e6e3bfbc-32bd-5345-aa3b-de89839dd88f",
+          "name": "Gringa de pastor"
+        },
+        {
+          "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
+          "name": "Torta de pastor"
+        },
+        {
+          "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
+          "name": "Volcán de pastor"
         }
       ]
     },
     "flags": [],
     "meta": {
-      "as_of": "2026-10-19T08:00:00-06:00"
+      "as_of": "2026-10-12T10:00:00-06:00"
     }
   }
 }
