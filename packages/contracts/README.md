@@ -23,10 +23,14 @@ and units, and `docs/superpowers/specs/2026-10-18-mr-10-contracts-schema-design.
 - `rpc.py` (C3): the 11 read RPCs, their arguments and the `{ok, data, error, flags, meta}` envelope.
   `Figure.raw` follows `METRIC_UNIT` (money in centavos, counts, percent points); `Pct` is a calculated
   percentage (not a column); `compare_periods` carries `period_a` and `period_b`; `get_dish_margin`
-  is on the net price (without IVA), the adopted definition. See `docs/superpowers/specs/2026-10-18-mr-11-contracts-rpc-tools-design.md` section 7.
+  is on the net price (without IVA), the adopted definition, and answers `needs_location` instead of
+  choosing a location; units sold are a decimal `quantity`; unreported sales figures are null, not zero. See `docs/superpowers/specs/2026-10-18-mr-11-contracts-rpc-tools-design.md` section 7.
   `ok=true` needs `data` and no `error`; `ok=false` needs `error` and no `data`.
 - `agent_tools.py` (C4): the 12 agent tools, derived from C3 plus `propose_change`, whose `values` is typed
-  per kind (price in the user's unit: `g`, `kg`, `ml`, `l`, `pza`; the confirmation service converts, not this package).
+  per kind in the user's terms (ingredient price in a unit of `g`, `kg`, `ml`, `l`, `pza`; menu price in
+  pesos for a location named in words; recipe quantity with a unit). The confirmation service (MR-37)
+  resolves names and dates and converts; only `decimals.pesos_to_centavos` (exact) lives here. The
+  stored payloads keep base-unit prices, centavos with a `location_id`, and `qty_base`.
 - `pending.py` (C5): the five `PendingChange` kinds and the typed proposal. `apply_pending_change`
   is the call and its result only (service_role model of MR-10 spec 7.5.7; SQL is MR-32).
 - `agent.py` (C6): `AgentRequest` / `AgentResponse`. `pc:<uuid>:approve|reject|detail` action ids
@@ -46,8 +50,8 @@ M3 milestone in `docs/kickoff/07-roadmap.md`). The cost of a tool is `count([B, 
 with the Anthropic `count_tokens` API and a fixed baseline tool `B`: the API adds tool-use
 scaffolding once per request, and the difference cancels it.
 Typed `propose_change.values` (spec section 7, D15) grew that tool's schema from 519 to 2397
-characters (both as compact JSON, `separators=(",", ":")`; the same schemas are 563 and 2594 with
-the default separators). That is a size guard in a test, not a token measurement.
+characters, and the menu price and recipe inputs (D25, D26) to 2535 (all as compact JSON,
+`separators=(",", ":")`; the same schemas are 563 and 2741 with the default separators). That is a size guard in a test, not a token measurement.
 
 To run it later: set `ANTHROPIC_API_KEY`, run `measure_tool_tokens` (above; the SDK is a dev
 dependency of this package), review `schemas/tool_tokens.json`, then run `uv run pytest`: the budget tests, skipped while the
