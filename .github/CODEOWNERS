@@ -1,0 +1,3 @@
+# Contract changes: either owner can approve (GitHub treats owners on one line as alternatives).
+# Branch protection does not require code-owner review, so this only requests reviews.
+/packages/contracts/ @p0sin @campolloram
