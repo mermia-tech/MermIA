@@ -57,9 +57,11 @@
     "JsonValue": {},
     "MetricCardMsg": {
       "additionalProperties": false,
+      "description": "A card for one RPC result. `data` must be that RPC's complete `data` (rpc.RPCS), as\nreturned; web and POS render it and WhatsApp flattens it to text. There is no partial card:\nshowing a single metric would need a message type of its own.",
       "properties": {
         "data": {
-          "$ref": "#/$defs/JsonValue"
+          "$ref": "#/$defs/JsonValue",
+          "description": "the data of `rpc`, complete, as the RPC returned it"
         },
         "kind": {
           "const": "metric_card",

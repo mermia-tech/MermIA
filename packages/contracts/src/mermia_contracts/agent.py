@@ -5,10 +5,18 @@ other contract. WhatsApp turns `choices` into buttons (up to 3, 20-character lab
 list; that limit belongs to the channel adapter, not to this contract.
 """
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import AfterValidator, AwareDatetime, Field, JsonValue
+from pydantic import (
+    AfterValidator,
+    AwareDatetime,
+    Field,
+    JsonValue,
+    TypeAdapter,
+    ValidationError,
+    model_validator,
+)
 
 from mermia_contracts.batch import Model, Text
 from mermia_contracts.db.models import Channel
@@ -104,11 +112,31 @@ def _known_rpc(name: str) -> str:
     return name
 
 
+_RPC_DATA: dict[str, TypeAdapter[Any]] = {
+    name: TypeAdapter(spec.data) for name, spec in RPCS.items()
+}
+
+
 class MetricCardMsg(Model):
+    """A card for one RPC result. `data` must be that RPC's complete `data` (rpc.RPCS), as
+    returned; web and POS render it and WhatsApp flattens it to text. There is no partial card:
+    showing a single metric would need a message type of its own."""
+
     kind: Literal["metric_card"]
     rpc: Annotated[str, AfterValidator(_known_rpc)]
-    data: JsonValue
-    """The RPC's `data` as returned; web and POS render it, WhatsApp flattens it to text."""
+    data: JsonValue = Field(description="the data of `rpc`, complete, as the RPC returned it")
+
+    @model_validator(mode="after")
+    def _data_fits_rpc(self) -> "MetricCardMsg":
+        try:
+            _RPC_DATA[self.rpc].validate_python(self.data)
+        except ValidationError as error:
+            where = "; ".join(
+                f"{'.'.join(map(str, e['loc'])) or '(root)'}: {e['msg']}"
+                for e in error.errors()[:5]
+            )
+            raise ValueError(f"data is not a valid {self.rpc} result: {where}") from None
+        return self
 
 
 AgentMessage = Annotated[TextMsg | ChoicesMsg | MetricCardMsg, Field(discriminator="kind")]
