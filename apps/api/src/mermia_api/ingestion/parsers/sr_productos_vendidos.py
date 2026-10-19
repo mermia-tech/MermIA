@@ -47,17 +47,18 @@ def _header_at(sheet_rows: list[Row]) -> int | None:
     return None
 
 
-def _sheet(wb: Workbook) -> tuple[list[Row], int] | None:
+def _sheet_name(wb: Workbook) -> str | None:
+    """The sheet with the title and header in its first rows (only those rows are read)."""
     for name in wb.sheetnames:
-        sheet_rows = rows(wb, name)
-        h = _header_at(sheet_rows)
-        if h is not None and any(TITLE in norm(c) for row in sheet_rows[:h] for c in row):
-            return sheet_rows, h
+        top = rows(wb, name, max_row=SEARCH_ROWS)
+        h = _header_at(top)
+        if h is not None and any(TITLE in norm(c) for row in top[:h] for c in row):
+            return name
     return None
 
 
 def matches(wb: Workbook) -> bool:
-    return _sheet(wb) is not None
+    return _sheet_name(wb) is not None
 
 
 def _date(value: str) -> dt.date:
@@ -75,7 +76,13 @@ def _period(title: list[Row]) -> Period:
         for cell in row:
             m = PERIOD.search(norm(cell))
             if m:
-                return Period.model_validate({"from": _date(m[1]), "to": _date(m[2])})
+                start, end = _date(m[1]), _date(m[2])
+                if start > end:
+                    raise MalformedReport(
+                        f"El periodo del reporte empieza ({m[1]}) después de terminar ({m[2]}).",
+                        "period from > to",
+                    )
+                return Period.model_validate({"from": start, "to": end})
     raise MalformedReport(
         "No encontré el periodo del reporte (la línea «Del ... al ...»).",
         "no period line in the title block",
@@ -101,10 +108,12 @@ def _units(value: object, where: str) -> Decimal:
 
 
 def parse(wb: Workbook) -> NormalizedBatch:
-    found = _sheet(wb)
-    if found is None:  # the registry calls parse only after matches
+    name = _sheet_name(wb)
+    if name is None:  # the registry calls parse only after matches
         raise MalformedReport("El reporte no tiene el formato esperado.", "header not found")
-    sheet_rows, h = found
+    sheet_rows = rows(wb, name)
+    h = _header_at(sheet_rows)
+    assert h is not None
     title = sheet_rows[:h]
     period = _period(title)
 
@@ -118,13 +127,23 @@ def parse(wb: Workbook) -> NormalizedBatch:
             continue
         where = f"la fila {n}"
         clave, desc, grupo, cantidad, precio, importe, descuento, total = cells
+        if totals is not None:
+            # After Total only a text footer may follow ("Impreso el ..."). Numbers there mean
+            # more items or another section, which would be loaded silently short.
+            if cantidad is not None or total is not None:
+                raise MalformedReport(
+                    f"Encontré más datos después de la fila «Total» (en {where}). Envíame el "
+                    "reporte con una sola tabla de productos.",
+                    f"numeric row after Total at row {n}",
+                )
+            continue
         if norm(clave) == "total" or norm(desc) == "total":
             totals = Totals(
                 net_sales=centavos(total, f"la fila Total ({n})"),
                 units=_units(cantidad, f"la fila Total ({n})"),
                 lines=len(items),
             )
-            break
+            continue
         name = text(desc)
         if name is None:
             raise MalformedReport(
@@ -140,7 +159,11 @@ def parse(wb: Workbook) -> NormalizedBatch:
                 f"total != importe - descuento at row {n}",
             )
         units = _units(cantidad, where)
-        if precio is not None and centavos(precio, where) * units != gross:
+        try:
+            price_off = precio is not None and centavos(precio, where) * units != gross
+        except MalformedReport:  # Precio only feeds this check: an odd price is a warning
+            price_off = True
+        if price_off:
             issues.append(
                 IssueIn(
                     severity=IssueSeverity.warning,

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from openpyxl.workbook.workbook import Workbook
 
-from mermia_api.ingestion.errors import UnknownReport
+from mermia_api.ingestion.errors import ReportError, UnknownReport, UnreadableFile
 from mermia_api.ingestion.parsers import sr_productos_vendidos
 from mermia_api.ingestion.xlsx import open_workbook
 from mermia_contracts.batch import NormalizedBatch
@@ -44,6 +44,16 @@ def parse_file(data: bytes) -> NormalizedBatch:
         for parser in XLSX_PARSERS:
             if parser.matches(wb):
                 return parser.parse(wb)
+    except ReportError:
+        raise
+    except Exception as e:
+        # A damaged file (corrupt sheet XML, bad cell values) fails inside openpyxl while sheets
+        # are read lazily, or a value breaks a contract limit: never a crash, always a message.
+        raise UnreadableFile(
+            "No pude leer el archivo: parece dañado. Vuelve a exportar el reporte desde Soft "
+            "Restaurant y envíamelo de nuevo.",
+            f"{type(e).__name__}: {e}",
+        ) from e
     finally:
         wb.close()
     known = ", ".join(f"«{p.report_es}»" for p in XLSX_PARSERS)
