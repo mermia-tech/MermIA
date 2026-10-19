@@ -1,6 +1,6 @@
 # MR-11 Design: RPC shapes, agent tools and pending changes
 
-Date: 2026-10-18. Ticket: [#11](https://github.com/mermia-tech/MermIA/issues/11). Branch: `MR-11-contracts-rpc-tools`, built on `MR-10-contracts-schema` (which already contains `main`). Status: **implemented locally, corrections after an independent review applied, waiting for the owner's approval to commit.** Nothing is pushed.
+Date: 2026-10-18. Ticket: [#11](https://github.com/mermia-tech/MermIA/issues/11). Branch: `MR-11-contracts-rpc-tools`, built on `MR-10-contracts-schema` (which already contains `main`). Status: **PR #50. The corrections of section 7 (post-merge audit, 2026-10-19) are committed locally on the branch and not yet pushed.**
 
 This document records what the contracts decide and what they leave to later tickets, so a builder of MR-13, MR-32 or MR-37 does not have to read the code first. Section 6 lists everything still open.
 
@@ -20,7 +20,7 @@ Dev A (data) and Dev B (conversation) agree on shapes before they build. After t
 - Any migration, SQL or pgTAP. `apply_pending_change` is a contract here; its body and tests are **MR-32**.
 - The mock RPC server (MR-13) and the confirmation service (MR-37).
 - Kinds `ingredient_alias.confirm` and `settings.update` (`09` section 5.1). Exactly five kinds exist.
-- Measuring the 125-token budget (6.2).
+- Measuring the 125-token budget (6.2). Typed `propose_change.values` made that schema larger (7, D21).
 - Fixing the lint debt that merging `main` into MR-10 exposed (6.5).
 
 ### Anti-goals
@@ -35,9 +35,9 @@ Dev A (data) and Dev B (conversation) agree on shapes before they build. After t
 | D2 | Envelope `{ok, data, error, flags[], meta}`. `ok=true` requires `data` and forbids `error`; `ok=false` requires `error` and forbids `data`. `error.code` is a closed list. `Flag` carries a code and a message; its code list is open. | `09` names `ok`, `data`, `flags`, `meta`; the `error` field and the lists are the author's |
 | D3 | Numbers travel as `{raw, text}`: raw for code and charts, text pre-formatted by the metric layer. | `09` section 4.1 |
 | D4 | An ambiguous dish name in `get_dish_margin` is a successful answer (`match = "ambiguous"` with candidates). | Author's; `09` says "returns candidates when ambiguous" |
-| D5 | The 12 tools are the 11 RPCs plus `propose_change`. Read tools use the RPC argument models as they are. `propose_change` has a flat schema (`kind`, `target`, `values`, `reason`); `values` is validated against the kind's payload afterwards (`ChangeProposal`). `target` is what the user said; the confirmation service resolves it to `target_id`. | Author's, keeps tool schemas small |
+| D5 | The 12 tools are the 11 RPCs plus `propose_change`. Read tools use the RPC argument models as they are. `propose_change` keeps a flat schema (`kind`, `target`, `values`, `reason`) and `values` is typed per kind (D15). `target` is what the user said; the confirmation service resolves it to the id that `ChangeProposal.target_id` holds. | Author's; D15 supersedes the open `values` |
 | D6 | Exactly five kinds: `ingredient_price.set`, `recipe.upsert`, `menu_item_price.set`, `import_batch.approve`, `import_batch.rollback`. `pending_change.kind` stays `text` in the database. | Owner, 2026-10-18 |
-| D7 | `ingredient_price.set` carries **pesos per base unit** of the ingredient (g, ml or pza), the unit `ingredient_price.unit_price_net` is stored in (MR-10 spec 5.4, D6 there). "$220 per kg" of an ingredient whose base unit is g is `0.22`. Prices per purchase unit exist only in `batch.PurchaseLineIn` and are converted by the costing engine (MR-25). `PriceMove.new_unit_price` uses the same unit. | Review finding 1; follows MR-10 |
+| D7 | `ingredient_price.set` as STORED and applied carries **pesos per base unit** of the ingredient (g, ml or pza), the unit `ingredient_price.unit_price_net` is stored in (MR-10 spec 5.4, D6 there). "$220 per kg" of an ingredient whose base unit is g is `0.22`. The model does not send that figure: it sends the price and unit the user said (D15). Prices per purchase unit exist in `batch.PurchaseLineIn` and are converted by the costing engine (MR-25). `PriceMove.new_unit_price` keeps the per-base-unit number and adds the unit and a text to quote (D15). | Review finding 1; follows MR-10 |
 | D8 | `recipe.upsert` has its own `RecipeLine`, a copy of `batch.RecipeLineIn` with the Decimal types of D9. PROVISIONAL like the original. | Author's (batch.py is out of scope) |
 | D9 | Decimal inputs: exact or rejected, never silently altered; see section 4. | Review finding 2; owner's precision condition |
 | D10 | Action ids: ids starting with `pc:` must be `pc:<canonical lowercase UUID>:approve\|reject\|detail`; every other id (1 to 256 characters) is opaque. | Owner, plan review 2026-10-18 |
@@ -115,6 +115,8 @@ Run on 2026-10-18 on the local branch (no database, no API key):
 
 Not run: pgTAP, `-m db`, `-m rest`, the token measurement.
 
+The counts above are those of the first version; section 7 lists what the audit corrections added.
+
 ## 6. Open items
 
 ### 6.1 For MR-32 (not decided here)
@@ -140,9 +142,46 @@ The `ingredient_price.set` payload carries a price per base unit without naming 
 
 ### 6.4 Suggestions, not required
 - Behaviour tests for the three limits that only the freshness test protects.
-- Bounds for percentages (`coverage`, `share`) and maximum lengths for user and LLM text (`TextInput.text`, `target`, `dish`, `category`, `values`).
-- Tie `MetricCardMsg.data` to the data model of its `rpc`.
+- Maximum lengths for user and LLM text (`TextInput.text`, `target`, `dish`, `category`). Percentage bounds for `coverage` and `share` were considered and not added (D16).
+- `MetricCardMsg.data` is tied to its rpc (D19); a union per rpc would give Phase 2 precise types.
 - Rename `forbidden_role`.
 
 ### 6.5 Integration debt (not MR-11's)
 Merging `main` into MR-10 makes the root CI fail: 7 `ruff check` errors and 11 files for `ruff format`, all in MR-10 files (`mypy` with the CI configuration passes). MR-11 adds none. Strict `mypy` over `packages` reports 95 errors, all in MR-10 tests, so `packages` is not in `mypy files`. Options: fix them in MR-10, or relax rules for `packages`.
+
+## 7. Corrections after the post-merge audit (2026-10-19)
+
+The 11 findings of the review of #50 were checked against `ad6351b` (nine reproduced in code; the token budget, the pytest marker and CODEOWNERS are configuration facts) and addressed in small commits, one theme each, with tests written first. Decisions of this round (D14 to D21):
+
+| # | Decision | Where |
+|---|---|---|
+| D14 | **`Figure.raw` has one scale per metric.** `rpc.METRIC_UNIT`: money (`net_sales`, `avg_ticket`, `revenue`, `margin`) is whole centavos, as `Money.raw`; counts (`tickets`, `guests`, `units`) are whole numbers; percentages (`food_cost_pct`, `margin_pct`) are percent points with at most four decimals. `Figure` keeps its shape (no `unit` field): the unit follows from the `metric` beside it. `ComparePeriodsData`, `CompareLocationsData` and `TopDishesData` enforce it; `abs_change` must equal `a - b`. | `rpc.py`, `test_figure_scale.py` |
+| D15 | **`propose_change.values` is typed per kind.** One closed variant per payload, and it must be the variant of `kind`: `IngredientPriceInput {unit_price, unit, effective_from}`, `MenuItemPriceSet`, `RecipeUpsert`, `NoPayload`; unknown fields are rejected. `unit` is `g`, `kg`, `ml`, `l` or `pza` (no free text). The model sends the price in the user's unit; it never converts. The STORED proposal (`ChangeProposal`) stays per base unit and has no `unit` (no `base_unit` in the payload either, see 6.3). **The conversion is not implemented in this package**: it belongs to the confirmation service (MR-37) with `unit_conversion` (MR-25). `PriceMove.new_unit_price` is a `BasePrice {raw per base unit, base_unit, text}`: quote `text` ("$220.00/kg"), never convert `raw`. | `pending.py`, `agent_tools.py`, `rpc.py`, `test_propose_change.py`, `test_price_move.py` |
+| D16 | **Calculated and persisted percentages are different types.** `ComputedPercent` (14,4) is what `Pct` and `Meta.coverage_pct` use, so +1400 fits. `PercentPoints` (7,4) mirrors `numeric(7,4)` columns and keeps 999.9999. `pct_change` is null when the base period `b` is zero (a value there is an error). `coverage` and `share` are not bounded to 0 to 100: a refund-heavy category can have a negative share and nothing in the documents pins a bound. | `decimals.py`, `rpc.py`, `test_percent_types.py` |
+| D17 | **Strictly positive prices, quantities and yields in a change**: `unit_price`, `price_gross`, `qty_base`, `yield_qty`, `yield_override_pct` (Python and JSON mode). `yield_override_pct` is edible portion over purchased in percent (03 C.6, cost = price / yield): greater than zero and limited to the column's 999.9999. It has **no 100 % cap**: the `Recetas` export that fills it is unverified (`RecipeLine` is PROVISIONAL); cap it when MR-23 verifies the export. `batch.py` (MR-10) and the database are untouched. | `decimals.py`, `pending.py`, `test_change_bounds.py` |
+| D18 | **`compare_periods` carries `period_a` and `period_b`** (required, inclusive, from not after to). `meta.period_resolved` is null for it, because the envelope holds one range. | `rpc.py`, `test_compare_periods_ranges.py` |
+| D19 | **`MetricCardMsg.data` must be the complete data of its `rpc`**, validated with the model registered in `RPCS`. No partial card: that needs a message type of its own (not defined). The exported schema still types `data` as JSON. | `agent.py`, `test_metric_card.py` |
+| D20 | **Margin is on the NET price (without IVA).** `DishMarginResolved` gains `price_gross` (to quote the menu price) and `margin_pct`: `margin = net_price - cost`, `margin_pct = margin / net_price`, `food_cost = cost / net_price`, `margin_pct + food_cost = 100`, checked within the rounding of centavos. For the pastor at Centro (cost $18.40, menu price $65.00, net $56.03): margin 67.16 % and food cost 32.84 %, not 71.69 % and 28.31 %. Prices are greater than zero and `net_price` does not exceed `price_gross`; the IVA rate is not hard-coded. | `rpc.py`, `test_dish_margin.py` |
+| D21 | **The token budget is still not measured** (D13 stands; no `tool_tokens.json`; no API key was used). Typed `propose_change.values` grew that tool's schema from 563 to 2397 characters (characters, not tokens): by a character estimate the 125-token limit is very likely exceeded by it and by most other tools (an estimate, not a measurement); the real measurement decides what to cut. `test_propose_change.py` has a character guard so the size does not grow unnoticed. | `agent_tools.py`, 6.2 |
+
+### 7.1 What the other tickets must do
+
+| Ticket | Consequence |
+|---|---|
+| MR-12 (#51) | Not merged when this was written. Its `fixtures/README.md` and `expected.json` give the margin on the gross price (`margin_pct_of_gross`, 71.7 %); the contract is net (D20). The RPC examples are NOT aligned with the fixtures yet (see 7.2). |
+| MR-13 | Do not copy the C3 examples as the mock's answers until they are aligned with the fixtures (7.2). Money in `compare_*` and top dishes is centavos; `compare_periods` needs both ranges and a null `meta.period_resolved`. |
+| MR-17, MR-24 | SQL returns centavos for the money `Figure`s, null `pct_change` over a zero base, `period_a` and `period_b`, margin on net price with `price_gross` and `margin_pct`, `PriceMove` with `base_unit` and a formatted `text`. The IVA rate must come from data, not a constant. |
+| MR-19 (eval) | 13 H3 #9 must send `effective_from` with `unit_price` and `unit` (the closed list). 13 H3 #4 must quote the net margin: for the pastor, 67.2 % with the menu price $65.00 from `price_gross`, not 71.7 %. |
+| MR-20 | Add the token measurement to its acceptance criteria (the ticket does not mention it; D8/D13 deferred it, the MR-11 "Done when" asks for it) and re-measure `propose_change` after D15. `measure_tool_tokens` and the budget tests exist and skip until `schemas/tool_tokens.json` does. |
+| MR-25 | Cost formulas divide by yields and `yield_qty`: they are greater than zero in a change (D17) but the database has no `CHECK`. Verify the `yield_override_pct` semantics against the real export. |
+| MR-32 | The stored payload stays per base unit. Whether to add `base_unit` so apply can compare it with `ingredient.base_unit` (6.3) is still the owner's decision. |
+| MR-37 | Convert the user's `{unit_price, unit}` to pesos per base unit with `ingredient.base_unit` and `unit_conversion` (reject a unit family that does not match, such as a kg price for a ml ingredient), store before and after WITH the unit in `pending_change.diff`, and show it to the approver. Not implemented here. |
+| MR-27 | `propose_change` input numbers come from the user's text, not from a tool result. |
+| New migration ticket (MR-14 area) | `CHECK` constraints for `unit_price_net`, `price_gross`, `qty_base`, `yield_qty`, `yield_override_pct` and `default_yield_pct` (greater than zero); none exists today. The purchase rules of `batch.py` (discounts, credit notes) are MR-23's. |
+
+### 7.2 Open items found while fixing
+
+- **Examples versus MR-12 fixtures: pending.** The RPC examples still differ from the fixture seed: the week (10-12..18 against 10-05..11), compare `b` ($171,900.00 against $171,905.00), pastor cost and price (18.20 and 50.00 against 18.40 and 65.00), the top dish name and units (640 against 656), the discount count (14 against the 17 of the cancellation Saturday), the food cost (34.1 % against 37.5 %) and the price move (0.22 per g and +22.2 % against 170 to 195 per kg). They were not changed because #51 is not merged, and the fixtures are not the agreed reference until then. Align them from `expected.json` afterwards (MR-13 or a follow-up commit here). The invariants a self-consistent example must satisfy are tested now.
+- **`PriceSuggestion` price basis.** `current_price` and `suggested_price` are `Money`, and nothing says whether they are the menu price (with IVA) or the net price. `03` computes the suggested menu price with IVA; the example uses the net price of the margin example. Decide before MR-24 and MR-33.
+- **Menu price input.** `menu_item_price.set` takes `price_gross` in centavos, so the model converts "$65.00" to 6500. The audit decision covered ingredient prices only. Accepting pesos would avoid that arithmetic; not decided.
+- **Phase 2 types.** `Figure.raw` and `Pct.raw` are `number | string` in the exported schemas and `MetricCardMsg.data` is JSON; the checks above are validators that the JSON Schema cannot express.
