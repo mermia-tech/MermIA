@@ -120,6 +120,6 @@ EXAMPLES = Path(__file__).parent / "examples" / "rpc"
 def test_the_contract_example_is_what_the_rpc_answers(db_url: str, name: str) -> None:
     """The C3 examples (and so the mock server, MR-13) say what the real RPC says on the seed."""
     doc = json.loads((EXAMPLES / f"{name}.json").read_text())
-    adapter = TypeAdapter(RpcEnvelope[RPCS[name].data])  # type: ignore[misc,arg-type]
+    adapter: TypeAdapter[Any] = TypeAdapter(RpcEnvelope[RPCS[name].data])  # type: ignore[misc,arg-type]
     live = adapter.validate_python(call(db_url, name, doc["args"], OWNER))
     assert live == adapter.validate_python(doc["response"])
