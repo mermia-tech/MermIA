@@ -41,6 +41,19 @@ select is((select count(*) from (values ('app_user'), ('raw_file')) t(x)
 -- no view, function or sequence can bypass the table privileges (spec 7.2.5) --------------------------------
 select is((select count(*) from pg_class where relnamespace = 'public'::regnamespace and relkind in ('v', 'm', 'S', 'f', 'p')), 0::bigint, 'public has no view, materialized view, sequence, foreign table or partitioned table');
 select is((select count(*) from pg_proc where pronamespace = 'public'::regnamespace), 0::bigint, 'public has no function');
+-- MR-17: the read RPCs live in `api`, the one schema besides public the Data API exposes for us
+select is((select count(*) from pg_class where relnamespace = 'api'::regnamespace), 0::bigint, 'api has no table, view or sequence');
+select set_eq($$select proname::text from pg_proc where pronamespace = 'api'::regnamespace$$,
+              array['get_sales_summary', 'compare_periods', 'get_top_dishes', 'get_data_status'], 'api holds the read RPCs only');
+select is((select count(*) from pg_proc where pronamespace = 'api'::regnamespace and prosecdef), 0::bigint,
+          'every RPC is SECURITY INVOKER, so RLS applies (09 section 4.1)');
+select is((select count(*) from pg_proc where pronamespace = 'api'::regnamespace
+           and (has_function_privilege('anon', oid, 'execute') or not has_function_privilege('authenticated', oid, 'execute')
+                or proacl is null or exists (select 1 from aclexplode(proacl) a where a.grantee = 0))), 0::bigint,
+          'only authenticated runs the RPCs (not anon, not PUBLIC)');
+select ok(not has_schema_privilege('anon', 'api', 'usage'), 'anon has no usage on api');
+select is((select count(*) from pg_proc where pronamespace in ('api'::regnamespace, 'app'::regnamespace)
+           and (prosrc ilike '%request.jwt%' or prosrc ilike '%set_config%')), 0::bigint, 'no RPC reads or sets request.jwt settings directly');
 select is((select count(*) from pg_trigger t join pg_class c on c.oid = t.tgrelid where c.relnamespace = 'public'::regnamespace and not t.tgisinternal
            and t.tgname not in ('touch_row', 'membership_locations', 'audit_log_no_row_mutation', 'audit_log_no_truncate')), 0::bigint,
           'only the reviewed triggers exist');

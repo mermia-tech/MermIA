@@ -66,3 +66,17 @@ jobs:
       - name: Run pgTAP tests
         if: steps.find.outputs.workdir != ''
         run: supabase test db --workdir "${{ steps.find.outputs.workdir }}"
+
+      # MR-17: the RPCs answer in the C3 shapes on the seeded database
+      - uses: astral-sh/setup-uv@v6
+        if: steps.find.outputs.workdir != ''
+        with:
+          enable-cache: true
+
+      - name: Run database contract tests
+        if: steps.find.outputs.workdir != ''
+        env:
+          MERMIA_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          uv sync --locked --all-packages --all-groups
+          uv run pytest -m "db and not rest"
