@@ -281,7 +281,7 @@ def items_golden(lo: r.Location, sold: list[b.ItemDay]) -> dict[str, Any]:
                 "external_id": x.code,
                 "name": b.MENU[x.code].name,
                 "category": b.MENU[x.code].category,
-                "kind": b.MENU[x.code].kind,
+                # the report has no item kind; the parser leaves the contract default
             }
             for x in sold
         ],

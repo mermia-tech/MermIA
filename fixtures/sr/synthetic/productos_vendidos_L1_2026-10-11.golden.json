@@ -227,7 +227,7 @@
    "external_id": "P043",
    "name": "Coca-Cola",
    "category": "Bebidas",
-   "kind": "drink",
+   "kind": "dish",
    "price_gross": null,
    "tax_rate": null
   },
@@ -235,7 +235,7 @@
    "external_id": "P044",
    "name": "Coca-Cola Light",
    "category": "Bebidas",
-   "kind": "drink",
+   "kind": "dish",
    "price_gross": null,
    "tax_rate": null
   },
@@ -243,7 +243,7 @@
    "external_id": "P045",
    "name": "Sprite",
    "category": "Bebidas",
-   "kind": "drink",
+   "kind": "dish",
    "price_gross": null,
    "tax_rate": null
   },
@@ -251,7 +251,7 @@
    "external_id": "P046",
    "name": "Agua mineral",
    "category": "Bebidas",
-   "kind": "drink",
+   "kind": "dish",
    "price_gross": null,
    "tax_rate": null
   },
@@ -259,7 +259,7 @@
    "external_id": "P047",
    "name": "Agua natural",
    "category": "Bebidas",
-   "kind": "drink",
+   "kind": "dish",
    "price_gross": null,
    "tax_rate": null
   },
@@ -267,7 +267,7 @@
    "external_id": "P048",
    "name": "Cerveza Corona",
    "category": "Bebidas",
-   "kind": "drink",
+   "kind": "dish",
    "price_gross": null,
    "tax_rate": null
   },
@@ -275,7 +275,7 @@
    "external_id": "P049",
    "name": "Cerveza Victoria",
    "category": "Bebidas",
-   "kind": "drink",
+   "kind": "dish",
    "price_gross": null,
    "tax_rate": null
   },
@@ -283,7 +283,7 @@
    "external_id": "P050",
    "name": "Michelada",
    "category": "Bebidas",
-   "kind": "drink",
+   "kind": "dish",
    "price_gross": null,
    "tax_rate": null
   },
@@ -291,7 +291,7 @@
    "external_id": "P051",
    "name": "Café de olla",
    "category": "Bebidas",
-   "kind": "drink",
+   "kind": "dish",
    "price_gross": null,
    "tax_rate": null
   },
@@ -323,7 +323,7 @@
    "external_id": "P070",
    "name": "Extra queso",
    "category": "Extras",
-   "kind": "modifier",
+   "kind": "dish",
    "price_gross": null,
    "tax_rate": null
   },
@@ -331,7 +331,7 @@
    "external_id": "P071",
    "name": "Extra aguacate",
    "category": "Extras",
-   "kind": "modifier",
+   "kind": "dish",
    "price_gross": null,
    "tax_rate": null
   },
