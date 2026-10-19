@@ -28,6 +28,7 @@ exclude = ['/\.venv/']
 explicit_package_bases = true
 mypy_path = [
     "$MYPY_CONFIG_FILE_DIR/apps/api/src",
+    "$MYPY_CONFIG_FILE_DIR/apps/mock-rpc/src",
     "$MYPY_CONFIG_FILE_DIR/packages/contracts/src",
     "$MYPY_CONFIG_FILE_DIR/packages/fixtures/src",
 ]
