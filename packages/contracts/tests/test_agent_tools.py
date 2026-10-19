@@ -1,7 +1,11 @@
 """C4: 12 tools, one per RPC plus propose_change, each with a valid JSON Schema."""
 
+import json
+from decimal import Decimal
+from typing import Any
+
 import pytest
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from mermia_contracts.agent_tools import (
     DESCRIPTIONS,
@@ -9,6 +13,7 @@ from mermia_contracts.agent_tools import (
     tool_definitions,
     tools_sha256,
 )
+from mermia_contracts.pending import ChangeProposal
 from mermia_contracts.rpc import RPCS
 
 TOOLS = tool_definitions()
@@ -52,3 +57,20 @@ def test_propose_change_rejects_bad_arguments(args: dict) -> None:  # type: igno
 def test_hash_is_stable() -> None:
     assert tools_sha256() == tools_sha256()
     assert len(tools_sha256()) == 64
+
+
+def test_tool_input_from_json_loads_becomes_a_typed_proposal() -> None:
+    """What the SDK hands over (floats and ints from json.loads) must validate, exactly."""
+    tool_input = json.loads(
+        '{"kind": "ingredient_price.set", "target": "carne al pastor", "reason": "subió",'
+        ' "values": {"unit_price": 0.22, "effective_from": "2026-10-19"}}'
+    )
+    args = ProposeChangeArgs.model_validate(tool_input)
+    resolved: dict[str, Any] = {
+        "kind": args.kind,
+        "target_id": "0f7a1c52-3b6e-7c1a-9d33-000000000001",  # resolved from args.target
+        "values": args.values,
+        "reason": args.reason,
+    }
+    proposal = TypeAdapter(ChangeProposal).validate_python(resolved)
+    assert proposal.values.unit_price == Decimal("0.22")  # type: ignore[union-attr]

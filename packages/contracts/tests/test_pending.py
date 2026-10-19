@@ -60,31 +60,68 @@ def test_other_kinds_are_rejected(kind: str) -> None:
         ADAPTER.validate_python({**_doc("import_batch.approve"), "kind": kind})
 
 
-@pytest.mark.parametrize(
-    "kind,patch",
-    [
-        ("ingredient_price.set", {"values": {"unit_price": "1e3", "effective_from": "2026-10-19"}}),
-        ("ingredient_price.set", {"values": {"unit_price": 220, "effective_from": "mañana"}}),
-        ("ingredient_price.set", {"values": {"unit_price": 220}}),
-        (
-            "ingredient_price.set",
-            {"values": {"unit_price": 1.0000001, "effective_from": "2026-10-19"}},
-        ),
-        ("recipe.upsert", {"values": {"yield_qty": 1, "lines": []}}),
-        ("menu_item_price.set", {"values": {"price_gross": 55.5, "effective_from": "2026-10-19"}}),
-        (
-            "menu_item_price.set",
-            {"values": _doc("ingredient_price.set")["values"]},
-        ),  # wrong kind's payload
-        ("import_batch.approve", {"values": {"force": True}}),
-        ("import_batch.rollback", {"target_id": "not-a-uuid"}),
-        ("import_batch.rollback", {"reason": " "}),
-        ("import_batch.rollback", {"surprise": 1}),
-    ],
-)
-def test_bad_proposals_are_rejected(kind: str, patch: dict[str, Any]) -> None:
-    with pytest.raises(ValidationError):
-        ADAPTER.validate_python({**_doc(kind), **patch})
+PRICE, RECIPE, MENU, APPROVE, ROLLBACK = KINDS
+
+
+def assert_rejects(good: dict[str, Any], bad: dict[str, Any], *, loc: tuple[str, ...]) -> None:
+    """The unmodified proposal is valid (python mode, like parsed JSON); `bad` fails at `loc`."""
+    ADAPTER.validate_python(good)
+    with pytest.raises(ValidationError) as info:
+        ADAPTER.validate_python(bad)
+    paths = [tuple(map(str, e["loc"])) for e in info.value.errors()]
+    assert any(path[-len(loc) :] == loc for path in paths), paths
+
+
+def _values(kind: str, **changes: Any) -> dict[str, Any]:
+    doc = _doc(kind)
+    return {**doc, "values": {**doc["values"], **changes}}
+
+
+def _top(kind: str, **changes: Any) -> dict[str, Any]:
+    return {**_doc(kind), **changes}
+
+
+BAD_PROPOSALS = [
+    (PRICE, _values(PRICE, unit_price="1e3"), ("unit_price",)),
+    (PRICE, _values(PRICE, unit_price=True), ("unit_price",)),
+    (PRICE, _values(PRICE, unit_price=0.2200001), ("unit_price",)),
+    (PRICE, _values(PRICE, effective_from="mañana"), ("effective_from",)),
+    (PRICE, _values(PRICE, extra=1), ("extra",)),
+    (RECIPE, _values(RECIPE, lines=[]), ("lines",)),
+    (RECIPE, _values(RECIPE, yield_qty=0.1234567), ("yield_qty",)),
+    (MENU, _values(MENU, price_gross=55.5), ("price_gross",)),
+    (MENU, _top(MENU, values={"unit_price": 1}), ("unit_price",)),  # another kind's payload
+    (APPROVE, _top(APPROVE, values={"force": True}), ("force",)),
+    (ROLLBACK, _top(ROLLBACK, target_id="not-a-uuid"), ("target_id",)),
+    (ROLLBACK, _top(ROLLBACK, reason=" "), ("reason",)),
+    (ROLLBACK, _top(ROLLBACK, surprise=1), ("surprise",)),
+]
+
+
+@pytest.mark.parametrize("kind,bad,loc", BAD_PROPOSALS)
+def test_bad_proposals_are_rejected(kind: str, bad: dict[str, Any], loc: tuple[str, ...]) -> None:
+    assert_rejects(_doc(kind), bad, loc=loc)
+
+
+def test_python_and_json_paths_agree() -> None:
+    for kind in KINDS:
+        doc = _doc(kind)
+        assert ADAPTER.validate_python(doc) == ADAPTER.validate_json(json.dumps(doc))
+
+
+def test_ingredient_price_is_per_base_unit_like_the_database() -> None:
+    contract = IngredientPriceSet.model_fields["unit_price"].description or ""
+    column = IngredientPriceRow.model_fields["unit_price_net"].description or ""
+    assert contract.startswith("unit=pesos_per_base_unit")
+    assert column.startswith("unit=pesos_per_base_unit")
+    assert "purchase" not in contract.replace("never per purchase unit", "")
+
+
+def test_a_price_per_kilo_is_written_per_gram() -> None:
+    parsed = ADAPTER.validate_python(_values("ingredient_price.set", unit_price=0.22))
+    assert parsed.values.unit_price == Decimal(
+        "0.22"
+    )  # $220/kg of an ingredient whose base unit is g
 
 
 def test_batch_kinds_need_no_values() -> None:
@@ -150,11 +187,3 @@ def test_apply_args_need_two_uuids_and_nothing_else() -> None:
     ):
         with pytest.raises(ValidationError):
             ApplyPendingChangeArgs.model_validate(bad)
-
-
-def test_ingredient_price_is_per_base_unit_like_the_database() -> None:
-    contract = IngredientPriceSet.model_fields["unit_price"].description or ""
-    column = IngredientPriceRow.model_fields["unit_price_net"].description or ""
-    assert contract.startswith("unit=pesos_per_base_unit")
-    assert column.startswith("unit=pesos_per_base_unit")
-    assert "purchase" not in contract.replace("never per purchase unit", "")

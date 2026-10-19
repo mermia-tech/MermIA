@@ -1,5 +1,6 @@
 """C3: the 11 RPC contracts parse their examples and reject malformed input."""
 
+import copy
 import json
 from pathlib import Path
 from typing import Any
@@ -54,61 +55,94 @@ def _ok_summary() -> dict[str, Any]:
     return response
 
 
-def _summary_with(path: tuple[str, ...], value: Any) -> dict[str, Any]:
-    doc = _ok_summary()
-    node = doc
+def _error_doc() -> dict[str, Any]:
+    doc: dict[str, Any] = json.loads((EXAMPLES / "get_sales_summary.error.json").read_text())
+    response: dict[str, Any] = doc["response"]
+    return response
+
+
+def assert_rejects(
+    good: dict[str, Any], bad: dict[str, Any], *, loc: tuple[str, ...], reason: str
+) -> None:
+    """The unmodified document is valid, and `bad` fails at `loc` for `reason`.
+
+    Without the control, a document that was already invalid for an unrelated reason would
+    make every negative test pass for the wrong reason.
+    """
+    adapter = _envelope("get_sales_summary")
+    adapter.validate_python(good)
+    with pytest.raises(ValidationError) as info:
+        adapter.validate_python(bad)
+    found = [
+        e for e in info.value.errors() if tuple(map(str, e["loc"]))[-len(loc) :] == loc or not loc
+    ]
+    assert any(reason in e["type"] or reason in e["msg"] for e in found), info.value.errors()
+
+
+def _with(doc: dict[str, Any], path: tuple[str, ...], value: Any) -> dict[str, Any]:
+    out = copy.deepcopy(doc)
+    node = out
     for key in path[:-1]:
         node = node[key]
     node[path[-1]] = value
-    return doc
+    return out
 
 
 @pytest.mark.parametrize(
-    "doc",
+    "path,value,loc,reason",
     [
-        _summary_with(("data", "net_sales", "raw"), 1843205.5),  # float money
-        _summary_with(("data", "net_sales", "raw"), "18432050"),  # string money
-        _summary_with(("data", "tickets"), -1),
-        _summary_with(("data", "surprise"), 1),  # unknown field
-        _summary_with(("meta", "as_of"), "2026-10-19T08:00:00"),  # no time zone
+        (("data", "net_sales", "raw"), 1843205.5, ("net_sales", "raw"), "int_type"),  # float money
+        (("data", "net_sales", "raw"), "18432050", ("net_sales", "raw"), "int_type"),  # str money
+        (("data", "tickets"), -1, ("tickets",), "greater_than_equal"),
+        (("data", "surprise"), 1, ("surprise",), "extra_forbidden"),
+        (("data", "change_vs_previous", "raw"), 7.12345, ("raw",), "decimal_max_places"),
+        (("meta", "as_of"), "2026-10-19T08:00:00", ("as_of",), "timezone_aware"),
+        (("meta", "period_resolved", "to"), "2026-10-01", (), "must not be after"),
     ],
-    ids=["float-money", "string-money", "negative-count", "unknown-field", "naive-instant"],
+    ids=[
+        "float-money",
+        "string-money",
+        "negative-count",
+        "unknown-field",
+        "five-decimals",
+        "naive-instant",
+        "reversed-period",
+    ],
 )
-def test_malformed_responses_are_rejected(doc: dict[str, Any]) -> None:
-    with pytest.raises(ValidationError):
-        _envelope("get_sales_summary").validate_python(doc)
-
-
-def _error() -> dict[str, Any]:
-    return {"code": "no_data", "message": "x"}
+def test_malformed_responses_are_rejected(
+    path: tuple[str, ...], value: Any, loc: tuple[str, ...], reason: str
+) -> None:
+    good = _ok_summary()
+    assert_rejects(good, _with(good, path, value), loc=loc, reason=reason)
 
 
 @pytest.mark.parametrize(
-    "patch",
+    "patch,reason",
     [
-        {"data": None},  # ok=true, no data
-        {"error": _error()},  # ok=true with an error
+        ({"data": None}, "ok=true needs data"),
+        ({"error": {"code": "no_data", "message": "x"}}, "ok=true needs data and no error"),
     ],
     ids=["ok-no-data", "ok-with-error"],
 )
-def test_envelope_ok_true_inconsistencies(patch: dict[str, Any]) -> None:
-    with pytest.raises(ValidationError):
-        _envelope("get_sales_summary").validate_python({**_ok_summary(), **patch})
+def test_envelope_ok_true_inconsistencies(patch: dict[str, Any], reason: str) -> None:
+    good = _ok_summary()
+    assert_rejects(good, {**good, **patch}, loc=(), reason=reason)
 
 
 @pytest.mark.parametrize(
-    "patch",
+    "patch,loc,reason",
     [
-        {"error": None},  # ok=false, no error
-        {"data": _ok_summary()["data"]},  # ok=false with data
-        {"error": {"code": "boom", "message": "x"}},  # code outside the closed list
+        ({"error": None}, (), "ok=false needs an error"),
+        ({"data": _ok_summary()["data"]}, (), "ok=false needs an error and no data"),
+        ({"error": {"code": "boom", "message": "x"}}, ("error", "code"), "enum"),
     ],
     ids=["fail-no-error", "fail-with-data", "unknown-code"],
 )
-def test_envelope_ok_false_inconsistencies(patch: dict[str, Any]) -> None:
-    error_doc = json.loads((EXAMPLES / "get_sales_summary.error.json").read_text())["response"]
-    with pytest.raises(ValidationError):
-        _envelope("get_sales_summary").validate_python({**error_doc, **patch})
+def test_envelope_ok_false_inconsistencies(
+    patch: dict[str, Any], loc: tuple[str, ...], reason: str
+) -> None:
+    good = _error_doc()
+    assert_rejects(good, {**good, **patch}, loc=loc, reason=reason)
 
 
 @pytest.mark.parametrize(
@@ -127,8 +161,11 @@ def test_envelope_ok_false_inconsistencies(patch: dict[str, Any]) -> None:
     ],
 )
 def test_bad_arguments_are_rejected(name: str, args: dict[str, Any]) -> None:
+    spec = RPCS[name]
+    example = json.loads((EXAMPLES / f"{name}.json").read_text())["args"]
+    spec.args.model_validate(example)  # control: the example arguments are valid
     with pytest.raises(ValidationError):
-        RPCS[name].args.model_validate(args)
+        spec.args.model_validate(args)
 
 
 def test_custom_period_uses_the_from_alias() -> None:
@@ -141,3 +178,12 @@ def test_custom_period_uses_the_from_alias() -> None:
 def test_top_dishes_defaults() -> None:
     args = RPCS["get_top_dishes"].args.model_validate({"period": "today", "metric": "units"})
     assert (args.order, args.limit) == ("desc", 5)  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize("path", FILES, ids=lambda p: p.name)
+def test_python_and_json_paths_agree(path: Path) -> None:
+    """json.loads output (what an LLM tool or an HTTP client hands over) parses like the text."""
+    name = path.name.split(".")[0]
+    response = json.loads(path.read_text())["response"]
+    adapter = _envelope(name)
+    assert adapter.validate_python(response) == adapter.validate_json(json.dumps(response))
