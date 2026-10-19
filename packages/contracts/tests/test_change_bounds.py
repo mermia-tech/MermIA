@@ -26,7 +26,11 @@ def _price(unit_price: Any) -> dict[str, Any]:
 
 
 def _menu(price_gross: Any) -> dict[str, Any]:
-    return {"price_gross": price_gross, "effective_from": DAY}
+    return {
+        "price_gross": price_gross,
+        "location_id": "0f7a1c52-3b6e-7c1a-9d11-000000000001",
+        "effective_from": DAY,
+    }
 
 
 def _recipe(yield_qty: Any = 1, qty_base: Any = 60, yield_pct: Any = None) -> dict[str, Any]:

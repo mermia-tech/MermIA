@@ -161,10 +161,16 @@
     },
     "MenuItemPriceSet": {
       "additionalProperties": false,
+      "description": "STORED: centavos for one location (`menu_item_price.location_id` is not null) and a date.",
       "properties": {
         "effective_from": {
           "format": "date",
           "title": "Effective From",
+          "type": "string"
+        },
+        "location_id": {
+          "format": "uuid",
+          "title": "Location Id",
           "type": "string"
         },
         "price_gross": {
@@ -177,6 +183,7 @@
       },
       "required": [
         "price_gross",
+        "location_id",
         "effective_from"
       ],
       "title": "MenuItemPriceSet",

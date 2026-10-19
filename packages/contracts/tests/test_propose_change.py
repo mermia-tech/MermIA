@@ -21,10 +21,10 @@ from mermia_contracts.agent_tools import (
 from mermia_contracts.pending import (
     IngredientPriceInput,
     IngredientPriceSet,
-    MenuItemPriceSet,
+    MenuItemPriceInput,
     NoPayload,
     PendingKind,
-    RecipeUpsert,
+    RecipeUpsertInput,
 )
 
 DAY = "2026-10-19"
@@ -36,8 +36,9 @@ APPROVE = "import_batch.approve"
 ROLLBACK = "import_batch.rollback"
 RECIPE_VALUES = {
     "yield_qty": 1,
-    "lines": [{"ingredient_name": "Carne", "qty_base": 60, "unit": "g"}],
+    "lines": [{"ingredient_name": "Carne", "qty": 60, "unit": "g"}],
 }
+MENU_VALUES = {"price_pesos": 65, "location": "Centro"}
 
 
 def _args(kind: str, values: Any = ..., **extra: Any) -> dict[str, Any]:
@@ -90,12 +91,13 @@ def test_a_price_proposal_needs_price_unit_and_date(key: str) -> None:
     assert (key, "missing") in _locs(info)
 
 
-def test_a_menu_price_proposal_needs_its_effective_date() -> None:
-    good = {"price_gross": 6500, "effective_from": DAY}
-    ProposeChangeArgs.model_validate(_args(MENU, good))
+@pytest.mark.parametrize("key", ["price_pesos", "location"])
+def test_a_menu_price_proposal_needs_its_price_and_location_but_not_a_date(key: str) -> None:
+    """The date is optional for a menu price: the service uses the location's calendar date."""
+    ProposeChangeArgs.model_validate(_args(MENU, MENU_VALUES))
     with pytest.raises(ValidationError) as info:
-        ProposeChangeArgs.model_validate(_args(MENU, _without(good, "effective_from")))
-    assert ("effective_from", "missing") in _locs(info)
+        ProposeChangeArgs.model_validate(_args(MENU, _without(MENU_VALUES, key)))
+    assert (key, "missing") in _locs(info)
 
 
 @pytest.mark.parametrize(
@@ -103,7 +105,7 @@ def test_a_menu_price_proposal_needs_its_effective_date() -> None:
     [
         (INGREDIENT, _ingredient(), "source"),  # the proposer never sets the source
         (INGREDIENT, _ingredient(), "currency"),
-        (MENU, {"price_gross": 6500, "effective_from": DAY}, "unit"),  # no unit on a menu price
+        (MENU, MENU_VALUES, "unit"),  # no unit on a menu price
         (RECIPE, RECIPE_VALUES, "effective_from"),
         (APPROVE, {}, "unit"),
         (ROLLBACK, {}, "reason"),
@@ -122,12 +124,12 @@ def test_a_field_that_does_not_belong_to_the_kind_is_rejected(
 @pytest.mark.parametrize(
     "kind,values",
     [
-        (INGREDIENT, {"price_gross": 6500, "effective_from": DAY}),
+        (INGREDIENT, MENU_VALUES),
         (INGREDIENT, RECIPE_VALUES),
         (MENU, _ingredient()),
         (RECIPE, _ingredient()),
         (APPROVE, _ingredient()),
-        (ROLLBACK, {"price_gross": 6500, "effective_from": DAY}),
+        (ROLLBACK, MENU_VALUES),
         (INGREDIENT, {}),
         (MENU, {}),
         (RECIPE, {}),
@@ -163,17 +165,18 @@ def test_the_price_a_user_quotes_is_greater_than_zero(price: Any) -> None:
     assert ("unit_price", "greater_than") in _locs(info)
 
 
-def test_a_menu_price_in_centavos_is_greater_than_zero() -> None:
+def test_a_menu_price_in_pesos_is_greater_than_zero() -> None:
     with pytest.raises(ValidationError) as info:
-        ProposeChangeArgs.model_validate(_args(MENU, {"price_gross": 0, "effective_from": DAY}))
-    assert ("price_gross", "greater_than") in _locs(info)
+        ProposeChangeArgs.model_validate(_args(MENU, {**MENU_VALUES, "price_pesos": 0}))
+    assert ("price_pesos", "greater_than") in _locs(info)
 
 
-def test_the_input_and_the_stored_shapes_differ_only_where_the_unit_is_converted() -> None:
-    """Persistence stays per base unit: it has no `unit`, so an input cannot be stored as is."""
+def test_the_input_and_the_stored_shapes_differ_only_where_the_service_converts() -> None:
+    """Persistence stays per base unit, in centavos with a location id, and in base quantities:
+    an input cannot be stored as is. The service (not this package) converts."""
     assert VALUES_FOR_KIND[PendingKind.ingredient_price_set] is IngredientPriceInput
-    assert VALUES_FOR_KIND[PendingKind.menu_item_price_set] is MenuItemPriceSet
-    assert VALUES_FOR_KIND[PendingKind.recipe_upsert] is RecipeUpsert
+    assert VALUES_FOR_KIND[PendingKind.menu_item_price_set] is MenuItemPriceInput
+    assert VALUES_FOR_KIND[PendingKind.recipe_upsert] is RecipeUpsertInput
     assert VALUES_FOR_KIND[PendingKind.import_batch_approve] is NoPayload
     assert VALUES_FOR_KIND[PendingKind.import_batch_rollback] is NoPayload
     assert set(VALUES_FOR_KIND) == set(PendingKind)
@@ -194,7 +197,7 @@ def test_the_tool_schema_lists_one_closed_variant_per_payload() -> None:
     schema = _schema()
     variants = schema["properties"]["values"]["anyOf"]
     names = [v["$ref"].rsplit("/", 1)[1] for v in variants]
-    assert names == ["IngredientPriceInput", "MenuItemPriceSet", "RecipeUpsert", "NoPayload"]
+    assert names == ["IngredientPriceInput", "MenuItemPriceInput", "RecipeUpsertInput", "NoPayload"]
     for name in names:
         assert schema["$defs"][name]["additionalProperties"] is False
 
@@ -204,11 +207,15 @@ def test_the_tool_schema_states_the_units_and_the_required_dates() -> None:
     ingredient = defs["IngredientPriceInput"]
     assert set(ingredient["required"]) == {"unit_price", "unit", "effective_from"}
     assert ingredient["properties"]["unit"]["enum"] == UNITS
-    assert set(defs["MenuItemPriceSet"]["required"]) == {"price_gross", "effective_from"}
+    menu = defs["MenuItemPriceInput"]
+    assert set(menu["required"]) == {"price_pesos", "location"}  # the date is optional here
+    assert "effective_from" in menu["properties"]
 
 
 def test_the_tool_schema_size_is_recorded_not_budgeted() -> None:
     """Typed values make propose_change larger. This is a size guard in characters, NOT a token
     measurement (that is deferred to the eval ticket): it fails if the schema grows unnoticed."""
     size = len(json.dumps(_schema(), separators=(",", ":")))
-    assert size <= 2450, size  # compact JSON: 2397 now, 519 before typed values
+    # compact JSON: 519 before typed values, 2397 with them, 2535 with the menu price location
+    # and the recipe quantity inputs (pesos, location name, qty and unit)
+    assert size <= 2600, size

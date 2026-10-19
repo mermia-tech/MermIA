@@ -806,23 +806,43 @@
           ],
           "type": "object"
         },
-        "MenuItemPriceSet": {
+        "MenuItemPriceInput": {
           "additionalProperties": false,
+          "description": "Pesos with IVA, as the user said it, for one location named in words.",
           "properties": {
             "effective_from": {
-              "format": "date",
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "location": {
+              "pattern": "\\S",
               "type": "string"
             },
-            "price_gross": {
-              "description": "unit=centavos, greater than zero",
-              "exclusiveMinimum": 0,
-              "maximum": 9223372036854775807,
-              "type": "integer"
+            "price_pesos": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "maximum": 9.223372036854776e+16,
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "pesos with IVA, at most 2 decimals (> 0)"
             }
           },
           "required": [
-            "price_gross",
-            "effective_from"
+            "price_pesos",
+            "location"
           ],
           "type": "object"
         },
@@ -842,26 +862,14 @@
           ],
           "type": "string"
         },
-        "RecipeLine": {
+        "RecipeLineInput": {
           "additionalProperties": false,
           "properties": {
-            "ingredient_external_id": {
-              "anyOf": [
-                {
-                  "pattern": "\\S",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": null
-            },
             "ingredient_name": {
               "pattern": "\\S",
               "type": "string"
             },
-            "qty_base": {
+            "qty": {
               "anyOf": [
                 {
                   "exclusiveMinimum": 0.0,
@@ -874,7 +882,13 @@
               "description": "unit=quantity (> 0)"
             },
             "unit": {
-              "pattern": "\\S",
+              "enum": [
+                "g",
+                "kg",
+                "ml",
+                "l",
+                "pza"
+              ],
               "type": "string"
             },
             "yield_override_pct": {
@@ -900,17 +914,17 @@
           },
           "required": [
             "ingredient_name",
-            "qty_base",
+            "qty",
             "unit"
           ],
           "type": "object"
         },
-        "RecipeUpsert": {
+        "RecipeUpsertInput": {
           "additionalProperties": false,
           "properties": {
             "lines": {
               "items": {
-                "$ref": "#/$defs/RecipeLine"
+                "$ref": "#/$defs/RecipeLineInput"
               },
               "minItems": 1,
               "type": "array"
@@ -962,10 +976,10 @@
               "$ref": "#/$defs/IngredientPriceInput"
             },
             {
-              "$ref": "#/$defs/MenuItemPriceSet"
+              "$ref": "#/$defs/MenuItemPriceInput"
             },
             {
-              "$ref": "#/$defs/RecipeUpsert"
+              "$ref": "#/$defs/RecipeUpsertInput"
             },
             {
               "$ref": "#/$defs/NoPayload"

@@ -18,10 +18,10 @@ from pydantic import model_validator
 from mermia_contracts.batch import Model, Text
 from mermia_contracts.pending import (
     IngredientPriceInput,
-    MenuItemPriceSet,
+    MenuItemPriceInput,
     NoPayload,
     PendingKind,
-    RecipeUpsert,
+    RecipeUpsertInput,
 )
 from mermia_contracts.rpc import RPCS
 
@@ -31,19 +31,20 @@ TOKEN_LIMIT: Final = 125
 
 VALUES_FOR_KIND: Final[dict[PendingKind, type[Model]]] = {
     PendingKind.ingredient_price_set: IngredientPriceInput,
-    PendingKind.recipe_upsert: RecipeUpsert,
-    PendingKind.menu_item_price_set: MenuItemPriceSet,
+    PendingKind.recipe_upsert: RecipeUpsertInput,
+    PendingKind.menu_item_price_set: MenuItemPriceInput,
     PendingKind.import_batch_approve: NoPayload,
     PendingKind.import_batch_rollback: NoPayload,
 }
-"""The payload each kind accepts from the model. Only the ingredient price differs from what is
-stored (a unit instead of a base-unit price); the other four are the stored payloads."""
+"""The payload each kind accepts from the model, in the user's terms: prices in pesos, a location
+by name, quantities with a unit of the closed list. The stored payloads (pending.ChangeProposal)
+differ for the first three kinds: base-unit price, centavos with a location id, base quantity."""
 
 
 class ProposeChangeArgs(Model):
     kind: PendingKind
     target: Text
-    values: IngredientPriceInput | MenuItemPriceSet | RecipeUpsert | NoPayload = NoPayload()
+    values: IngredientPriceInput | MenuItemPriceInput | RecipeUpsertInput | NoPayload = NoPayload()
     reason: Text | None = None
 
     @model_validator(mode="after")

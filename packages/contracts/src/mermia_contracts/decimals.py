@@ -55,16 +55,25 @@ def _from_python(value: Any) -> Any:
 
 
 class _Exact:
-    def __init__(self, max_digits: int, decimal_places: int, *, gt: Decimal | None = None) -> None:
+    def __init__(
+        self,
+        max_digits: int,
+        decimal_places: int,
+        *,
+        gt: Decimal | None = None,
+        le: Decimal | None = None,
+    ) -> None:
         self.max_digits = max_digits
         self.decimal_places = decimal_places
         self.gt = gt
+        self.le = le
 
     def __get_pydantic_core_schema__(self, source: Any, handler: Any) -> core_schema.CoreSchema:
         exact = core_schema.decimal_schema(
             max_digits=self.max_digits,
             decimal_places=self.decimal_places,
             gt=self.gt,
+            le=self.le,
             strict=True,
         )
         return core_schema.no_info_before_validator_function(_from_python, exact)
@@ -107,6 +116,13 @@ PositivePercentPoints = Annotated[
 ]
 """Strictly positive twins of the types above, for values that divide or multiply a cost: a
 price, a quantity, a yield. Each keeps the digits of its database column."""
+_MAX_CENTAVOS = 2**63 - 1  # bigint
+PositivePesos = Annotated[
+    Decimal,
+    _Exact(19, 2, gt=_ZERO, le=Decimal(_MAX_CENTAVOS) / 100),
+    Field(description="pesos with IVA, at most 2 decimals (> 0)"),
+]
+"""A price in pesos as the user says it: it converts to centavos exactly (pesos_to_centavos)."""
 PositiveCents = Annotated[
     int, Field(strict=True, gt=0, le=2**63 - 1, description="unit=centavos, greater than zero")
 ]
@@ -121,3 +137,38 @@ def exact_json(text: str) -> Any:
     of any length in the database range exactly.
     """
     return json.loads(text, parse_float=Decimal)
+
+
+def pesos_to_centavos(pesos: Decimal | int) -> int:
+    """Pesos to integer centavos, exactly: more than two decimals is an error, never rounded.
+
+    Only a Decimal or an int is accepted (a float would already be inexact). The result is greater
+    than zero and inside the bigint of `menu_item_price.price_gross`. The arithmetic is on the
+    integer coefficient of the Decimal, so the decimal context of the caller (its precision and
+    traps) cannot round it, and every invalid value is a ValueError.
+    """
+    if isinstance(pesos, bool) or not isinstance(pesos, Decimal | int):
+        raise TypeError("pesos must be a Decimal or an int")
+    if isinstance(pesos, int):
+        centavos = pesos * 100
+    else:
+        sign, digits, exponent = pesos.as_tuple()  # NaN, sNaN and infinities have no digits
+        if not isinstance(exponent, int):
+            raise ValueError(f"pesos must be a finite number, got {pesos}")
+        coefficient = int("".join(map(str, digits)))
+        shift = exponent + 2  # centavos = coefficient x 10**shift
+        if coefficient == 0:
+            centavos = 0
+        elif shift >= 0:
+            if shift > len(str(_MAX_CENTAVOS)):  # far beyond the bigint: do not build 10**shift
+                raise ValueError(f"pesos out of range for a price in centavos: {pesos}")
+            centavos = coefficient * 10**shift
+        else:
+            if -shift > len(digits) or coefficient % 10**-shift:
+                raise ValueError(f"pesos have at most two decimals, got {pesos}")
+            centavos = coefficient // 10**-shift
+        if sign:
+            centavos = -centavos
+    if not 0 < centavos <= _MAX_CENTAVOS:
+        raise ValueError(f"pesos out of range for a price in centavos: {pesos}")
+    return centavos

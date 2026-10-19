@@ -23,6 +23,7 @@ from mermia_contracts.db.models import IngredientPriceSource, PendingChangeStatu
 from mermia_contracts.decimals import (
     PositiveCents,
     PositivePercentPoints,
+    PositivePesos,
     PositivePricePerUnit,
     PositiveQuantity,
     PositiveUnitPricePerBaseUnit,
@@ -83,14 +84,37 @@ class RecipeLine(Model):
     because the "Recetas" export that fills it is unverified; limited to the column's 999.9999."""
 
 
+class RecipeLineInput(Model):
+    ingredient_name: Text
+    qty: PositiveQuantity
+    unit: PurchaseUnit
+    yield_override_pct: PositivePercentPoints | None = None
+
+
+class RecipeUpsertInput(Model):
+    yield_qty: PositiveQuantity
+    lines: Annotated[list[RecipeLineInput], Field(min_length=1)]
+
+
 # PROVISIONAL: the lines mirror the "Recetas" import.
 class RecipeUpsert(Model):
     yield_qty: PositiveQuantity
     lines: Annotated[list[RecipeLine], Field(min_length=1)]
 
 
+class MenuItemPriceInput(Model):
+    """Pesos with IVA, as the user said it, for one location named in words."""
+
+    price_pesos: PositivePesos
+    location: Text
+    effective_from: dt.date | None = None
+
+
 class MenuItemPriceSet(Model):
+    """STORED: centavos for one location (`menu_item_price.location_id` is not null) and a date."""
+
     price_gross: PositiveCents
+    location_id: UUID
     effective_from: dt.date
 
 
