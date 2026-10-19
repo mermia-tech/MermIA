@@ -53,3 +53,26 @@ def test_error_variant_is_ok_false() -> None:
 def test_special_variant_is_served() -> None:
     response = client.post("/rpc/get_dish_margin?variant=needs_location", json={"dish": "pastor"})
     assert response.json()["data"]["match"] == "needs_location"
+
+
+def _raws(node: object) -> list[object]:
+    if isinstance(node, dict):
+        found = [v for k, v in node.items() if k == "raw"]
+        return found + [x for v in node.values() for x in _raws(v)]
+    if isinstance(node, list):
+        return [x for v in node for x in _raws(v)]
+    return []
+
+
+@pytest.mark.parametrize("name", list(RPCS))
+def test_raw_values_travel_as_json_numbers(name: str) -> None:
+    body = client.post(f"/rpc/{name}", json=rpcs.CANONICAL[name]).json()
+    assert all(isinstance(raw, int | float) for raw in _raws(body))
+
+
+def test_every_answer_says_it_is_a_fixed_mock_answer() -> None:
+    for name in RPCS:
+        for variant in (None, *rpcs.VARIANTS[name]):
+            url = f"/rpc/{name}" + (f"?variant={variant}" if variant else "")
+            flags = client.post(url, json=rpcs.CANONICAL[name]).json()["flags"]
+            assert "mock_fixed_answer" in [f["code"] for f in flags]

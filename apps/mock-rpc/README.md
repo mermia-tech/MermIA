@@ -50,8 +50,10 @@ figures are asserted in `tests/test_rpcs.py`.
   at least 70 % of an equal share of units; high margin = at or above the units-weighted average).
   The real definitions belong to MR-24.
 - **`get_sales_breakdown` tickets are `null`**: `daily_sales_agg.payment_mix` holds amounts only (D23).
-- Decimal `raw` values that are not whole numbers (percentages) are JSON strings (`"7.2223"`), as
-  the contract's `number | string` allows. Whole centavos are numbers.
+- Every `raw` is a JSON number (a percentage has up to four decimals), as in the C3 examples.
+- **Every answer carries a `mock_fixed_answer` flag** naming the canonical query it answers: the
+  request values are not used, so a different query is not an error, only a flagged answer.
+- Changes between figures (`abs_change`, `diff_vs_best`) have a signed `text` (`+$12,415.50`).
 - `meta.coverage_pct` is the share of the period's days that have a daily row.
 
 ## Differences from the C3 examples

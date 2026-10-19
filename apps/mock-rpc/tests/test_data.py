@@ -19,3 +19,9 @@ def test_centro_week_total_matches_expected() -> None:
         and "2026-10-05" <= r["business_date"] <= "2026-10-11"
     ]
     assert sum(r["net_sales"] for r in rows) == 18432050
+
+
+def test_signed_money_shows_the_sign_of_a_change() -> None:
+    assert data.money(1241550, signed=True) == "+$12,415.50"
+    assert data.money(-2339970, signed=True) == "-$23,399.70"
+    assert data.money(0, signed=True) == "$0.00"

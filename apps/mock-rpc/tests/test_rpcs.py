@@ -51,6 +51,11 @@ def test_compare_periods_is_centro_against_the_week_before() -> None:
     assert (d["a"]["raw"], d["b"]["raw"]) == (18432050, 17190500)
 
 
+def test_changes_between_figures_carry_their_sign() -> None:
+    assert _data("compare_periods")["abs_change"]["text"] == "+$12,415.50"
+    assert _data("compare_locations")["rows"][1]["diff_vs_best"]["text"] == "-$23,399.70"
+
+
 def test_compare_locations_ranks_centro_first() -> None:
     rows = _data("compare_locations")["rows"]
     assert [r["name"] for r in rows] == ["Centro", "Polanco"]

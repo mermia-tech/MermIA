@@ -8,6 +8,7 @@ answers are plain dicts in the C3 envelope, validated with the C3 models before 
 from __future__ import annotations
 
 import datetime as dt
+import json
 from collections import defaultdict
 from collections.abc import Callable
 from decimal import ROUND_HALF_UP, Decimal
@@ -68,8 +69,8 @@ def _coverage(loc: str | None, period: tuple[dt.date, dt.date]) -> Decimal:
 # --- pieces of a response --------------------------------------------------------------------
 
 
-def money(cents: int) -> Answer:
-    return {"raw": cents, "text": data.money(cents)}
+def money(cents: int, *, signed: bool = False) -> Answer:
+    return {"raw": cents, "text": data.money(cents, signed=signed)}
 
 
 def pct(value: Decimal, *, signed: bool = False) -> Answer:
@@ -161,7 +162,7 @@ def compare_periods() -> Answer:
         "period_b": _span(named_period("prev_week")),
         "a": money(a),
         "b": money(b),
-        "abs_change": money(a - b),
+        "abs_change": money(a - b, signed=True),
         "pct_change": pct(ratio(a - b, b), signed=True),
     }
     return _envelope(body)
@@ -176,7 +177,7 @@ def compare_locations() -> Answer:
             "name": _location_name(loc),
             "value": money(value),
             "rank": rank,
-            "diff_vs_best": money(value - values[0][0]),
+            "diff_vs_best": money(value - values[0][0], signed=True),
         }
         for rank, (value, loc) in enumerate(values, start=1)
     ]
@@ -475,9 +476,17 @@ VARIANTS: dict[str, tuple[str, ...]] = {
 
 
 def build(name: str, variant: str | None = None) -> Answer:
-    """The envelope of RPC `name`; `variant` must be one of `VARIANTS[name]` or None."""
+    """The envelope of RPC `name`; `variant` must be one of `VARIANTS[name]` or None.
+
+    Every answer carries a `mock_fixed_answer` flag: the request values are not used."""
     if variant is None:
-        return ANSWERS[name]()
-    if variant not in VARIANTS[name]:
+        answer = ANSWERS[name]()
+    elif variant not in VARIANTS[name]:
         raise KeyError(variant)
-    return _error() if variant == "error" else SPECIAL[(name, variant)]()
+    else:
+        answer = _error() if variant == "error" else SPECIAL[(name, variant)]()
+    message = (
+        f"Mock: fixed answer to {json.dumps(CANONICAL[name])}; the request values are not used."
+    )
+    answer["flags"] = [*answer["flags"], {"code": "mock_fixed_answer", "message": message}]
+    return answer

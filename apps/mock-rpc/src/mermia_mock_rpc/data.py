@@ -30,8 +30,8 @@ LOCATIONS: dict[str, str] = {
 }
 
 
-def money(cents: int) -> str:
-    sign = "-" if cents < 0 else ""
+def money(cents: int, *, signed: bool = False) -> str:
+    sign = "-" if cents < 0 else "+" if signed and cents > 0 else ""
     pesos, centavos = divmod(abs(cents), 100)
     return f"{sign}${pesos:,}.{centavos:02d}"
 
