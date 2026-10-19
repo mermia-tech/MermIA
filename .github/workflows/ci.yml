@@ -57,7 +57,7 @@ jobs:
       - uses: supabase/setup-cli@v1
         if: steps.find.outputs.workdir != ''
         with:
-          version: latest
+          version: 2.121.0  # pinned: "latest" needs a GitHub API call that can be rate-limited
 
       - name: Start database
         if: steps.find.outputs.workdir != ''
