@@ -1,9 +1,10 @@
 """125-token budget per tool (08 C4).
 
 NOT MEASURED YET. The real count_tokens measurement needs an Anthropic API key and is deferred
-to the LLM eval ticket (proposed: MR-20). The tests that need the measurement carry the
-`tokens` marker, so the default run deselects them: run them with `pytest -m tokens` once
-`schemas/tool_tokens.json` exists. The rest check the measuring code with a fake counter.
+to the LLM eval ticket (proposed: MR-20). Until `schemas/tool_tokens.json` exists the two tests
+that read it are SKIPPED with a visible reason; they are not passing. Once the snapshot is
+committed they run everywhere, so a tool changed after measuring (hash mismatch) or over the
+limit fails the suite. The other tests check the measuring code with a fake counter.
 """
 
 import json
@@ -21,11 +22,12 @@ from mermia_contracts.tools.measure_tool_tokens import (
     problems,
 )
 
-MISSING = "no measurement yet: run measure_tool_tokens with ANTHROPIC_API_KEY set"
+MISSING = "token measurement pending (eval ticket, proposed MR-20): schemas/tool_tokens.json absent"
 
 
 def _snapshot() -> dict[str, Any]:
-    assert SNAPSHOT.exists(), MISSING
+    if not SNAPSHOT.exists():
+        pytest.skip(MISSING)
     snap: dict[str, Any] = json.loads(SNAPSHOT.read_text())
     return snap
 
@@ -34,14 +36,12 @@ def test_limit_is_125() -> None:
     assert TOKEN_LIMIT == 125
 
 
-@pytest.mark.tokens
 def test_snapshot_matches_the_current_tools() -> None:
     snap = _snapshot()
     assert snap["tools_sha256"] == tools_sha256(), "tools changed: measure again"
     assert snap["limit"] == TOKEN_LIMIT
 
 
-@pytest.mark.tokens
 def test_every_tool_is_measured_and_within_the_limit() -> None:
     per_tool = _snapshot()["per_tool"]
     assert list(per_tool) == [t["name"] for t in tool_definitions()]

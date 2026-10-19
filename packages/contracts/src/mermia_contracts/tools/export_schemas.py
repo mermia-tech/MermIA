@@ -3,8 +3,9 @@
     python -m mermia_contracts.tools.export_schemas [--output DIR] [--check]
 
 One file per RPC (`rpc.<name>.args.json`, `rpc.<name>.response.json`), plus `agent.tools.json`,
-`pending.change_proposal.json`, `pending.apply_args.json`, `pending.apply_result.json`, `agent.request.json` and `agent.response.json`. Schemas describe
-what the models accept (validation mode). `--check` fails if the committed files differ.
+`pending.change_proposal.json`, `pending.apply_args.json`, `pending.apply_result.json`,
+`agent.request.json` and `agent.response.json`. Schemas describe what the models accept
+(validation mode). `--check` fails if the committed files differ.
 """
 
 import argparse

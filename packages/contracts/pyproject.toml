@@ -24,6 +24,6 @@ testpaths = ["tests"]
 markers = [
   "db: needs the local Supabase database (MERMIA_DB_URL)",
   "rest: needs the local Supabase API (MERMIA_API_URL, MERMIA_JWT_SECRET, MERMIA_API_KEY)",
-  "tokens: needs the real token measurement (schemas/tool_tokens.json, made with ANTHROPIC_API_KEY); deferred to the eval ticket",
+  "tokens: calls the Anthropic count_tokens API (ANTHROPIC_API_KEY); part of the deferred token evaluation",
 ]
 addopts = "-m 'not db and not rest and not tokens'"

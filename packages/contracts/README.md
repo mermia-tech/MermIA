@@ -43,7 +43,8 @@ with the Anthropic `count_tokens` API and a fixed baseline tool `B`: the API add
 scaffolding once per request, and the difference cancels it.
 
 To run it later: set `ANTHROPIC_API_KEY`, run `measure_tool_tokens` (above; the SDK is a dev
-dependency of this package), review `schemas/tool_tokens.json`, then run `uv run pytest -m tokens`.
+dependency of this package), review `schemas/tool_tokens.json`, then run `uv run pytest`: the budget tests, skipped while the
+snapshot is absent, start running (and `-m tokens` re-measures live).
 The snapshot stores the hash of the tool definitions, so changing a tool afterwards needs a new
 measurement. If a tool is over 125, decide then how to cut it; the limit itself is not changed
 without the owner's approval.
