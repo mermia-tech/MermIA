@@ -32,6 +32,10 @@ select throws_ok($$update public.location set tenant_id = 'bbbbbbbb-0000-7000-80
 -- text integrity (spec 5.1) ----------------------------------------------------------------
 select throws_ok($$insert into public.tenant (name) values ('   ')$$, '23514', null, 'blank required text is rejected');
 select throws_ok($$insert into public.tenant (name, plan) values ('X', '')$$, '23514', null, 'blank optional text is rejected');
+-- MR-14: whitespace other than spaces is blank too, as in the contract's Text (\S)
+select throws_ok($$insert into public.tenant (name) values (E'\t\n\r')$$, '23514', null, 'tab/newline-only text is rejected');
+select throws_ok($$insert into public.tenant (name) values (U&'\00A0\3000\2009')$$, '23514', null, 'NBSP/ideographic-space-only text is rejected');
+select lives_ok($$insert into public.tenant (name) values (U&' \00A0x')$$, 'text with one visible character is accepted');
 select lives_ok($$insert into public.tenant (name, plan) values ('X', null)$$, 'null optional text is allowed');
 select throws_ok($$insert into public.app_user (name, phone_e164) values ('P', '5512345678')$$, '23514', null, 'phone must be E.164');
 select lives_ok($$insert into public.app_user (name, phone_e164) values ('P', '+5215512345678')$$, 'valid E.164 phone');

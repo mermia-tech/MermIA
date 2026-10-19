@@ -9,7 +9,8 @@ select is((select count(*) from pg_proc p where p.pronamespace = 'app'::regnames
 select is((select count(*) from pg_proc p where p.pronamespace = 'app'::regnamespace and has_function_privilege('anon', p.oid, 'execute')),
           0::bigint, 'anon executes nothing in app');
 select set_eq($$select p.proname::text from pg_proc p where p.pronamespace = 'app'::regnamespace and has_function_privilege('authenticated', p.oid, 'execute')$$,
-              array['current_tenant_id', 'can_see_location', 'has_all_locations'], 'authenticated executes only the three policy helpers');
+              array['current_tenant_id', 'can_see_location', 'has_all_locations', 'has_location_list', 'location_scope_ids'],
+              'authenticated executes only the policy helpers');
 select ok(has_function_privilege('service_role', 'app.uuid_v7(timestamptz)', 'execute'), 'service_role can run the uuid default');
 select ok(has_schema_privilege('authenticated', 'app', 'usage'), 'authenticated has usage on app');
 select ok(has_schema_privilege('service_role', 'app', 'usage'), 'service_role has usage on app');
@@ -112,11 +113,18 @@ select is((select count(*) from pg_policy p join pg_class c on c.oid = p.polreli
 select is((select count(*) from (select polrelid from pg_policy group by polrelid having count(*) > 1) x), 0::bigint, 'at most one policy per table');
 select is((select count(*) from pg_policy p join pg_class c on c.oid = p.polrelid join expected_class e on e.tbl = c.relname
            where not (case
-             when e.cls like '%loc_col=%' then pg_get_expr(p.polqual, p.polrelid) like '%can_see_location%' and pg_get_expr(p.polqual, p.polrelid) like '%current_tenant_id%'
+             when e.cls like '%loc_col=%' then pg_get_expr(p.polqual, p.polrelid) like '%location_scope_ids%' and pg_get_expr(p.polqual, p.polrelid) like '%has_location_list%'
+                  and pg_get_expr(p.polqual, p.polrelid) like '%has_all_locations%' and pg_get_expr(p.polqual, p.polrelid) like '%current_tenant_id%'
              when e.cls = 'rls_class=F' then pg_get_expr(p.polqual, p.polrelid) like '%has_all_locations%' and pg_get_expr(p.polqual, p.polrelid) like '%current_tenant_id%'
              when e.cls = 'rls_class=LP' then pg_get_expr(p.polqual, p.polrelid) ilike '%exists%' and pg_get_expr(p.polqual, p.polrelid) like '%import_batch%'
              else pg_get_expr(p.polqual, p.polrelid) like '%current_tenant_id%' end)),
           0::bigint, 'each policy expression matches its class (tenant, location, all-locations, parent)');
+-- MR-14: claim helpers run once per statement (init plan), never per row (MR-53 item 7)
+select is((select count(*) from pg_policy p join pg_class c on c.oid = p.polrelid where c.relnamespace = 'public'::regnamespace
+           and (pg_get_expr(p.polqual, p.polrelid) like '%can_see_location%'
+                or regexp_replace(pg_get_expr(p.polqual, p.polrelid), 'SELECT app\.', 'SELECT x.', 'g')
+                   ~ 'app\.(current_tenant_id|has_all_locations|has_location_list|location_scope_ids)\(')),
+          0::bigint, 'policies call the claim helpers only inside (select ...)');
 
 -- privileges (spec 7.1) --------------------------------------------------------------------------------------------------
 select is((select count(*) from expected_class e where has_any_column_privilege('anon', ('public.' || e.tbl)::regclass, 'select,insert,update,references')),
@@ -155,8 +163,8 @@ select is((select count(*) from pg_attribute a join pg_class c on c.oid = a.attr
            where c.relnamespace = 'public'::regnamespace and c.relkind = 'r' and a.attnum > 0 and not a.attisdropped
              and a.atttypid in ('text'::regtype, 'character varying'::regtype)
              and not exists (select 1 from pg_constraint k where k.conrelid = c.oid and k.contype = 'c' and k.conname = a.attname || '_not_blank'
-                             and pg_get_constraintdef(k.oid) like '%btrim(%')),
-          0::bigint, 'every text column rejects blank strings');
+                             and position('~ ''[^\t\n\v\f\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]''' in pg_get_constraintdef(k.oid)) > 0)),
+          0::bigint, 'every text column rejects blank strings (Unicode whitespace, as the contract''s Text)');
 
 -- composite foreign keys (D18) ---------------------------------------------------------------------------------------------
 select is((select count(*) from pg_constraint k

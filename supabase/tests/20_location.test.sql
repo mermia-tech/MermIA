@@ -43,6 +43,30 @@ select is(pg_temp.eval('{"tenant_id":"aaaaaaaa-0000-7000-8000-000000000001"}', '
 select is(pg_temp.eval('', 'app.has_all_locations()'), 'false', 'no claims is not full scope');
 select is(pg_temp.eval('{"location_ids":"null"}', 'app.has_all_locations()'), 'false', 'the string "null" is not full scope');
 
+-- policy term vs can_see_location (MR-14) ----------------------------------------
+-- The class-L policy uses has_all_locations / has_location_list / location_scope_ids instead of
+-- calling can_see_location per row. Both must agree on every claim shape and row location.
+create temp table claim_shapes (claims text) on commit drop;
+insert into claim_shapes values
+  ('{"location_ids":null}'), ('{"location_ids":["a1a1a1a1-0000-7000-8000-000000000001"]}'),
+  ('{"location_ids":["a1a1a1a1-0000-7000-8000-000000000001","a2a2a2a2-0000-7000-8000-000000000002"]}'),
+  ('{"location_ids":[]}'), ('{"location_ids":"a1a1a1a1-0000-7000-8000-000000000001"}'), ('{"location_ids":{"a":1}}'),
+  ('{"location_ids":[1,2]}'), ('{"location_ids":["a1a1a1a1-0000-7000-8000-000000000001",1]}'),
+  ('{"location_ids":["A1A1A1A1-0000-7000-8000-000000000001"]}'), ('{"location_ids":["{a1a1a1a1-0000-7000-8000-000000000001}"]}'),
+  ('{"location_ids":["a1a1a1a10000700080000000000000001"]}'), ('{"location_ids":["nope"]}'), ('{"location_ids":[null]}'),
+  ('{"location_ids":"null"}'), ('{"tenant_id":"aaaaaaaa-0000-7000-8000-000000000001"}'), ('{}'), ('');
+create temp table row_locs (loc text) on commit drop;
+insert into row_locs values ('''a1a1a1a1-0000-7000-8000-000000000001'''), ('''a2a2a2a2-0000-7000-8000-000000000002'''), ('null');
+select is((select count(*) from claim_shapes s cross join row_locs l
+           where pg_temp.eval(s.claims, format('app.can_see_location(%s::uuid)', l.loc))
+                 is distinct from pg_temp.eval(s.claims, format(
+                   'coalesce(app.has_all_locations() or (%1$s::uuid is null and app.has_location_list())'
+                   ' or %1$s::uuid = any (app.location_scope_ids()), false)', l.loc))),
+          0::bigint, 'the class-L policy term agrees with can_see_location for every claim shape');
+select is(pg_temp.eval('{"location_ids":["a1a1a1a1-0000-7000-8000-000000000001","A2A2A2A2-0000-7000-8000-000000000002"]}', 'app.location_scope_ids()'),
+          '{a1a1a1a1-0000-7000-8000-000000000001}', 'location_scope_ids keeps only canonical lowercase ids');
+select is(pg_temp.eval('{"location_ids":["a1a1a1a1-0000-7000-8000-000000000001",1]}', 'app.location_scope_ids()'), '{}', 'a mixed list scopes nothing');
+
 -- current_tenant_id -----------------------------------------------------------
 select is(pg_temp.eval('{"tenant_id":"aaaaaaaa-0000-7000-8000-000000000001"}', 'app.current_tenant_id()'), 'aaaaaaaa-0000-7000-8000-000000000001', 'valid tenant claim');
 select is(pg_temp.eval('{"tenant_id":"AAAAAAAA-0000-7000-8000-000000000001"}', 'app.current_tenant_id()'), 'aaaaaaaa-0000-7000-8000-000000000001', 'upper-case uuid is accepted and normalised');
