@@ -42,7 +42,7 @@ Example 6 (food cost yesterday = 31.4%) is **not** pinned. The seed's figure is 
 - Money is integer centavos. A sales line's `net` is `gross - discount`, **IVA included**. A day's `net_sales` is the sum of its item nets. `tax` is the IVA inside it, and `payment_mix` adds up to `net_sales`.
 - Margin is `(price_gross - cost) / price_gross`, which is how `13` H3 example 4 computes it.
 - Dish cost is `sum(qty * price per base unit * 100 / yield_pct)`, rounded once to centavos, half away from zero.
-- To land exactly on the two pinned weeks, calibration adds units across each week's best sellers. It then takes the last few pesos (less than the cheapest item) off that Sunday's pastor order as a discount. That's why Centro has an unexplained $11 discount on 2026-10-04.
+- To land exactly on the two pinned weeks, calibration adds units across each week's best sellers. It then takes the last few pesos (less than the cheapest item) off that Sunday's pastor order as a discount. That's why Centro's pastor order has a small, unexplained discount on 2026-10-04 ($6) and 2026-10-11 ($5).
 
 ## Sample SR exports (`sr/synthetic/`)
 
