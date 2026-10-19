@@ -1,0 +1,369 @@
+{
+  "$defs": {
+    "CostConfidence": {
+      "enum": [
+        "confirmed",
+        "estimated",
+        "missing"
+      ],
+      "title": "CostConfidence",
+      "type": "string"
+    },
+    "CostDriver": {
+      "additionalProperties": false,
+      "properties": {
+        "ingredient": {
+          "pattern": "\\S",
+          "title": "Ingredient",
+          "type": "string"
+        },
+        "share": {
+          "$ref": "#/$defs/Pct"
+        }
+      },
+      "required": [
+        "ingredient",
+        "share"
+      ],
+      "title": "CostDriver",
+      "type": "object"
+    },
+    "DishCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "menu_item_id": {
+          "format": "uuid",
+          "title": "Menu Item Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "menu_item_id",
+        "name"
+      ],
+      "title": "DishCandidate",
+      "type": "object"
+    },
+    "DishMarginAmbiguous": {
+      "additionalProperties": false,
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/DishCandidate"
+          },
+          "maxItems": 5,
+          "minItems": 1,
+          "title": "Candidates",
+          "type": "array"
+        },
+        "match": {
+          "const": "ambiguous",
+          "title": "Match",
+          "type": "string"
+        }
+      },
+      "required": [
+        "match",
+        "candidates"
+      ],
+      "title": "DishMarginAmbiguous",
+      "type": "object"
+    },
+    "DishMarginResolved": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "$ref": "#/$defs/CostConfidence"
+        },
+        "cost": {
+          "$ref": "#/$defs/Money"
+        },
+        "cost_drivers": {
+          "items": {
+            "$ref": "#/$defs/CostDriver"
+          },
+          "maxItems": 3,
+          "title": "Cost Drivers",
+          "type": "array"
+        },
+        "food_cost": {
+          "$ref": "#/$defs/Pct"
+        },
+        "margin": {
+          "$ref": "#/$defs/Money"
+        },
+        "match": {
+          "const": "resolved",
+          "title": "Match",
+          "type": "string"
+        },
+        "menu_item_id": {
+          "format": "uuid",
+          "title": "Menu Item Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "net_price": {
+          "$ref": "#/$defs/Money"
+        }
+      },
+      "required": [
+        "match",
+        "menu_item_id",
+        "name",
+        "cost",
+        "net_price",
+        "margin",
+        "food_cost",
+        "confidence",
+        "cost_drivers"
+      ],
+      "title": "DishMarginResolved",
+      "type": "object"
+    },
+    "Flag": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "pattern": "\\S",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "Flag",
+      "type": "object"
+    },
+    "Meta": {
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "coverage_pct": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "unit=percent_points"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Coverage Pct"
+        },
+        "period_resolved": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Period"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "as_of"
+      ],
+      "title": "Meta",
+      "type": "object"
+    },
+    "Money": {
+      "additionalProperties": false,
+      "properties": {
+        "raw": {
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Raw",
+          "type": "integer"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "Money",
+      "type": "object"
+    },
+    "Pct": {
+      "additionalProperties": false,
+      "properties": {
+        "raw": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=percent_points",
+          "title": "Raw"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "Pct",
+      "type": "object"
+    },
+    "Period": {
+      "additionalProperties": false,
+      "description": "Business dates covered by the batch, both inclusive.",
+      "properties": {
+        "from": {
+          "format": "date",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "format": "date",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Period",
+      "type": "object"
+    },
+    "RpcError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/RpcErrorCode"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "RpcError",
+      "type": "object"
+    },
+    "RpcErrorCode": {
+      "enum": [
+        "invalid_args",
+        "not_found",
+        "no_data",
+        "forbidden",
+        "internal"
+      ],
+      "title": "RpcErrorCode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "data": {
+      "anyOf": [
+        {
+          "discriminator": {
+            "mapping": {
+              "ambiguous": "#/$defs/DishMarginAmbiguous",
+              "resolved": "#/$defs/DishMarginResolved"
+            },
+            "propertyName": "match"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/DishMarginResolved"
+            },
+            {
+              "$ref": "#/$defs/DishMarginAmbiguous"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Data"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RpcError"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "flags": {
+      "items": {
+        "$ref": "#/$defs/Flag"
+      },
+      "title": "Flags",
+      "type": "array"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    },
+    "ok": {
+      "title": "Ok",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "ok",
+    "meta"
+  ],
+  "title": "RpcEnvelope[Annotated[Union[DishMarginResolved, DishMarginAmbiguous], FieldInfo(annotation=NoneType, required=True, discriminator='match')]]",
+  "type": "object"
+}

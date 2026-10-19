@@ -1,0 +1,163 @@
+{
+  "$defs": {
+    "Choice": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 24,
+          "pattern": "\\S",
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "Choice",
+      "type": "object"
+    },
+    "ChoicesMsg": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "choices",
+          "title": "Kind",
+          "type": "string"
+        },
+        "options": {
+          "items": {
+            "$ref": "#/$defs/Choice"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Options",
+          "type": "array"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "text",
+        "options"
+      ],
+      "title": "ChoicesMsg",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "MetricCardMsg": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "kind": {
+          "const": "metric_card",
+          "title": "Kind",
+          "type": "string"
+        },
+        "rpc": {
+          "title": "Rpc",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "rpc",
+        "data"
+      ],
+      "title": "MetricCardMsg",
+      "type": "object"
+    },
+    "TextMsg": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "text",
+          "title": "Kind",
+          "type": "string"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "text"
+      ],
+      "title": "TextMsg",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "messages": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "choices": "#/$defs/ChoicesMsg",
+            "metric_card": "#/$defs/MetricCardMsg",
+            "text": "#/$defs/TextMsg"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/TextMsg"
+          },
+          {
+            "$ref": "#/$defs/ChoicesMsg"
+          },
+          {
+            "$ref": "#/$defs/MetricCardMsg"
+          }
+        ]
+      },
+      "minItems": 1,
+      "title": "Messages",
+      "type": "array"
+    },
+    "route": {
+      "enum": [
+        "handler",
+        "template",
+        "haiku",
+        "sonnet",
+        "fallback"
+      ],
+      "title": "Route",
+      "type": "string"
+    },
+    "usage_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Usage Id"
+    }
+  },
+  "required": [
+    "messages",
+    "route"
+  ],
+  "title": "AgentResponse",
+  "type": "object"
+}

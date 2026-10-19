@@ -1,0 +1,85 @@
+{
+  "$defs": {
+    "Period": {
+      "additionalProperties": false,
+      "description": "Business dates covered by the batch, both inclusive.",
+      "properties": {
+        "from": {
+          "format": "date",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "format": "date",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Period",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "location_ids": {
+      "anyOf": [
+        {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Location Ids"
+    },
+    "metric": {
+      "enum": [
+        "net_sales",
+        "tickets",
+        "avg_ticket",
+        "guests",
+        "food_cost_pct",
+        "units"
+      ],
+      "title": "Metric",
+      "type": "string"
+    },
+    "period": {
+      "anyOf": [
+        {
+          "enum": [
+            "today",
+            "yesterday",
+            "this_week",
+            "last_week",
+            "prev_week",
+            "this_month",
+            "last_month",
+            "last_7d",
+            "last_30d"
+          ],
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/Period"
+        }
+      ],
+      "title": "Period"
+    }
+  },
+  "required": [
+    "metric",
+    "period"
+  ],
+  "title": "CompareLocationsArgs",
+  "type": "object"
+}
