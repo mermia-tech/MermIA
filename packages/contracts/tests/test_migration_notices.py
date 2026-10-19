@@ -24,5 +24,6 @@ def test_migrations_are_timestamped_and_ordered() -> None:
         "metrics.sql",
         "rls_location_scope.sql",
         "read_rpcs_first4.sql",
+        "apply_rollback_batch.sql",
     ]
     assert all(n.split("_", 1)[0].isdigit() and len(n.split("_", 1)[0]) == 14 for n in names)
