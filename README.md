@@ -7,6 +7,7 @@ conventions, and `docs/kickoff/` for the research and plan.
 
 ```
 apps/api/                 The one FastAPI service (uv workspace member)
+apps/mock-rpc/            Mock server for the 11 read RPCs, answered from the fixtures
 supabase/                 Supabase CLI project: migrations (append-only), pgTAP tests
 packages/contracts/       Python package: generated DB row models and the NormalizedBatch contract
 docs/kickoff/             Research, architecture (09) and the 4-week plan (08)
