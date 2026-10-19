@@ -107,6 +107,22 @@ begin
   end;
 end $$;
 
+-- counts only the two test tenants' rows, so data already in the database (the seed) is ignored
+create function pg_temp.seen_test_tenants(r text, tbl text) returns text language plpgsql as $$
+declare n bigint;
+begin
+  execute format('set local role %I', r);
+  begin
+    execute format('select count(*) from public.%I where tenant_id in (%L, %L)', tbl,
+                   'aaaaaaaa-0000-7000-8000-000000000001', 'bbbbbbbb-0000-7000-8000-000000000002') into n;
+    reset role;
+    return n::text;
+  exception when others then
+    reset role;
+    return 'ERR ' || sqlstate;
+  end;
+end $$;
+
 -- scenarios: name, claims
 create temp table scenario (name text primary key, claims text not null);
 insert into scenario values
@@ -146,11 +162,11 @@ select is((select count(*) from cls where pg_temp.seen('anon', '', tbl) is disti
           'anon is denied on every table');
 
 -- privileged roles see every row (3 rows in L tables and LP, 2 elsewhere; app_user-like tables have 1)
-select is((select count(*) from cls where cls in ('T','F') and tbl not in ('tenant') and pg_temp.seen('service_role', '', tbl) is distinct from '2'), 0::bigint,
+select is((select count(*) from cls where cls in ('T','F') and tbl not in ('tenant') and pg_temp.seen_test_tenants('service_role', tbl) is distinct from '2'), 0::bigint,
           'service_role sees both tenants in tenant-wide and full-scope tables');
-select is((select count(*) from cls where cls in ('L','LP') and pg_temp.seen('service_role', '', tbl) is distinct from '3'), 0::bigint,
+select is((select count(*) from cls where cls in ('L','LP') and pg_temp.seen_test_tenants('service_role', tbl) is distinct from '3'), 0::bigint,
           'service_role sees all three location rows in location-scoped tables');
-select is(pg_temp.seen('postgres', '', 'sale_ticket'), '3', 'postgres bypasses RLS');
+select is(pg_temp.seen_test_tenants('postgres', 'sale_ticket'), '3', 'postgres bypasses RLS');
 
 select * from finish();
 rollback;

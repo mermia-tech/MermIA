@@ -26,7 +26,11 @@ exclude = ['/\.venv/']
 # Name modules by path so same-named test files in different members do not clash.
 # List each member's src/ folder in mypy_path as members are added.
 explicit_package_bases = true
-mypy_path = ["$MYPY_CONFIG_FILE_DIR/apps/api/src", "$MYPY_CONFIG_FILE_DIR/packages/contracts/src"]
+mypy_path = [
+    "$MYPY_CONFIG_FILE_DIR/apps/api/src",
+    "$MYPY_CONFIG_FILE_DIR/packages/contracts/src",
+    "$MYPY_CONFIG_FILE_DIR/packages/fixtures/src",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["apps", "packages"]

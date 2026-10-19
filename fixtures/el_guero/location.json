@@ -1,0 +1,18 @@
+[
+ {
+  "id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Centro",
+  "timezone": "America/Mexico_City",
+  "address": "Av. Juárez 118, Centro, CDMX",
+  "sr_version": "12"
+ },
+ {
+  "id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Polanco",
+  "timezone": "America/Mexico_City",
+  "address": "Av. Presidente Masaryk 240, Polanco, CDMX",
+  "sr_version": "12"
+ }
+]

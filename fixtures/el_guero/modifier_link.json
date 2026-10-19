@@ -1,0 +1,37 @@
+[
+ {
+  "id": "a74d0156-abb1-5fa4-af14-f5e6a10a72d8",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
+  "modifier_item_id": "8e78aef5-7af2-5722-b908-d6929161e6cf",
+  "price_delta": 1500
+ },
+ {
+  "id": "f6176db4-6da5-566b-960e-31657d2a257b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "81404715-16f4-518e-b9e7-07df075161eb",
+  "modifier_item_id": "8e78aef5-7af2-5722-b908-d6929161e6cf",
+  "price_delta": 1500
+ },
+ {
+  "id": "0f46ac7e-7f22-5a0f-9b12-e74e12de43c9",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "16544bcb-7aa7-5dad-9708-adb3680e63e0",
+  "modifier_item_id": "8e78aef5-7af2-5722-b908-d6929161e6cf",
+  "price_delta": 1500
+ },
+ {
+  "id": "79063bd0-e15e-5032-83a3-61db139ce2fd",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
+  "modifier_item_id": "1b376cec-616e-5aa4-8165-026eadf08c20",
+  "price_delta": 2000
+ },
+ {
+  "id": "30202973-d74e-52b2-8261-ea182a5b2d0c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "menu_item_id": "86d5db2b-7f85-51ab-9d06-49872ddfa200",
+  "modifier_item_id": "1b376cec-616e-5aa4-8165-026eadf08c20",
+  "price_delta": 2000
+ }
+]

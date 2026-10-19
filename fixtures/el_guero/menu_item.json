@@ -1,0 +1,371 @@
+[
+ {
+  "id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P001",
+  "name": "Tacos al pastor (orden de 3)",
+  "normalized_name": "tacos al pastor orden de 3",
+  "category_id": "33589ce1-08e9-5064-ab33-b83cbe696c3b",
+  "kind": "dish"
+ },
+ {
+  "id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P002",
+  "name": "Tacos de bistec (orden de 3)",
+  "normalized_name": "tacos de bistec orden de 3",
+  "category_id": "33589ce1-08e9-5064-ab33-b83cbe696c3b",
+  "kind": "dish"
+ },
+ {
+  "id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P003",
+  "name": "Tacos de suadero (orden de 3)",
+  "normalized_name": "tacos de suadero orden de 3",
+  "category_id": "33589ce1-08e9-5064-ab33-b83cbe696c3b",
+  "kind": "dish"
+ },
+ {
+  "id": "a825d126-082a-5b37-a763-784cbb733ba2",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P004",
+  "name": "Tacos campechanos (orden de 3)",
+  "normalized_name": "tacos campechanos orden de 3",
+  "category_id": "33589ce1-08e9-5064-ab33-b83cbe696c3b",
+  "kind": "dish"
+ },
+ {
+  "id": "f5fea202-65b8-55a9-81fe-f47369aad159",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P005",
+  "name": "Tacos de longaniza (orden de 3)",
+  "normalized_name": "tacos de longaniza orden de 3",
+  "category_id": "33589ce1-08e9-5064-ab33-b83cbe696c3b",
+  "kind": "dish"
+ },
+ {
+  "id": "c6b15bb1-c30a-5aaa-89b0-dafc57ad6974",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P006",
+  "name": "Tacos de lengua (orden de 3)",
+  "normalized_name": "tacos de lengua orden de 3",
+  "category_id": "33589ce1-08e9-5064-ab33-b83cbe696c3b",
+  "kind": "dish"
+ },
+ {
+  "id": "cf3d4151-31c2-5ac3-b1f2-c1866f4fb3f3",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P007",
+  "name": "Tacos de tripa (orden de 3)",
+  "normalized_name": "tacos de tripa orden de 3",
+  "category_id": "33589ce1-08e9-5064-ab33-b83cbe696c3b",
+  "kind": "dish"
+ },
+ {
+  "id": "f29b7642-a735-5d9e-935b-41c973aaafe8",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P008",
+  "name": "Tacos de cabeza (orden de 3)",
+  "normalized_name": "tacos de cabeza orden de 3",
+  "category_id": "33589ce1-08e9-5064-ab33-b83cbe696c3b",
+  "kind": "dish"
+ },
+ {
+  "id": "e6e3bfbc-32bd-5345-aa3b-de89839dd88f",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P009",
+  "name": "Gringa de pastor",
+  "normalized_name": "gringa de pastor",
+  "category_id": "33589ce1-08e9-5064-ab33-b83cbe696c3b",
+  "kind": "dish"
+ },
+ {
+  "id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P010",
+  "name": "Volcán de pastor",
+  "normalized_name": "volcan de pastor",
+  "category_id": "33589ce1-08e9-5064-ab33-b83cbe696c3b",
+  "kind": "dish"
+ },
+ {
+  "id": "dae5c370-12a2-52d9-97da-7841e565845e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P011",
+  "name": "Taco de costilla",
+  "normalized_name": "taco de costilla",
+  "category_id": "33589ce1-08e9-5064-ab33-b83cbe696c3b",
+  "kind": "dish"
+ },
+ {
+  "id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P020",
+  "name": "Quesadilla de queso",
+  "normalized_name": "quesadilla de queso",
+  "category_id": "29b56d1d-380e-5c60-beed-bc5ad33c3956",
+  "kind": "dish"
+ },
+ {
+  "id": "a11a23db-3424-5073-9c64-5465605cbad1",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P021",
+  "name": "Quesadilla de flor de calabaza",
+  "normalized_name": "quesadilla de flor de calabaza",
+  "category_id": "29b56d1d-380e-5c60-beed-bc5ad33c3956",
+  "kind": "dish"
+ },
+ {
+  "id": "4b0ed652-4bef-5511-bba9-2952b3810e83",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P022",
+  "name": "Quesadilla de champiñón",
+  "normalized_name": "quesadilla de champinon",
+  "category_id": "29b56d1d-380e-5c60-beed-bc5ad33c3956",
+  "kind": "dish"
+ },
+ {
+  "id": "81404715-16f4-518e-b9e7-07df075161eb",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P023",
+  "name": "Alambre de res",
+  "normalized_name": "alambre de res",
+  "category_id": "29b56d1d-380e-5c60-beed-bc5ad33c3956",
+  "kind": "dish"
+ },
+ {
+  "id": "16544bcb-7aa7-5dad-9708-adb3680e63e0",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P024",
+  "name": "Alambre de pollo",
+  "normalized_name": "alambre de pollo",
+  "category_id": "29b56d1d-380e-5c60-beed-bc5ad33c3956",
+  "kind": "dish"
+ },
+ {
+  "id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P025",
+  "name": "Torta de pastor",
+  "normalized_name": "torta de pastor",
+  "category_id": "29b56d1d-380e-5c60-beed-bc5ad33c3956",
+  "kind": "dish"
+ },
+ {
+  "id": "a88d57f4-0d46-5a47-84ca-be0d3f24e680",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P026",
+  "name": "Huarache de bistec",
+  "normalized_name": "huarache de bistec",
+  "category_id": "29b56d1d-380e-5c60-beed-bc5ad33c3956",
+  "kind": "dish"
+ },
+ {
+  "id": "43c7f151-02d1-5a6f-9cca-6760710b3bd4",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P027",
+  "name": "Sopes de chicharrón (orden de 2)",
+  "normalized_name": "sopes de chicharron orden de 2",
+  "category_id": "29b56d1d-380e-5c60-beed-bc5ad33c3956",
+  "kind": "dish"
+ },
+ {
+  "id": "5b173856-fc01-5ae6-951a-95c551609843",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P028",
+  "name": "Nopales asados",
+  "normalized_name": "nopales asados",
+  "category_id": "29b56d1d-380e-5c60-beed-bc5ad33c3956",
+  "kind": "dish"
+ },
+ {
+  "id": "00aab2fe-5645-5fae-92ca-d263adb5936b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P029",
+  "name": "Frijoles charros",
+  "normalized_name": "frijoles charros",
+  "category_id": "29b56d1d-380e-5c60-beed-bc5ad33c3956",
+  "kind": "dish"
+ },
+ {
+  "id": "86d5db2b-7f85-51ab-9d06-49872ddfa200",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P030",
+  "name": "Guacamole con totopos",
+  "normalized_name": "guacamole con totopos",
+  "category_id": "29b56d1d-380e-5c60-beed-bc5ad33c3956",
+  "kind": "dish"
+ },
+ {
+  "id": "e8d89f5e-1edc-591a-9400-e9de9cb3555e",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P031",
+  "name": "Papa asada con chorizo",
+  "normalized_name": "papa asada con chorizo",
+  "category_id": "29b56d1d-380e-5c60-beed-bc5ad33c3956",
+  "kind": "dish"
+ },
+ {
+  "id": "13523ead-5ebf-552d-b723-0701a893c6e4",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P040",
+  "name": "Agua de horchata",
+  "normalized_name": "agua de horchata",
+  "category_id": "d51afedf-b895-5810-852e-209224a851cc",
+  "kind": "dish"
+ },
+ {
+  "id": "88bab77a-1b10-5d6f-bd92-14f28fddb78d",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P041",
+  "name": "Agua de jamaica",
+  "normalized_name": "agua de jamaica",
+  "category_id": "d51afedf-b895-5810-852e-209224a851cc",
+  "kind": "dish"
+ },
+ {
+  "id": "fe1e8153-67eb-5ba5-bb08-c84a3d180d53",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P042",
+  "name": "Agua de tamarindo",
+  "normalized_name": "agua de tamarindo",
+  "category_id": "d51afedf-b895-5810-852e-209224a851cc",
+  "kind": "dish"
+ },
+ {
+  "id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P043",
+  "name": "Coca-Cola",
+  "normalized_name": "coca-cola",
+  "category_id": "d51afedf-b895-5810-852e-209224a851cc",
+  "kind": "drink"
+ },
+ {
+  "id": "da887536-8f4f-5c71-9a9e-6227f1ae0a2f",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P044",
+  "name": "Coca-Cola Light",
+  "normalized_name": "coca-cola light",
+  "category_id": "d51afedf-b895-5810-852e-209224a851cc",
+  "kind": "drink"
+ },
+ {
+  "id": "e5abc715-9d4d-5131-9c57-5a521cbf66c7",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P045",
+  "name": "Sprite",
+  "normalized_name": "sprite",
+  "category_id": "d51afedf-b895-5810-852e-209224a851cc",
+  "kind": "drink"
+ },
+ {
+  "id": "1ea4dd32-cfd7-50b4-bdb0-3fa128bb154a",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P046",
+  "name": "Agua mineral",
+  "normalized_name": "agua mineral",
+  "category_id": "d51afedf-b895-5810-852e-209224a851cc",
+  "kind": "drink"
+ },
+ {
+  "id": "65d78189-e3d0-514e-ac4f-9917f93ce4d2",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P047",
+  "name": "Agua natural",
+  "normalized_name": "agua natural",
+  "category_id": "d51afedf-b895-5810-852e-209224a851cc",
+  "kind": "drink"
+ },
+ {
+  "id": "b55371fc-3a78-55c0-8edc-ed56d117914d",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P048",
+  "name": "Cerveza Corona",
+  "normalized_name": "cerveza corona",
+  "category_id": "d51afedf-b895-5810-852e-209224a851cc",
+  "kind": "drink"
+ },
+ {
+  "id": "b01f86fa-2e25-5958-951d-e2a0b346deb4",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P049",
+  "name": "Cerveza Victoria",
+  "normalized_name": "cerveza victoria",
+  "category_id": "d51afedf-b895-5810-852e-209224a851cc",
+  "kind": "drink"
+ },
+ {
+  "id": "20d2bbfa-a852-565f-a62c-1e09b7ecd826",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P050",
+  "name": "Michelada",
+  "normalized_name": "michelada",
+  "category_id": "d51afedf-b895-5810-852e-209224a851cc",
+  "kind": "drink"
+ },
+ {
+  "id": "824e6447-6259-5db4-9acd-4a1de7819568",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P051",
+  "name": "Café de olla",
+  "normalized_name": "cafe de olla",
+  "category_id": "d51afedf-b895-5810-852e-209224a851cc",
+  "kind": "drink"
+ },
+ {
+  "id": "5b32108b-bb50-5f0d-be50-20445b00b7bb",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P060",
+  "name": "Flan napolitano",
+  "normalized_name": "flan napolitano",
+  "category_id": "9e0802da-c71a-573c-86bb-27e0d24219cc",
+  "kind": "dish"
+ },
+ {
+  "id": "d54c49ce-7ef2-568e-ba98-f4e32f30ad13",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P061",
+  "name": "Arroz con leche",
+  "normalized_name": "arroz con leche",
+  "category_id": "9e0802da-c71a-573c-86bb-27e0d24219cc",
+  "kind": "dish"
+ },
+ {
+  "id": "0bd3aa2e-92eb-55a9-8078-addcf7fc4171",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P062",
+  "name": "Churros (orden de 3)",
+  "normalized_name": "churros orden de 3",
+  "category_id": "9e0802da-c71a-573c-86bb-27e0d24219cc",
+  "kind": "dish"
+ },
+ {
+  "id": "8e78aef5-7af2-5722-b908-d6929161e6cf",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P070",
+  "name": "Extra queso",
+  "normalized_name": "extra queso",
+  "category_id": "052ecb26-8d67-567b-a180-d90edff8a848",
+  "kind": "modifier"
+ },
+ {
+  "id": "1b376cec-616e-5aa4-8165-026eadf08c20",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P071",
+  "name": "Extra aguacate",
+  "normalized_name": "extra aguacate",
+  "category_id": "052ecb26-8d67-567b-a180-d90edff8a848",
+  "kind": "modifier"
+ },
+ {
+  "id": "918dc21b-89f7-5abd-a1b9-3ae0c2ebe35b",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "external_id": "P072",
+  "name": "Orden de tortillas",
+  "normalized_name": "orden de tortillas",
+  "category_id": "052ecb26-8d67-567b-a180-d90edff8a848",
+  "kind": "dish"
+ }
+]

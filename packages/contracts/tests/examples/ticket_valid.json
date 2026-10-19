@@ -10,7 +10,7 @@
     {"external_id": "N-100", "business_date": "2026-10-12", "opened_at": "2026-10-12T19:00:00-06:00",
      "closed_at": "2026-10-12T19:40:00-06:00", "channel": "dine_in", "staff": {"display_name": "Juan"},
      "subtotal": 10000, "tax": 1600, "total": 11600, "status": "paid",
-     "lines": [{"item_name": "Taco al pastor", "qty": "2.000000", "unit_price": 5000, "net": 10000}],
+     "lines": [{"item_name": "Taco al pastor", "qty": "2.000000", "unit_price": 5800, "tax": 1600, "net": 11600}],
      "payments": [{"method": "cash", "amount": 11600}]}
   ]
 }

@@ -50,6 +50,28 @@ def test_invalid_examples_fail_for_the_labelled_reason(name: str, reason: str) -
     assert reason in kinds or reason in messages, (kinds, messages)
 
 
+@pytest.mark.parametrize("path", VALID, ids=lambda p: p.name)
+def test_ticket_money_adds_up(path: Path) -> None:
+    """Ticket grain uses the item and daily meaning of net (fixtures/README.md, Definitions).
+
+    Line net = qty x unit_price - discount, IVA included; line tax is the IVA inside it.
+    Ticket total = sum(line net) - ticket discount, tax = sum(line tax), subtotal = total - tax
+    (without IVA), and totals.net_sales = sum of paid tickets' totals (03 B.5, 09 section 2).
+    """
+    batch = NormalizedBatch.model_validate_json(path.read_text())
+    if not batch.tickets:
+        return
+    for t in batch.tickets:
+        for line in t.lines:
+            assert line.net == round(line.qty * line.unit_price) - line.discount, t.external_id
+        assert t.total == sum(x.net for x in t.lines) - t.discount, t.external_id
+        assert t.tax == sum(x.tax for x in t.lines), t.external_id
+        assert t.subtotal == t.total - t.tax, t.external_id
+        assert sum(p.amount for p in t.payments) in (0, t.total), t.external_id
+    paid = sum(t.total for t in batch.tickets if t.status == "paid")
+    assert batch.totals.net_sales in (None, paid)
+
+
 def test_json_schema_snapshot() -> None:
     schema = (
         json.dumps(NormalizedBatch.model_json_schema(by_alias=True), indent=2, sort_keys=True)

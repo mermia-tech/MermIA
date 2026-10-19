@@ -1,0 +1,18 @@
+[
+ {
+  "id": "e23c52db-a562-5798-8262-bb084e00ddf1",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "ingredient_id": null,
+  "from_unit": "kg",
+  "to_unit": "g",
+  "factor": "1000.0000000000"
+ },
+ {
+  "id": "d490c4b2-817b-59de-b612-b0fb8dfa466d",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "ingredient_id": null,
+  "from_unit": "l",
+  "to_unit": "ml",
+  "factor": "1000.0000000000"
+ }
+]

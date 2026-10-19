@@ -1,0 +1,23 @@
+[
+ {
+  "id": "54f37bf2-0d8d-5500-8e6b-69127b7e5362",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Carnes Selectas del Bajío",
+  "rfc": "CSB150301AB1",
+  "kind": "cfdi"
+ },
+ {
+  "id": "cb708dbd-29bf-5d69-a23a-d07bcac30dee",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Central de Abasto, Bodega 23",
+  "rfc": null,
+  "kind": "market"
+ },
+ {
+  "id": "e3287b40-c0d7-5297-93e1-f7beb8943507",
+  "tenant_id": "03299e41-28bd-5779-bcc6-0e5e76580fad",
+  "name": "Distribuidora de Bebidas del Valle",
+  "rfc": "DBV180912KQ3",
+  "kind": "cfdi"
+ }
+]
