@@ -23,7 +23,7 @@ and units, and `docs/superpowers/specs/2026-10-18-mr-10-contracts-schema-design.
 - `rpc.py` (C3): the 11 read RPCs, their arguments and the `{ok, data, error, flags, meta}` envelope.
   `Figure.raw` follows `METRIC_UNIT` (money in centavos, counts, percent points); `Pct` is a calculated
   percentage (not a column); `compare_periods` carries `period_a` and `period_b`; `get_dish_margin`
-  is on the net price. See `docs/superpowers/specs/2026-10-18-mr-11-contracts-rpc-tools-design.md` section 7.
+  is on the net price (without IVA), the adopted definition. See `docs/superpowers/specs/2026-10-18-mr-11-contracts-rpc-tools-design.md` section 7.
   `ok=true` needs `data` and no `error`; `ok=false` needs `error` and no `data`.
 - `agent_tools.py` (C4): the 12 agent tools, derived from C3 plus `propose_change`, whose `values` is typed
   per kind (price in the user's unit: `g`, `kg`, `ml`, `l`, `pza`; the confirmation service converts, not this package).
@@ -39,7 +39,7 @@ ANTHROPIC_API_KEY=... uv run python -m mermia_contracts.tools.measure_tool_token
 ANTHROPIC_API_KEY=... uv run python -m mermia_contracts.tools.measure_tool_tokens --check  # re-measure and compare
 ```
 
-**Token budget: NOT MEASURED YET.** Each tool may add at most 125 tokens (`agent_tools.TOKEN_LIMIT`,
+**Token budget: NOT MEASURED YET (deferred to MR-20; not met by MR-11, and not a closing requirement of it).** Each tool may add at most 125 tokens (`agent_tools.TOKEN_LIMIT`,
 08 C4); nobody has checked that the current tools fit, and a rough size estimate suggests some do
 not. The measurement is deferred to the LLM eval ticket (proposed: MR-20, the day-5 gate and the
 M3 milestone in `docs/kickoff/07-roadmap.md`). The cost of a tool is `count([B, t]) - count([B])`
