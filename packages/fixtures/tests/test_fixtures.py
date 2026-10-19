@@ -55,14 +55,17 @@ def test_eval_weekly_figures() -> None:
 
 
 def test_eval_pastor_cost_and_margin() -> None:
-    # 13 H3 example 4: cost $18.40, price $65.00, margin 71.7 %
+    # 13 H3 example 4: cost $18.40, menu price $65.00; margin on the net price (MR-11 D20):
+    # $65.00 less IVA is $56.03, so the margin is 67.2 % and the food cost 32.8 %
     costs = committed(JSON_DIR / "expected.json")["dish_costs_today"]
     pastor = next(c for c in costs if c["code"] == "P001" and c["location"] == "L1")
-    assert (pastor["cost"], pastor["price_gross"], pastor["margin_pct_of_gross"]) == (
-        1840,
-        6500,
-        "71.7",
-    )
+    assert (
+        pastor["cost"],
+        pastor["price_gross"],
+        pastor["net_price"],
+        pastor["margin_pct"],
+        pastor["food_cost_pct"],
+    ) == (1840, 6500, 5603, "67.2", "32.8")
 
 
 def test_pastor_meat_costs_less_than_the_eval_proposal() -> None:

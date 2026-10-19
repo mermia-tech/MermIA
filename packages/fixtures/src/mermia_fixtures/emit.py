@@ -15,7 +15,7 @@ import json
 import re
 import zipfile
 from collections import Counter, defaultdict
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any
 
@@ -129,6 +129,7 @@ def expected(items: list[b.ItemDay], days: list[b.Day]) -> dict[str, Any]:
             continue
         for lo in r.LOCATIONS:
             price = b.menu_price(m.code, lo)
+            net_price = price - b.vat_inside(price)
             dish_costs.append(
                 {
                     "code": m.code,
@@ -136,9 +137,10 @@ def expected(items: list[b.ItemDay], days: list[b.Day]) -> dict[str, Any]:
                     "location": lo.key,
                     "cost": cost,
                     "price_gross": price,
-                    "margin_pct_of_gross": str(
-                        (Decimal(price - cost) * 100 / price).quantize(Decimal("0.1"))
-                    ),
+                    "net_price": net_price,
+                    "margin": net_price - cost,
+                    "margin_pct": pct(net_price - cost, net_price),
+                    "food_cost_pct": pct(cost, net_price),
                 }
             )
     loc, sat = r.CANCEL_SATURDAY
@@ -148,7 +150,8 @@ def expected(items: list[b.ItemDay], days: list[b.Day]) -> dict[str, Any]:
         "today": r.TODAY.isoformat(),
         "notes": [
             "Money is centavos. Sales net = gross - discount, IVA included (13 H3 quotes it so).",
-            "margin_pct_of_gross = (price_gross - cost) / price_gross, as 13 H3 example 4.",
+            "Dish margin is on the net price (without IVA), as the MR-11 contract decides:"
+            " margin_pct = (net_price - cost) / net_price, food_cost_pct = cost / net_price.",
         ],
         "weekly_net_sales": weekly,
         "daily_net_sales": {
@@ -176,6 +179,11 @@ def expected(items: list[b.ItemDay], days: list[b.Day]) -> dict[str, Any]:
             for k, since, new in r.PRICE_JUMPS
         ],
     }
+
+
+def pct(part: int, whole: int) -> str:
+    """Percent points with one decimal, half away from zero."""
+    return str((Decimal(part) * 100 / whole).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
 
 
 def food_cost(items: list[b.ItemDay], day: dt.date) -> dict[str, Any]:

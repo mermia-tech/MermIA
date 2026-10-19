@@ -2,7 +2,7 @@
  "today": "2026-10-12",
  "notes": [
   "Money is centavos. Sales net = gross - discount, IVA included (13 H3 quotes it so).",
-  "margin_pct_of_gross = (price_gross - cost) / price_gross, as 13 H3 example 4."
+  "Dish margin is on the net price (without IVA), as the MR-11 contract decides: margin_pct = (net_price - cost) / net_price, food_cost_pct = cost / net_price."
  ],
  "weekly_net_sales": {
   "L1": {
@@ -234,7 +234,10 @@
    "location": "L1",
    "cost": 1840,
    "price_gross": 6500,
-   "margin_pct_of_gross": "71.7"
+   "net_price": 5603,
+   "margin": 3763,
+   "margin_pct": "67.2",
+   "food_cost_pct": "32.8"
   },
   {
    "code": "P001",
@@ -242,7 +245,10 @@
    "location": "L2",
    "cost": 1840,
    "price_gross": 7200,
-   "margin_pct_of_gross": "74.4"
+   "net_price": 6207,
+   "margin": 4367,
+   "margin_pct": "70.4",
+   "food_cost_pct": "29.6"
   },
   {
    "code": "P002",
@@ -250,7 +256,10 @@
    "location": "L1",
    "cost": 2532,
    "price_gross": 7500,
-   "margin_pct_of_gross": "66.2"
+   "net_price": 6466,
+   "margin": 3934,
+   "margin_pct": "60.8",
+   "food_cost_pct": "39.2"
   },
   {
    "code": "P002",
@@ -258,7 +267,10 @@
    "location": "L2",
    "cost": 2532,
    "price_gross": 8300,
-   "margin_pct_of_gross": "69.5"
+   "net_price": 7155,
+   "margin": 4623,
+   "margin_pct": "64.6",
+   "food_cost_pct": "35.4"
   },
   {
    "code": "P003",
@@ -266,7 +278,10 @@
    "location": "L1",
    "cost": 2343,
    "price_gross": 7000,
-   "margin_pct_of_gross": "66.5"
+   "net_price": 6034,
+   "margin": 3691,
+   "margin_pct": "61.2",
+   "food_cost_pct": "38.8"
   },
   {
    "code": "P003",
@@ -274,7 +289,10 @@
    "location": "L2",
    "cost": 2343,
    "price_gross": 7700,
-   "margin_pct_of_gross": "69.6"
+   "net_price": 6638,
+   "margin": 4295,
+   "margin_pct": "64.7",
+   "food_cost_pct": "35.3"
   },
   {
    "code": "P004",
@@ -282,7 +300,10 @@
    "location": "L1",
    "cost": 2085,
    "price_gross": 7500,
-   "margin_pct_of_gross": "72.2"
+   "net_price": 6466,
+   "margin": 4381,
+   "margin_pct": "67.8",
+   "food_cost_pct": "32.2"
   },
   {
    "code": "P004",
@@ -290,7 +311,10 @@
    "location": "L2",
    "cost": 2085,
    "price_gross": 8300,
-   "margin_pct_of_gross": "74.9"
+   "net_price": 7155,
+   "margin": 5070,
+   "margin_pct": "70.9",
+   "food_cost_pct": "29.1"
   },
   {
    "code": "P005",
@@ -298,7 +322,10 @@
    "location": "L1",
    "cost": 1614,
    "price_gross": 6500,
-   "margin_pct_of_gross": "75.2"
+   "net_price": 5603,
+   "margin": 3989,
+   "margin_pct": "71.2",
+   "food_cost_pct": "28.8"
   },
   {
    "code": "P005",
@@ -306,7 +333,10 @@
    "location": "L2",
    "cost": 1614,
    "price_gross": 7200,
-   "margin_pct_of_gross": "77.6"
+   "net_price": 6207,
+   "margin": 4593,
+   "margin_pct": "74.0",
+   "food_cost_pct": "26.0"
   },
   {
    "code": "P009",
@@ -314,7 +344,10 @@
    "location": "L1",
    "cost": 3155,
    "price_gross": 8500,
-   "margin_pct_of_gross": "62.9"
+   "net_price": 7328,
+   "margin": 4173,
+   "margin_pct": "56.9",
+   "food_cost_pct": "43.1"
   },
   {
    "code": "P009",
@@ -322,7 +355,10 @@
    "location": "L2",
    "cost": 3155,
    "price_gross": 9400,
-   "margin_pct_of_gross": "66.4"
+   "net_price": 8103,
+   "margin": 4948,
+   "margin_pct": "61.1",
+   "food_cost_pct": "38.9"
   },
   {
    "code": "P010",
@@ -330,7 +366,10 @@
    "location": "L1",
    "cost": 1462,
    "price_gross": 4500,
-   "margin_pct_of_gross": "67.5"
+   "net_price": 3879,
+   "margin": 2417,
+   "margin_pct": "62.3",
+   "food_cost_pct": "37.7"
   },
   {
    "code": "P010",
@@ -338,7 +377,10 @@
    "location": "L2",
    "cost": 1462,
    "price_gross": 5000,
-   "margin_pct_of_gross": "70.8"
+   "net_price": 4310,
+   "margin": 2848,
+   "margin_pct": "66.1",
+   "food_cost_pct": "33.9"
   },
   {
    "code": "P020",
@@ -346,7 +388,10 @@
    "location": "L1",
    "cost": 1101,
    "price_gross": 4500,
-   "margin_pct_of_gross": "75.5"
+   "net_price": 3879,
+   "margin": 2778,
+   "margin_pct": "71.6",
+   "food_cost_pct": "28.4"
   },
   {
    "code": "P020",
@@ -354,7 +399,10 @@
    "location": "L2",
    "cost": 1101,
    "price_gross": 5000,
-   "margin_pct_of_gross": "78.0"
+   "net_price": 4310,
+   "margin": 3209,
+   "margin_pct": "74.5",
+   "food_cost_pct": "25.5"
   },
   {
    "code": "P023",
@@ -362,7 +410,10 @@
    "location": "L1",
    "cost": 6136,
    "price_gross": 14500,
-   "margin_pct_of_gross": "57.7"
+   "net_price": 12500,
+   "margin": 6364,
+   "margin_pct": "50.9",
+   "food_cost_pct": "49.1"
   },
   {
    "code": "P023",
@@ -370,7 +421,10 @@
    "location": "L2",
    "cost": 6136,
    "price_gross": 16000,
-   "margin_pct_of_gross": "61.6"
+   "net_price": 13793,
+   "margin": 7657,
+   "margin_pct": "55.5",
+   "food_cost_pct": "44.5"
   },
   {
    "code": "P025",
@@ -378,7 +432,10 @@
    "location": "L1",
    "cost": 3449,
    "price_gross": 8000,
-   "margin_pct_of_gross": "56.9"
+   "net_price": 6897,
+   "margin": 3448,
+   "margin_pct": "50.0",
+   "food_cost_pct": "50.0"
   },
   {
    "code": "P025",
@@ -386,7 +443,10 @@
    "location": "L2",
    "cost": 3449,
    "price_gross": 8800,
-   "margin_pct_of_gross": "60.8"
+   "net_price": 7586,
+   "margin": 4137,
+   "margin_pct": "54.5",
+   "food_cost_pct": "45.5"
   },
   {
    "code": "P040",
@@ -394,7 +454,10 @@
    "location": "L1",
    "cost": 517,
    "price_gross": 3500,
-   "margin_pct_of_gross": "85.2"
+   "net_price": 3017,
+   "margin": 2500,
+   "margin_pct": "82.9",
+   "food_cost_pct": "17.1"
   },
   {
    "code": "P040",
@@ -402,7 +465,10 @@
    "location": "L2",
    "cost": 517,
    "price_gross": 3900,
-   "margin_pct_of_gross": "86.7"
+   "net_price": 3362,
+   "margin": 2845,
+   "margin_pct": "84.6",
+   "food_cost_pct": "15.4"
   },
   {
    "code": "P041",
@@ -410,7 +476,10 @@
    "location": "L1",
    "cost": 314,
    "price_gross": 3500,
-   "margin_pct_of_gross": "91.0"
+   "net_price": 3017,
+   "margin": 2703,
+   "margin_pct": "89.6",
+   "food_cost_pct": "10.4"
   },
   {
    "code": "P041",
@@ -418,7 +487,10 @@
    "location": "L2",
    "cost": 314,
    "price_gross": 3900,
-   "margin_pct_of_gross": "91.9"
+   "net_price": 3362,
+   "margin": 3048,
+   "margin_pct": "90.7",
+   "food_cost_pct": "9.3"
   },
   {
    "code": "P043",
@@ -426,7 +498,10 @@
    "location": "L1",
    "cost": 1400,
    "price_gross": 3000,
-   "margin_pct_of_gross": "53.3"
+   "net_price": 2586,
+   "margin": 1186,
+   "margin_pct": "45.9",
+   "food_cost_pct": "54.1"
   },
   {
    "code": "P043",
@@ -434,7 +509,10 @@
    "location": "L2",
    "cost": 1400,
    "price_gross": 3300,
-   "margin_pct_of_gross": "57.6"
+   "net_price": 2845,
+   "margin": 1445,
+   "margin_pct": "50.8",
+   "food_cost_pct": "49.2"
   },
   {
    "code": "P046",
@@ -442,7 +520,10 @@
    "location": "L1",
    "cost": 1200,
    "price_gross": 3000,
-   "margin_pct_of_gross": "60.0"
+   "net_price": 2586,
+   "margin": 1386,
+   "margin_pct": "53.6",
+   "food_cost_pct": "46.4"
   },
   {
    "code": "P046",
@@ -450,7 +531,10 @@
    "location": "L2",
    "cost": 1200,
    "price_gross": 3300,
-   "margin_pct_of_gross": "63.6"
+   "net_price": 2845,
+   "margin": 1645,
+   "margin_pct": "57.8",
+   "food_cost_pct": "42.2"
   },
   {
    "code": "P048",
@@ -458,7 +542,10 @@
    "location": "L1",
    "cost": 1800,
    "price_gross": 4500,
-   "margin_pct_of_gross": "60.0"
+   "net_price": 3879,
+   "margin": 2079,
+   "margin_pct": "53.6",
+   "food_cost_pct": "46.4"
   },
   {
    "code": "P048",
@@ -466,7 +553,10 @@
    "location": "L2",
    "cost": 1800,
    "price_gross": 5000,
-   "margin_pct_of_gross": "64.0"
+   "net_price": 4310,
+   "margin": 2510,
+   "margin_pct": "58.2",
+   "food_cost_pct": "41.8"
   }
  ],
  "cancellation_saturday": {

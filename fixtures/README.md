@@ -29,7 +29,7 @@ The restaurant itself is written by hand in `packages/fixtures/src/mermia_fixtur
 | Example | Figure | Where it is checked |
 |---|---|---|
 | 1, 2 | Centro net sales: $184,320.50 for 2026-10-05..11 and $171,905.00 for 2026-09-28..10-04 | `test_fixtures.py`, `supabase/tests/60_seed.test.sql` |
-| 4 | Tacos al pastor: cost $18.40, price $65.00, margin 71.7% | same |
+| 4 | Tacos al pastor: cost $18.40, menu price $65.00 ($56.03 without IVA), margin 67.2% on the net price | same |
 | 7 | 2026-10-10 is the Saturday with the most cancellations, and every cancelled ticket has a waiter | same |
 | 9 | Pastor meat costs less than $220/kg today ($195) | `test_fixtures.py` |
 
@@ -40,7 +40,7 @@ Example 6 (food cost yesterday = 31.4%) is **not** pinned. The seed's figure is 
 ## Conventions
 
 - Money is integer centavos. A sales line's `net` is `gross - discount`, **IVA included**. A day's `net_sales` is the sum of its item nets. `tax` is the IVA inside it, and `payment_mix` adds up to `net_sales`.
-- Margin is `(price_gross - cost) / price_gross`, which is how `13` H3 example 4 computes it.
+- Dish margin and food cost are on the **net price** (without IVA), as decided in MR-11 (D20): `margin_pct = (net_price - cost) / net_price`. For the pastor that is 67.2%, so `13` H3 example 4's 71.7% (computed on the gross price) has to change to 67.2% (MR-19).
 - Dish cost is `sum(qty * price per base unit * 100 / yield_pct)`, rounded once to centavos, half away from zero.
 - To land exactly on the two pinned weeks, calibration adds units across each week's best sellers. It then takes the last few pesos (less than the cheapest item) off that Sunday's pastor order as a discount. That's why Centro's pastor order has a small, unexplained discount on 2026-10-04 ($6) and 2026-10-11 ($5).
 
