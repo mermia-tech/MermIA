@@ -199,7 +199,7 @@
               "type": "string"
             }
           ],
-          "description": "unit=pesos_per_purchase_unit",
+          "description": "unit=pesos_per_base_unit (g, ml or pza), never per purchase unit",
           "title": "New Unit Price"
         }
       },

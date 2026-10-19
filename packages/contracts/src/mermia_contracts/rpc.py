@@ -26,12 +26,12 @@ from mermia_contracts.batch import (
     Model,
     PercentPoints,
     Text,
-    UnitPrice,
 )
 from mermia_contracts.batch import (
     Period as DateRange,
 )
 from mermia_contracts.db.models import CostConfidence, SourceKind
+from mermia_contracts.pending import UnitPricePerBaseUnit
 
 # --- shared pieces ---------------------------------------------------------------------------
 
@@ -308,7 +308,7 @@ class MenuEngineeringData(Model):
 class PriceMove(Model):
     ingredient: Text
     change: Pct
-    new_unit_price: UnitPrice
+    new_unit_price: UnitPricePerBaseUnit  # per g, ml or pza of the ingredient, not per pack
 
 
 class TargetBreach(Model):

@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
+from mermia_contracts.db.models import IngredientPriceRow
 from mermia_contracts.db.models import PendingChangeStatus as S
 from mermia_contracts.pending import (
     TARGET_TYPE,
@@ -15,6 +16,7 @@ from mermia_contracts.pending import (
     ApplyPendingChangeArgs,
     ApplyResult,
     ChangeProposal,
+    IngredientPriceSet,
     PendingKind,
 )
 
@@ -148,3 +150,11 @@ def test_apply_args_need_two_uuids_and_nothing_else() -> None:
     ):
         with pytest.raises(ValidationError):
             ApplyPendingChangeArgs.model_validate(bad)
+
+
+def test_ingredient_price_is_per_base_unit_like_the_database() -> None:
+    contract = IngredientPriceSet.model_fields["unit_price"].description or ""
+    column = IngredientPriceRow.model_fields["unit_price_net"].description or ""
+    assert contract.startswith("unit=pesos_per_base_unit")
+    assert column.startswith("unit=pesos_per_base_unit")
+    assert "purchase" not in contract.replace("never per purchase unit", "")

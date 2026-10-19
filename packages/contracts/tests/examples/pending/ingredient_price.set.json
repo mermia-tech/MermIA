@@ -3,7 +3,7 @@
   "target_id": "0f7a1c52-3b6e-7c1a-9d33-000000000001",
   "reason": "El kilo de pastor ya cuesta 220",
   "values": {
-    "unit_price": 220.0,
+    "unit_price": 0.22,
     "effective_from": "2026-10-19"
   }
 }

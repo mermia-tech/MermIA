@@ -78,6 +78,7 @@
     },
     "IngredientPriceSet": {
       "additionalProperties": false,
+      "description": "Becomes `ingredient_price.unit_price_net`: pesos per BASE unit of the ingredient (g, ml or\npza), not per purchase unit. \"$220 per kg\" is 0.22 for an ingredient whose base unit is g;\nthe caller converts before proposing (MR-10 spec 5.4).",
       "properties": {
         "effective_from": {
           "format": "date",
@@ -97,7 +98,7 @@
               "type": "string"
             }
           ],
-          "description": "unit=pesos_per_purchase_unit",
+          "description": "unit=pesos_per_base_unit (g, ml or pza), never per purchase unit",
           "title": "Unit Price"
         }
       },

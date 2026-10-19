@@ -12,13 +12,14 @@ is deliberately no role table here. The SQL body and its pgTAP tests are MR-32.
 """
 
 import datetime as dt
+from decimal import Decimal
 from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import Field, model_validator
 
-from mermia_contracts.batch import Cents, Model, Quantity, RecipeLineIn, Text, UnitPrice
+from mermia_contracts.batch import Cents, Model, Quantity, RecipeLineIn, Text
 from mermia_contracts.db.models import IngredientPriceSource, PendingChangeStatus
 
 
@@ -40,8 +41,25 @@ TARGET_TYPE: dict[PendingKind, str] = {
 """`pending_change.target_type` for each kind; `target_id` is that table's id."""
 
 
+UnitPricePerBaseUnit = Annotated[
+    Decimal,
+    Field(
+        strict=True,
+        max_digits=20,
+        decimal_places=6,
+        description="unit=pesos_per_base_unit (g, ml or pza), never per purchase unit",
+    ),
+]
+"""Same limits as batch.UnitPrice (numeric(20,6)); the unit is the one `ingredient_price` stores."""
+
+
 class IngredientPriceSet(Model):
-    unit_price: UnitPrice
+    """Becomes `ingredient_price.unit_price_net`: pesos per BASE unit of the ingredient (g, ml or
+    pza), not per purchase unit. "$220 per kg" is 0.22 for an ingredient whose base unit is g;
+    the caller converts before proposing (MR-10 spec 5.4).
+    """
+
+    unit_price: UnitPricePerBaseUnit
     effective_from: dt.date
     source: IngredientPriceSource = IngredientPriceSource.manual
 
