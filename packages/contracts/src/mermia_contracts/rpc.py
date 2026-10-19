@@ -22,8 +22,8 @@ from pydantic import AwareDatetime, Field, model_validator
 
 from mermia_contracts.batch import Cents, Count, Model, Text
 from mermia_contracts.batch import Period as DateRange
-from mermia_contracts.db.models import CostConfidence, SourceKind
-from mermia_contracts.decimals import ComputedPercent, FigureRaw, UnitPricePerBaseUnit
+from mermia_contracts.db.models import BaseUnit, CostConfidence, SourceKind
+from mermia_contracts.decimals import ComputedPercent, FigureRaw, PositiveUnitPricePerBaseUnit
 
 # --- shared pieces ---------------------------------------------------------------------------
 
@@ -372,10 +372,20 @@ class MenuEngineeringData(Model):
     quadrants: Annotated[list[Quadrant], Field(min_length=4, max_length=4)]
 
 
+class BasePrice(Model):
+    """A price per BASE unit. `raw` is pesos per `base_unit` (g, ml or pza), never per pack, as
+    ingredient_price.unit_price_net stores it. `text` is the amount in the unit the owner uses,
+    formatted ("$220.00/kg"): quote it, do not convert `raw`."""
+
+    raw: PositiveUnitPricePerBaseUnit
+    base_unit: BaseUnit
+    text: Text
+
+
 class PriceMove(Model):
     ingredient: Text
     change: Pct
-    new_unit_price: UnitPricePerBaseUnit  # per g, ml or pza of the ingredient, not per pack
+    new_unit_price: BasePrice
 
 
 class TargetBreach(Model):

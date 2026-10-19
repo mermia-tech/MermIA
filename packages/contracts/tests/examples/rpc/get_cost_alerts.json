@@ -10,7 +10,11 @@
             "raw": 22.2,
             "text": "+22.2%"
           },
-          "new_unit_price": 0.22
+          "new_unit_price": {
+            "raw": 0.22,
+            "base_unit": "g",
+            "text": "$220.00/kg"
+          }
         }
       ],
       "breaches": [

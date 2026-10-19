@@ -1,5 +1,48 @@
 {
   "$defs": {
+    "BasePrice": {
+      "additionalProperties": false,
+      "description": "A price per BASE unit. `raw` is pesos per `base_unit` (g, ml or pza), never per pack, as\ningredient_price.unit_price_net stores it. `text` is the amount in the unit the owner uses,\nformatted (\"$220.00/kg\"): quote it, do not convert `raw`.",
+      "properties": {
+        "base_unit": {
+          "$ref": "#/$defs/BaseUnit"
+        },
+        "raw": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=pesos_per_base_unit (g, ml or pza), never per purchase unit; greater than zero",
+          "title": "Raw"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "base_unit",
+        "text"
+      ],
+      "title": "BasePrice",
+      "type": "object"
+    },
+    "BaseUnit": {
+      "enum": [
+        "g",
+        "ml",
+        "pza"
+      ],
+      "title": "BaseUnit",
+      "type": "string"
+    },
     "CostAlertsData": {
       "additionalProperties": false,
       "properties": {
@@ -193,16 +236,7 @@
           "type": "string"
         },
         "new_unit_price": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "description": "unit=pesos_per_base_unit (g, ml or pza), never per purchase unit",
-          "title": "New Unit Price"
+          "$ref": "#/$defs/BasePrice"
         }
       },
       "required": [
