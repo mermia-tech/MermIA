@@ -1,0 +1,14 @@
+{
+  "kind": "recipe.upsert",
+  "target_id": "0f7a1c52-3b6e-7c1a-9d33-000000000001",
+  "values": {
+    "yield_qty": 1,
+    "lines": [
+      {
+        "ingredient_name": "Carne al pastor",
+        "qty_base": 60,
+        "unit": "g"
+      }
+    ]
+  }
+}
