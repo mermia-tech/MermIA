@@ -211,4 +211,4 @@ def test_the_tool_schema_size_is_recorded_not_budgeted() -> None:
     """Typed values make propose_change larger. This is a size guard in characters, NOT a token
     measurement (that is deferred to the eval ticket): it fails if the schema grows unnoticed."""
     size = len(json.dumps(_schema(), separators=(",", ":")))
-    assert size <= 2450, size  # 2397 when written; before typed values: 563
+    assert size <= 2450, size  # compact JSON: 2397 now, 519 before typed values

@@ -45,8 +45,9 @@ not. The measurement is deferred to the LLM eval ticket (proposed: MR-20, the da
 M3 milestone in `docs/kickoff/07-roadmap.md`). The cost of a tool is `count([B, t]) - count([B])`
 with the Anthropic `count_tokens` API and a fixed baseline tool `B`: the API adds tool-use
 scaffolding once per request, and the difference cancels it.
-Typed `propose_change.values` (spec section 7, D15) grew that tool's schema from 563 to 2397
-characters; that is a size guard in a test, not a token measurement.
+Typed `propose_change.values` (spec section 7, D15) grew that tool's schema from 519 to 2397
+characters (both as compact JSON, `separators=(",", ":")`; the same schemas are 563 and 2594 with
+the default separators). That is a size guard in a test, not a token measurement.
 
 To run it later: set `ANTHROPIC_API_KEY`, run `measure_tool_tokens` (above; the SDK is a dev
 dependency of this package), review `schemas/tool_tokens.json`, then run `uv run pytest`: the budget tests, skipped while the
