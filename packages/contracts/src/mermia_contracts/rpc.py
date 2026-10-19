@@ -13,25 +13,16 @@ a successful response (`match="ambiguous"`).
 from __future__ import annotations
 
 import datetime as dt
-from decimal import Decimal
 from enum import StrEnum
 from typing import Annotated, Any, Literal, NamedTuple
 from uuid import UUID
 
 from pydantic import AwareDatetime, Field, model_validator
 
-from mermia_contracts.batch import (
-    Cents,
-    Count,
-    Model,
-    PercentPoints,
-    Text,
-)
-from mermia_contracts.batch import (
-    Period as DateRange,
-)
+from mermia_contracts.batch import Cents, Count, Model, Text
+from mermia_contracts.batch import Period as DateRange
 from mermia_contracts.db.models import CostConfidence, SourceKind
-from mermia_contracts.pending import UnitPricePerBaseUnit
+from mermia_contracts.decimals import FigureRaw, PercentPoints, UnitPricePerBaseUnit
 
 # --- shared pieces ---------------------------------------------------------------------------
 
@@ -68,7 +59,7 @@ class Pct(Model):
 class Figure(Model):
     """A number whose unit depends on the metric asked for (compare_*, top dishes)."""
 
-    raw: Annotated[Decimal, Field(strict=True, max_digits=24, decimal_places=6)]
+    raw: FigureRaw
     text: Text
 
 

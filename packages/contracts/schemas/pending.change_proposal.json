@@ -226,9 +226,9 @@
       "title": "NoPayload",
       "type": "object"
     },
-    "RecipeLineIn": {
+    "RecipeLine": {
       "additionalProperties": false,
-      "description": "PROVISIONAL: whether the \"Recetas\" export carries costs and yields is unverified.\n\nColumns: recipe_line. The ingredient is resolved by the loader.",
+      "description": "PROVISIONAL: whether the \"Recetas\" export carries costs and yields is unverified.",
       "properties": {
         "ingredient_external_id": {
           "anyOf": [
@@ -291,16 +291,16 @@
         "qty_base",
         "unit"
       ],
-      "title": "RecipeLineIn",
+      "title": "RecipeLine",
       "type": "object"
     },
     "RecipeUpsert": {
       "additionalProperties": false,
-      "description": "PROVISIONAL like RecipeLineIn: the lines mirror the \"Recetas\" import.",
+      "description": "PROVISIONAL: the lines mirror the \"Recetas\" import.",
       "properties": {
         "lines": {
           "items": {
-            "$ref": "#/$defs/RecipeLineIn"
+            "$ref": "#/$defs/RecipeLine"
           },
           "minItems": 1,
           "title": "Lines",

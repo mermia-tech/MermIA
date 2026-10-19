@@ -63,7 +63,7 @@ def test_other_kinds_are_rejected(kind: str) -> None:
 @pytest.mark.parametrize(
     "kind,patch",
     [
-        ("ingredient_price.set", {"values": {"unit_price": "220", "effective_from": "2026-10-19"}}),
+        ("ingredient_price.set", {"values": {"unit_price": "1e3", "effective_from": "2026-10-19"}}),
         ("ingredient_price.set", {"values": {"unit_price": 220, "effective_from": "mañana"}}),
         ("ingredient_price.set", {"values": {"unit_price": 220}}),
         (

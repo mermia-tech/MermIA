@@ -12,15 +12,15 @@ is deliberately no role table here. The SQL body and its pgTAP tests are MR-32.
 """
 
 import datetime as dt
-from decimal import Decimal
 from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import Field, model_validator
 
-from mermia_contracts.batch import Cents, Model, Quantity, RecipeLineIn, Text
+from mermia_contracts.batch import Cents, Model, Text
 from mermia_contracts.db.models import IngredientPriceSource, PendingChangeStatus
+from mermia_contracts.decimals import PercentPoints, Quantity, UnitPricePerBaseUnit
 
 
 class PendingKind(StrEnum):
@@ -41,18 +41,6 @@ TARGET_TYPE: dict[PendingKind, str] = {
 """`pending_change.target_type` for each kind; `target_id` is that table's id."""
 
 
-UnitPricePerBaseUnit = Annotated[
-    Decimal,
-    Field(
-        strict=True,
-        max_digits=20,
-        decimal_places=6,
-        description="unit=pesos_per_base_unit (g, ml or pza), never per purchase unit",
-    ),
-]
-"""Same limits as batch.UnitPrice (numeric(20,6)); the unit is the one `ingredient_price` stores."""
-
-
 class IngredientPriceSet(Model):
     """Becomes `ingredient_price.unit_price_net`: pesos per BASE unit of the ingredient (g, ml or
     pza), not per purchase unit. "$220 per kg" is 0.22 for an ingredient whose base unit is g;
@@ -64,11 +52,23 @@ class IngredientPriceSet(Model):
     source: IngredientPriceSource = IngredientPriceSource.manual
 
 
+# Mirrors batch.RecipeLineIn field for field. Not reused: its strict Decimal fields reject the
+# numbers of a parsed-JSON dict (see decimals.py) and batch.py is out of MR-11's scope.
+class RecipeLine(Model):
+    """PROVISIONAL: whether the "Recetas" export carries costs and yields is unverified."""
+
+    ingredient_name: Text
+    ingredient_external_id: Text | None = None
+    qty_base: Quantity
+    unit: Text
+    yield_override_pct: PercentPoints | None = None
+
+
 class RecipeUpsert(Model):
-    """PROVISIONAL like RecipeLineIn: the lines mirror the "Recetas" import."""
+    """PROVISIONAL: the lines mirror the "Recetas" import."""
 
     yield_qty: Quantity
-    lines: Annotated[list[RecipeLineIn], Field(min_length=1)]
+    lines: Annotated[list[RecipeLine], Field(min_length=1)]
 
 
 class MenuItemPriceSet(Model):
