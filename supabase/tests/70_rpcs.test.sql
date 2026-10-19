@@ -85,22 +85,38 @@ insert into public.import_batch (id, tenant_id, source_id, location_id, parser, 
 select 'eeeeeeee-0000-7000-8000-000000000001', s.tenant_id, s.id, s.location_id, 'sr.erp_push@v1', 'paid-ticket-test', 'applied', '2026-10-10T09:00:00-06:00'
 from public.source s where s.location_id = :'CENTRO' limit 1;
 insert into public.sale_ticket (id, tenant_id, location_id, source_id, external_id, batch_id, business_date, guests, subtotal, discount, tax, total, status)
-select 'eeeeeeee-0000-7000-8000-0000000000a1', b.tenant_id, b.location_id, b.source_id, 'P-1', b.id, '2026-10-09', 2, 11207, 500, 1793, 13000, 'paid'
+select 'eeeeeeee-0000-7000-8000-0000000000a1', b.tenant_id, b.location_id, b.source_id, 'P-1', b.id, '2026-10-09', 2, 10776, 0, 1724, 12500, 'paid'
 from public.import_batch b where b.id = 'eeeeeeee-0000-7000-8000-000000000001';
 insert into public.sale_line (tenant_id, location_id, source_id, batch_id, ticket_id, menu_item_id, qty, unit_price, discount, tax, net, is_void)
-select t.tenant_id, t.location_id, t.source_id, t.batch_id, t.id, m.id, x.qty, 6500, 0, round(x.qty * 6500 * 16 / 116.0), x.qty * 6500, x.void
-from public.sale_ticket t, public.menu_item m, (values (2, false), (1, true)) x(qty, void)
+select t.tenant_id, t.location_id, t.source_id, t.batch_id, t.id, m.id, x.qty, 6500, x.disc, round((x.qty * 6500 - x.disc) * 16 / 116.0), x.qty * 6500 - x.disc, x.void
+from public.sale_ticket t, public.menu_item m, (values (2, 500, false), (1, 0, true)) x(qty, disc, void)
 where t.id = 'eeeeeeee-0000-7000-8000-0000000000a1' and m.external_id = 'P001';
 select is((select row(grain, net_sales, tickets, guests, discounts)::text from app.v_daily_sales
            where location_id = :'CENTRO' and business_date = '2026-10-09'),
-          '(ticket,13000,1,2,500)', 'a day with a paid ticket takes sales, tickets and discounts from tickets only');
+          '(ticket,12500,1,2,500)', 'a day with a paid ticket takes sales, tickets and discounts from tickets only');
 select is((select count(*) from app.v_daily_sales where location_id = :'CENTRO' and business_date = '2026-10-09'), 1::bigint,
           'with no double count against the aggregate');
 select is((select string_agg(grain || ':' || trim_scale(units), ',') from app.v_item_sales_daily
            where location_id = :'CENTRO' and business_date = '2026-10-09'),
           'ticket:2', 'items of that day come from non-voided ticket lines only');
 select is(pg_temp.rpc(:OWNER, format('api.get_sales_summary(%L, %L)', '{"from":"2026-10-09","to":"2026-10-09"}', :'CENTRO')) #> '{data,avg_ticket,raw}',
-          '13000', 'and the average ticket follows');
+          '12500', 'and the average ticket follows');
+select is((select row(cancellations_amount, cancellations_count)::text from app.v_daily_sales
+           where location_id = :'CENTRO' and business_date = '2026-10-09'),
+          (select row(d.cancellations_amount, d.cancellations_count)::text from public.daily_sales_agg d
+           where d.location_id = :'CENTRO' and d.business_date = '2026-10-09'),
+          'cancellations stay with the aggregate on a ticket day (rule C)');
+-- the same paid ticket in a batch that is not applied, then superseded, counts nowhere
+update public.import_batch set status = 'received' where id = 'eeeeeeee-0000-7000-8000-000000000001';
+select is((select grain from app.v_daily_sales where location_id = :'CENTRO' and business_date = '2026-10-09'), 'aggregate',
+          'a paid ticket of a received batch does not take the day');
+select is((select count(*) from app.v_item_sales_daily where location_id = :'CENTRO' and business_date = '2026-10-09' and grain = 'ticket'), 0::bigint,
+          'nor its lines');
+update public.import_batch set status = 'superseded' where id = 'eeeeeeee-0000-7000-8000-000000000001';
+select is((select grain from app.v_daily_sales where location_id = :'CENTRO' and business_date = '2026-10-09'), 'aggregate',
+          'nor a superseded one');
+select is((select count(*) from app.v_item_sales_daily where location_id = :'CENTRO' and business_date = '2026-10-09' and grain = 'ticket'), 0::bigint,
+          'nor its lines either');
 rollback to savepoint paid_ticket;
 
 -- Batch status: rows of non-applied and superseded batches appear in neither view.

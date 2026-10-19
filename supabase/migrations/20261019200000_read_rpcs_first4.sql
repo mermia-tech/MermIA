@@ -204,14 +204,32 @@ left join lateral (
 where b.status = 'applied' and t.status = 'paid'
 group by t.tenant_id, t.location_id, t.business_date;
 
+-- The daily aggregate of the most recently applied batch, per location and day.
+create view app.v_daily_agg with (security_invoker = true) as
+select distinct on (s.tenant_id, s.location_id, s.business_date)
+       s.tenant_id, s.location_id, s.business_date, s.net_sales, s.tickets::bigint as tickets,
+       s.guests::bigint as guests, s.discounts, s.cancellations_amount,
+       s.cancellations_count::bigint as cancellations_count
+from public.daily_sales_agg s
+join public.import_batch b on b.tenant_id = s.tenant_id and b.id = s.batch_id
+where b.status = 'applied'
+order by s.tenant_id, s.location_id, s.business_date, b.applied_at desc, s.id desc;
+
 -- One row per location and day: ticket grain when the day has a paid ticket, otherwise the
--- daily aggregate of the most recently applied batch. Cancellations on a ticket day come from its
--- cancelled tickets; on an aggregate day from the aggregate (rule C).
+-- daily aggregate. Cancellations stay with the aggregate when the day has one (rule C: ticket
+-- records feed the waiter and reason breakdowns); a ticket day without an aggregate takes them
+-- from its cancelled tickets. The paid-ticket check is correlated on the indexed
+-- (tenant_id, location_id, business_date), so a read never scans the tenant's ticket history.
 create view app.v_daily_sales with (security_invoker = true) as
 select d.tenant_id, d.location_id, d.business_date, 'ticket'::text as grain,
        d.net_sales, d.tickets, d.guests, d.discounts,
-       coalesce(c.amount, 0)::bigint as cancellations_amount, coalesce(c.n, 0)::bigint as cancellations_count
+       case when a.location_id is not null then a.cancellations_amount else coalesce(c.amount, 0)::bigint end
+         as cancellations_amount,
+       case when a.location_id is not null then a.cancellations_count else coalesce(c.n, 0)::bigint end
+         as cancellations_count
 from app.v_ticket_days d
+left join app.v_daily_agg a
+  on a.tenant_id = d.tenant_id and a.location_id = d.location_id and a.business_date = d.business_date
 left join lateral (
   select sum(t.total) as amount, count(*) as n
   from public.sale_ticket t
@@ -222,22 +240,17 @@ left join lateral (
 union all
 select a.tenant_id, a.location_id, a.business_date, 'aggregate',
        a.net_sales, a.tickets, a.guests, a.discounts, a.cancellations_amount, a.cancellations_count
-from (
-  select distinct on (s.tenant_id, s.location_id, s.business_date)
-         s.tenant_id, s.location_id, s.business_date, s.net_sales, s.tickets::bigint as tickets,
-         s.guests::bigint as guests, s.discounts, s.cancellations_amount,
-         s.cancellations_count::bigint as cancellations_count
-  from public.daily_sales_agg s
-  join public.import_batch b on b.tenant_id = s.tenant_id and b.id = s.batch_id
-  where b.status = 'applied'
-  order by s.tenant_id, s.location_id, s.business_date, b.applied_at desc, s.id desc
-) a
-where not exists (select 1 from app.v_ticket_days d
-                  where d.tenant_id = a.tenant_id and d.location_id = a.location_id and d.business_date = a.business_date);
+from app.v_daily_agg a
+where not exists (
+  select 1 from public.sale_ticket t
+  join public.import_batch b on b.tenant_id = t.tenant_id and b.id = t.batch_id
+  where t.tenant_id = a.tenant_id and t.location_id = a.location_id and t.business_date = a.business_date
+    and t.status = 'paid' and b.status = 'applied');
 
 -- Items sold per location, day and dish, with the same per-day choice of grain. Ticket grain
 -- counts only non-voided lines of paid tickets (rule D); aggregate grain keeps single-day rows of
--- the most recently applied batch for that location and day.
+-- the most recently applied batch for that location and day. Known limit: a ticket-level discount
+-- is not spread over its lines, so on a ticket day item nets add up to net_sales + that discount.
 create view app.v_item_sales_daily with (security_invoker = true) as
 select l.tenant_id, l.location_id, t.business_date, l.menu_item_id, 'ticket'::text as grain,
        sum(l.qty) as units, sum(l.net + l.discount)::bigint as gross, sum(l.discount)::bigint as discount,
@@ -260,12 +273,15 @@ from (
   where b.status = 'applied' and a.period_from = a.period_to
 ) x
 where x.k = 1
-  and not exists (select 1 from app.v_ticket_days d
-                  where d.tenant_id = x.tenant_id and d.location_id = x.location_id and d.business_date = x.business_date)
+  and not exists (
+    select 1 from public.sale_ticket t
+    join public.import_batch b on b.tenant_id = t.tenant_id and b.id = t.batch_id
+    where t.tenant_id = x.tenant_id and t.location_id = x.location_id and t.business_date = x.business_date
+      and t.status = 'paid' and b.status = 'applied')
 group by x.tenant_id, x.location_id, x.business_date, x.menu_item_id;
 
 grant usage on schema app to authenticated;
-grant select on app.v_ticket_days, app.v_daily_sales, app.v_item_sales_daily to authenticated;
+grant select on app.v_ticket_days, app.v_daily_agg, app.v_daily_sales, app.v_item_sales_daily to authenticated;
 
 -- Sales over a range ------------------------------------------------------------------------
 -- Items sold over [f, t], from v_item_sales_daily, joined to the dish cost of that day.
@@ -575,12 +591,18 @@ begin
     group by src.kind
   ) k;
 
+  with covered as (
+    select v.location_id, v.business_date from app.v_daily_sales v
+    where v.location_id = any (locs) and v.business_date between today - 30 and today - 1
+    union
+    select v.location_id, v.business_date from app.v_item_sales_daily v
+    where v.location_id = any (locs) and v.business_date between today - 30 and today - 1
+  )
   select coalesce(jsonb_agg(d.day order by d.day), '[]') into missing
-  from generate_series(today - 30, today - 1, interval '1 day') as g(ts)
-  cross join lateral (select g.ts::date as day) d
+  from (select g::date as day from generate_series(today - 30, today - 1, interval '1 day') g) d
   where exists (
     select 1 from unnest(locs) l(id)
-    where not exists (select 1 from app.sales_totals(array[l.id], d.day, d.day) t where t.covered_days > 0));
+    where not exists (select 1 from covered c where c.location_id = l.id and c.business_date = d.day));
 
   select count(*) into stale
   from public.ingredient i
