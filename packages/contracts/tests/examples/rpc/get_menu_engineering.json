@@ -1,0 +1,47 @@
+{
+  "args": {
+    "period": "last_30d"
+  },
+  "response": {
+    "ok": true,
+    "data": {
+      "quadrants": [
+        {
+          "name": "star",
+          "count": 4,
+          "top_items": [
+            "Taco al pastor"
+          ]
+        },
+        {
+          "name": "plowhorse",
+          "count": 6,
+          "top_items": [
+            "Gringa"
+          ]
+        },
+        {
+          "name": "puzzle",
+          "count": 3,
+          "top_items": []
+        },
+        {
+          "name": "dog",
+          "count": 5,
+          "top_items": [
+            "Ensalada"
+          ]
+        }
+      ]
+    },
+    "flags": [],
+    "meta": {
+      "as_of": "2026-10-19T08:00:00-06:00",
+      "coverage_pct": 87.5,
+      "period_resolved": {
+        "from": "2026-10-12",
+        "to": "2026-10-18"
+      }
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "args": {
+    "metric": "net_sales",
+    "period": "last_week",
+    "location_ids": [
+      "0f7a1c52-3b6e-7c1a-9d11-000000000001",
+      "0f7a1c52-3b6e-7c1a-9d11-000000000002"
+    ]
+  },
+  "response": {
+    "ok": true,
+    "data": {
+      "metric": "net_sales",
+      "rows": [
+        {
+          "location_id": "0f7a1c52-3b6e-7c1a-9d11-000000000001",
+          "name": "Centro",
+          "value": {
+            "raw": 120000.00,
+            "text": "$120,000.00"
+          },
+          "rank": 1,
+          "diff_vs_best": {
+            "raw": 0,
+            "text": "$0.00"
+          }
+        },
+        {
+          "location_id": "0f7a1c52-3b6e-7c1a-9d11-000000000002",
+          "name": "Polanco",
+          "value": {
+            "raw": 64320.50,
+            "text": "$64,320.50"
+          },
+          "rank": 2,
+          "diff_vs_best": {
+            "raw": -55679.50,
+            "text": "-$55,679.50"
+          }
+        }
+      ]
+    },
+    "flags": [],
+    "meta": {
+      "as_of": "2026-10-19T08:00:00-06:00",
+      "coverage_pct": 87.5,
+      "period_resolved": {
+        "from": "2026-10-12",
+        "to": "2026-10-18"
+      }
+    }
+  }
+}

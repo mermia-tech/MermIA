@@ -1,0 +1,46 @@
+{
+  "args": {
+    "period": "last_7d",
+    "kind": "discounts"
+  },
+  "response": {
+    "ok": true,
+    "data": {
+      "kind": "discounts",
+      "count": 14,
+      "amount": {
+        "raw": 215000,
+        "text": "$2,150.00"
+      },
+      "top_items": [
+        {
+          "name": "Gringa",
+          "count": 6,
+          "amount": {
+            "raw": 90000,
+            "text": "$900.00"
+          }
+        }
+      ],
+      "by_staff": [
+        {
+          "name": "Ana",
+          "count": 9,
+          "amount": {
+            "raw": 140000,
+            "text": "$1,400.00"
+          }
+        }
+      ]
+    },
+    "flags": [],
+    "meta": {
+      "as_of": "2026-10-19T08:00:00-06:00",
+      "coverage_pct": 87.5,
+      "period_resolved": {
+        "from": "2026-10-12",
+        "to": "2026-10-18"
+      }
+    }
+  }
+}

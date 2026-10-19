@@ -1,0 +1,38 @@
+{
+  "args": {
+    "metric": "net_sales",
+    "period_a": "last_week",
+    "period_b": "prev_week"
+  },
+  "response": {
+    "ok": true,
+    "data": {
+      "metric": "net_sales",
+      "a": {
+        "raw": 184320.50,
+        "text": "$184,320.50"
+      },
+      "b": {
+        "raw": 171900.00,
+        "text": "$171,900.00"
+      },
+      "abs_change": {
+        "raw": 12420.50,
+        "text": "+$12,420.50"
+      },
+      "pct_change": {
+        "raw": 7.2,
+        "text": "+7.2%"
+      }
+    },
+    "flags": [],
+    "meta": {
+      "as_of": "2026-10-19T08:00:00-06:00",
+      "coverage_pct": 87.5,
+      "period_resolved": {
+        "from": "2026-10-12",
+        "to": "2026-10-18"
+      }
+    }
+  }
+}

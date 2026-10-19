@@ -1,0 +1,48 @@
+{
+  "args": {
+    "period": "yesterday",
+    "by": "payment_method",
+    "location_id": "0f7a1c52-3b6e-7c1a-9d11-000000000001"
+  },
+  "response": {
+    "ok": true,
+    "data": {
+      "by": "payment_method",
+      "rows": [
+        {
+          "key": "cash",
+          "net_sales": {
+            "raw": 1500000,
+            "text": "$15,000.00"
+          },
+          "tickets": 60,
+          "share": {
+            "raw": 62.5,
+            "text": "62.5%"
+          }
+        },
+        {
+          "key": "card",
+          "net_sales": {
+            "raw": 900000,
+            "text": "$9,000.00"
+          },
+          "tickets": 40,
+          "share": {
+            "raw": 37.5,
+            "text": "37.5%"
+          }
+        }
+      ]
+    },
+    "flags": [],
+    "meta": {
+      "as_of": "2026-10-19T08:00:00-06:00",
+      "coverage_pct": 87.5,
+      "period_resolved": {
+        "from": "2026-10-12",
+        "to": "2026-10-18"
+      }
+    }
+  }
+}

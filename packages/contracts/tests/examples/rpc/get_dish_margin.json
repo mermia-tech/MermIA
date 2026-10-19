@@ -1,0 +1,48 @@
+{
+  "args": {
+    "dish": "pastor"
+  },
+  "response": {
+    "ok": true,
+    "data": {
+      "match": "resolved",
+      "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000001",
+      "name": "Taco al pastor",
+      "cost": {
+        "raw": 1820,
+        "text": "$18.20"
+      },
+      "net_price": {
+        "raw": 5000,
+        "text": "$50.00"
+      },
+      "margin": {
+        "raw": 3180,
+        "text": "$31.80"
+      },
+      "food_cost": {
+        "raw": 36.4,
+        "text": "36.4%"
+      },
+      "confidence": "confirmed",
+      "cost_drivers": [
+        {
+          "ingredient": "Carne al pastor",
+          "share": {
+            "raw": 71.0,
+            "text": "71.0%"
+          }
+        }
+      ]
+    },
+    "flags": [],
+    "meta": {
+      "as_of": "2026-10-19T08:00:00-06:00",
+      "coverage_pct": 87.5,
+      "period_resolved": {
+        "from": "2026-10-12",
+        "to": "2026-10-18"
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "args": {
+    "period": {
+      "from": "2026-10-01",
+      "to": "2026-10-15"
+    },
+    "metric": "units",
+    "limit": 2
+  },
+  "response": {
+    "ok": true,
+    "data": {
+      "metric": "units",
+      "rows": [
+        {
+          "rank": 1,
+          "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000001",
+          "name": "Taco al pastor",
+          "value": {
+            "raw": 640,
+            "text": "640"
+          }
+        },
+        {
+          "rank": 2,
+          "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000002",
+          "name": "Gringa",
+          "value": {
+            "raw": 310,
+            "text": "310"
+          }
+        }
+      ]
+    },
+    "flags": [],
+    "meta": {
+      "as_of": "2026-10-19T08:00:00-06:00",
+      "coverage_pct": 87.5,
+      "period_resolved": {
+        "from": "2026-10-12",
+        "to": "2026-10-18"
+      }
+    }
+  }
+}
