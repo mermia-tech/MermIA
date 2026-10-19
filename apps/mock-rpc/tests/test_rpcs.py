@@ -40,10 +40,10 @@ def test_sales_summary_is_centro_last_week() -> None:
     assert d["change_vs_previous"]["text"] == "+7.2%"
 
 
-def test_nulls_variant_is_synthetic_and_says_so() -> None:
+def test_nulls_variant_is_partial_data() -> None:
     envelope = rpcs.build("get_sales_summary", "nulls")
     assert envelope["data"]["tickets"] is None
-    assert "synthetic" in envelope["flags"][0]["message"]
+    assert envelope["flags"][0]["code"] == "partial_data"
 
 
 def test_compare_periods_is_centro_against_the_week_before() -> None:
@@ -68,16 +68,17 @@ def test_top_dishes_this_month() -> None:
     assert rows[0]["value"]["raw"] == 1208
 
 
-def test_payment_breakdown_adds_up_and_has_no_tickets() -> None:
+def test_payment_breakdown_adds_up_and_counts_tickets() -> None:
     d = _data("get_sales_breakdown")
     assert d["by"] == "payment_method"
-    assert all(r["tickets"] is None for r in d["rows"])
+    assert [r["tickets"] for r in d["rows"]] == [60, 38, 8]
     day = next(
         r
         for r in data.table("daily_sales_agg")
         if r["location_id"] == data.LOCATIONS["L1"] and r["business_date"] == "2026-10-11"
     )
     assert sum(r["net_sales"]["raw"] for r in d["rows"]) == day["net_sales"]
+    assert sum(r["tickets"] for r in d["rows"]) == day["tickets"]
 
 
 def test_no_tickets_variant_is_by_category() -> None:

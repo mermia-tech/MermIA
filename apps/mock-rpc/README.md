@@ -2,7 +2,8 @@
 
 A small FastAPI app that answers the 11 read RPCs of the C3 contract
 (`packages/contracts/src/mermia_contracts/rpc.py`, `docs/kickoff/09-architecture.md` §4.1) with
-numbers computed from the fixture restaurant "Taquería El Güero" (`fixtures/el_guero/`). Dev B
+the C3 examples (`packages/contracts/tests/examples/rpc/`), which match the fixture restaurant
+"Taquería El Güero" (`fixtures/el_guero/`). Dev B
 builds the agent against it until the real SQL RPCs exist (MR-17, MR-24, MR-31).
 
 ## Run
@@ -28,28 +29,25 @@ whatever you send. "Today" is Monday 2026-10-12 (`expected.json`); the data ends
 | `get_sales_summary` | Centro, last week (2026-10-05..11): $184,320.50, +7.2 % | `error`, `nulls` |
 | `compare_periods` | `net_sales`, Centro, last week against the week before | `error` |
 | `compare_locations` | `net_sales`, last week, Centro against Polanco | `error` |
-| `get_top_dishes` | top 5 by units, this month, both locations | `error` |
+| `get_top_dishes` | top 2 by units, 2026-10-01..11, both locations | `error` |
 | `get_sales_breakdown` | by payment method, Centro, yesterday | `error`, `no_tickets` (by category) |
 | `get_cancellations` | Centro, Saturday 2026-10-10: 17 cancelled tickets | `error` |
 | `get_dish_margin` | tacos al pastor at Centro: margin 67.2 % on the net price | `error`, `ambiguous`, `needs_location` |
-| `get_food_cost_pct` | Centro, yesterday: 37.5 %, coverage 71.4 % | `error` |
+| `get_food_cost_pct` | Centro, yesterday: 37.5 % (target 32.0 %), coverage 71.4 %, by category | `error` |
 | `get_menu_engineering` | Centro, last 30 days, Kasavana-Smith (03) | `error` |
-| `get_cost_alerts` | last 30 days: the two price jumps | `error` |
+| `get_cost_alerts` | last 30 days, Centro: the two price jumps, one breach | `error` |
 | `get_data_status` | all sources | `error` |
 
-Every figure comes from the fixture JSON; `expected.json` supplies the ones it pins. Pinned
-figures are asserted in `tests/test_rpcs.py`.
+The answer is the `response` of the example file, as it is: `tests/test_examples.py` checks that every
+mock answer (data and meta) equals its example. Figures that the fixtures pin are asserted in
+`tests/test_rpcs.py`.
 
 ## Things to know
 
-- **`nulls` is synthetic.** The fixtures report every figure on every day, so this variant takes
-  yesterday's real `net_sales` and blanks the rest, with a `partial_data` flag whose message says so.
-- **`get_cost_alerts` has no breaches or suggestions.** The fixtures define no food-cost target and
-  no price suggestion; inventing them would be a guess.
-- **`get_data_status.stale_costs` is 0** and `get_menu_engineering` uses the textbook rule (popular =
-  at least 70 % of an equal share of units; high margin = at or above the units-weighted average).
-  The real definitions belong to MR-24.
-- **`get_sales_breakdown` tickets are `null`**: `daily_sales_agg.payment_mix` holds amounts only (D23).
+- **Variants** are the example files named `<rpc>.<variant>.json` (`nulls`, `no_tickets`, `ambiguous`,
+  `needs_location`, and `get_sales_summary.error`).
+- **`get_cost_alerts` and `get_data_status`** serve the examples (one breach, 29 stale costs): the
+  real definitions belong to MR-24.
 - Every `raw` is a JSON number (a percentage has up to four decimals), as in the C3 examples.
 - **Every answer carries a `mock_fixed_answer` flag** naming the canonical query it answers: the
   request values are not used, so a different query is not an error, only a flagged answer.
@@ -58,27 +56,12 @@ figures are asserted in `tests/test_rpcs.py`.
 
 ## Differences from the C3 examples
 
-The examples in `packages/contracts/tests/examples/rpc/` were written before the fixtures existed
-and still disagree with them (MR-11 spec §7.2). The mock does **not** serve them and the contract
-is untouched. Do not compare the two:
+Only these, all on purpose:
 
-| What | C3 examples | Mock (fixtures) |
-|---|---|---|
-| "Last week" | 2026-10-12..18 | 2026-10-05..11 |
-| `as_of` | 2026-10-19 | 2026-10-12 |
-| Location and dish ids | `0f7a1c52-…` | the fixture ids (`705e8e51-…` for Centro) |
-| Tacos al pastor | "Taco al pastor", cost $18.20, menu price $58.00, net $50.00 | "Tacos al pastor (orden de 3)", cost $18.40, menu price $65.00, net $56.03 |
-| Week figures | 912 tickets, 1,304 guests, discounts $2,150.00 | what `daily_sales_agg` sums to (648 tickets, 1,428 guests, $414.50) |
-| Top dish | 640 units | 1,208 units (both locations, this month) |
-| Food cost | 34.1 % | 37.5 % (traced in `fixtures/README.md`) |
-| Price move | pastor to $220/kg, +22.2 % | $170 to $195/kg, +14.7 %, plus aguacate +61.8 % |
-| Cost alerts | one breach and one suggestion | none |
-| Data status | one missing day, 3 stale costs, 87.5 % | no missing day, 0 stale, 100 % |
-| `coverage_pct` | 87.5 | 100.0 |
-| Payment breakdown | tickets per method | tickets `null` |
-
-When the examples are aligned with the fixtures, these differences go away; until then the fixtures
-are the reference for the eval (MR-19) and for this mock.
+- Every answer has one extra flag, `mock_fixed_answer`.
+- The `error` variant of the 10 RPCs without an error example is a generic `no_data` error
+  (`Mock: the forced error variant`) with the `as_of` of that RPC's example.
+- The canonical query is the example's `args`; the answer ignores what you send.
 
 ## Test
 

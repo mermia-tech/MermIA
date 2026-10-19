@@ -2,9 +2,7 @@
 with its C3 envelope; the answer is one fixed response per RPC (see rpcs.py)."""
 
 import json
-from decimal import Decimal
 from typing import Any
-from uuid import UUID
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import TypeAdapter, ValidationError
@@ -13,14 +11,6 @@ from mermia_contracts.rpc import RPCS, RpcEnvelope
 from mermia_mock_rpc import rpcs
 
 app = FastAPI(title="MermIA mock RPC")
-
-
-def _json(value: Any) -> Any:
-    """What json.dumps cannot do alone. A Decimal is a JSON number (pydantic would write a string):
-    the C3 examples use numbers; four decimals at most, so a float prints it exactly."""
-    if isinstance(value, Decimal):
-        return int(value) if value == value.to_integral_value() else float(value)
-    return str(value) if isinstance(value, UUID) else value.isoformat()
 
 
 @app.post("/rpc/{name}")
@@ -34,6 +24,6 @@ async def call(name: str, request: Request, variant: str | None = None) -> Respo
     except ValidationError as e:
         raise HTTPException(422, json.loads(e.json(include_url=False))) from e
     adapter: TypeAdapter[Any] = TypeAdapter(RpcEnvelope[RPCS[name].data])  # type: ignore[misc,arg-type]
-    answer = adapter.validate_python(rpcs.build(name, variant))
-    body = json.dumps(adapter.dump_python(answer, by_alias=True), default=_json)
-    return Response(body, media_type="application/json")
+    answer = rpcs.build(name, variant)
+    adapter.validate_python(answer)  # the answer is sent as it is: it is already plain JSON
+    return Response(json.dumps(answer), media_type="application/json")
