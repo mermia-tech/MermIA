@@ -39,11 +39,12 @@ whatever you send. "Today" is Monday 2026-10-12 (`expected.json`); the data ends
 | `get_data_status` | all sources | `error` |
 
 The answer is the `response` of the example file, as it is: `tests/test_examples.py` checks that every
-mock answer (data and meta) equals its example. Figures that the fixtures pin are asserted in
-`tests/test_rpcs.py`.
+mock answer (data and meta) equals its example.
 
 ## Things to know
 
+- **`nulls` is synthetic.** The fixtures report every figure on every day, so this variant is invented;
+  it carries a `mock_synthetic` flag that says so.
 - **Variants** are the example files named `<rpc>.<variant>.json` (`nulls`, `no_tickets`, `ambiguous`,
   `needs_location`, and `get_sales_summary.error`).
 - **`get_cost_alerts` and `get_data_status`** serve the examples (one breach, 29 stale costs): the
@@ -52,13 +53,13 @@ mock answer (data and meta) equals its example. Figures that the fixtures pin ar
 - **Every answer carries a `mock_fixed_answer` flag** naming the canonical query it answers: the
   request values are not used, so a different query is not an error, only a flagged answer.
 - Changes between figures (`abs_change`, `diff_vs_best`) have a signed `text` (`+$12,415.50`).
-- `meta.coverage_pct` is the share of the period's days that have a daily row.
 
 ## Differences from the C3 examples
 
 Only these, all on purpose:
 
-- Every answer has one extra flag, `mock_fixed_answer`.
+- Every answer has one extra flag, `mock_fixed_answer`, naming the args of its own example; the
+  `nulls` variant also has `mock_synthetic`.
 - The `error` variant of the 10 RPCs without an error example is a generic `no_data` error
   (`Mock: the forced error variant`) with the `as_of` of that RPC's example.
 - The canonical query is the example's `args`; the answer ignores what you send.

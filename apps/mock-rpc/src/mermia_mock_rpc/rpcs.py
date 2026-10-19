@@ -52,8 +52,11 @@ def build(name: str, variant: str | None = None) -> Answer:
         meta = {"as_of": _FILES[(name, None)]["response"]["meta"]["as_of"]}
         error = {"code": "no_data", "message": "Mock: the forced `error` variant"}
         answer = {"ok": False, "error": error, "flags": [], "meta": meta}
-    message = (
-        f"Mock: fixed answer to {json.dumps(CANONICAL[name])}; the request values are not used."
-    )
+    args = example["args"] if example else CANONICAL[name]
+    message = f"Mock: fixed answer to {json.dumps(args)}; the request values are not used."
     answer["flags"] = [*answer["flags"], {"code": "mock_fixed_answer", "message": message}]
+    if (name, variant) == ("get_sales_summary", "nulls"):
+        # The El Güero fixtures report every figure every day, so this variant is invented.
+        note = "Mock: synthetic variant, the fixtures have no partially reported day."
+        answer["flags"].append({"code": "mock_synthetic", "message": note})
     return answer

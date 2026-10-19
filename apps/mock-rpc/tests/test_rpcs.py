@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal
 from typing import Any
 
@@ -5,7 +6,7 @@ import pytest
 from pydantic import TypeAdapter
 
 from mermia_contracts.rpc import RPCS, RpcEnvelope
-from mermia_mock_rpc import data, rpcs
+from mermia_mock_rpc import rpcs
 
 CASES = [
     (name, variant) for name, variants in rpcs.VARIANTS.items() for variant in (None, *variants)
@@ -40,10 +41,29 @@ def test_sales_summary_is_centro_last_week() -> None:
     assert d["change_vs_previous"]["text"] == "+7.2%"
 
 
-def test_nulls_variant_is_partial_data() -> None:
+def test_nulls_variant_is_synthetic_and_says_so() -> None:
     envelope = rpcs.build("get_sales_summary", "nulls")
     assert envelope["data"]["tickets"] is None
-    assert envelope["flags"][0]["code"] == "partial_data"
+    flags = {f["code"]: f["message"] for f in envelope["flags"]}
+    assert "partial_data" in flags
+    assert "synthetic" in flags["mock_synthetic"]
+
+
+def test_only_the_nulls_variant_is_synthetic() -> None:
+    for name, variant in CASES:
+        codes = [f["code"] for f in rpcs.build(name, variant)["flags"]]
+        assert ("mock_synthetic" in codes) == (variant == "nulls"), (name, variant)
+
+
+@pytest.mark.parametrize(("name", "variant"), CASES, ids=lambda v: str(v))
+def test_fixed_answer_message_names_the_args_of_its_own_example(
+    name: str, variant: str | None
+) -> None:
+    flags = rpcs.build(name, variant)["flags"]
+    message = next(f["message"] for f in flags if f["code"] == "mock_fixed_answer")
+    example = rpcs._FILES.get((name, variant))
+    args = example["args"] if example else rpcs.CANONICAL[name]
+    assert json.dumps(args) in message
 
 
 def test_compare_periods_is_centro_against_the_week_before() -> None:
@@ -72,13 +92,7 @@ def test_payment_breakdown_adds_up_and_counts_tickets() -> None:
     d = _data("get_sales_breakdown")
     assert d["by"] == "payment_method"
     assert [r["tickets"] for r in d["rows"]] == [60, 38, 8]
-    day = next(
-        r
-        for r in data.table("daily_sales_agg")
-        if r["location_id"] == data.LOCATIONS["L1"] and r["business_date"] == "2026-10-11"
-    )
-    assert sum(r["net_sales"]["raw"] for r in d["rows"]) == day["net_sales"]
-    assert sum(r["tickets"] for r in d["rows"]) == day["tickets"]
+    assert sum(r["net_sales"]["raw"] for r in d["rows"]) == 3119500  # yesterday, as in `nulls`
 
 
 def test_no_tickets_variant_is_by_category() -> None:

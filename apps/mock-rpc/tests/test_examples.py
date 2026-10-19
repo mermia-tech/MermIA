@@ -21,7 +21,7 @@ def test_every_answer_equals_its_example(path: Path) -> None:
     example = json.loads(path.read_text())["response"]
     url = f"/rpc/{name}" + (f"?variant={variant}" if variant else "")
     got: dict[str, Any] = client.post(url, json=rpcs.CANONICAL[name]).json()
-    got["flags"] = [f for f in got["flags"] if f["code"] != "mock_fixed_answer"]
+    got["flags"] = [f for f in got["flags"] if not f["code"].startswith("mock_")]
     assert got == example
 
 
