@@ -6,12 +6,18 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn>=0.34",
+    "mermia-contracts",
+    "openpyxl>=3.1",
 ]
 
 [dependency-groups]
 dev = [
     "httpx2",
+    "types-openpyxl",
 ]
+
+[tool.uv.sources]
+mermia-contracts = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
