@@ -1,0 +1,472 @@
+{
+  "$defs": {
+    "CostConfidence": {
+      "enum": [
+        "confirmed",
+        "estimated",
+        "missing"
+      ],
+      "title": "CostConfidence",
+      "type": "string"
+    },
+    "CostDriver": {
+      "additionalProperties": false,
+      "properties": {
+        "ingredient": {
+          "pattern": "\\S",
+          "title": "Ingredient",
+          "type": "string"
+        },
+        "share": {
+          "$ref": "#/$defs/Pct"
+        }
+      },
+      "required": [
+        "ingredient",
+        "share"
+      ],
+      "title": "CostDriver",
+      "type": "object"
+    },
+    "DishCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "menu_item_id": {
+          "format": "uuid",
+          "title": "Menu Item Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "menu_item_id",
+        "name"
+      ],
+      "title": "DishCandidate",
+      "type": "object"
+    },
+    "DishMarginAmbiguous": {
+      "additionalProperties": false,
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/DishCandidate"
+          },
+          "maxItems": 5,
+          "minItems": 1,
+          "title": "Candidates",
+          "type": "array"
+        },
+        "match": {
+          "const": "ambiguous",
+          "title": "Match",
+          "type": "string"
+        }
+      },
+      "required": [
+        "match",
+        "candidates"
+      ],
+      "title": "DishMarginAmbiguous",
+      "type": "object"
+    },
+    "DishMarginNeedsLocation": {
+      "additionalProperties": false,
+      "description": "The dish is known but prices and costs differ by location and none was asked for (or can\nbe told apart). No margin is given: the caller asks again with one of `locations`.",
+      "properties": {
+        "locations": {
+          "items": {
+            "$ref": "#/$defs/LocationRef"
+          },
+          "minItems": 2,
+          "title": "Locations",
+          "type": "array"
+        },
+        "match": {
+          "const": "needs_location",
+          "title": "Match",
+          "type": "string"
+        },
+        "menu_item_id": {
+          "format": "uuid",
+          "title": "Menu Item Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "match",
+        "menu_item_id",
+        "name",
+        "locations"
+      ],
+      "title": "DishMarginNeedsLocation",
+      "type": "object"
+    },
+    "DishMarginResolved": {
+      "additionalProperties": false,
+      "description": "Margin and food cost on the NET price (without IVA), the basis of 03 and 09.\n\nmargin = net_price - cost; margin_pct = margin / net_price x 100; food_cost = cost /\nnet_price x 100, so margin_pct + food_cost = 100. `price_gross` is the menu price with IVA,\nonly to quote it: no percentage here is on it. Cost and prices are rounded to the centavo,\nthe percentages come from the unrounded values (they agree within that rounding).",
+      "properties": {
+        "confidence": {
+          "$ref": "#/$defs/CostConfidence"
+        },
+        "cost": {
+          "$ref": "#/$defs/Money"
+        },
+        "cost_drivers": {
+          "items": {
+            "$ref": "#/$defs/CostDriver"
+          },
+          "maxItems": 3,
+          "title": "Cost Drivers",
+          "type": "array"
+        },
+        "food_cost": {
+          "$ref": "#/$defs/Pct"
+        },
+        "location_id": {
+          "format": "uuid",
+          "title": "Location Id",
+          "type": "string"
+        },
+        "margin": {
+          "$ref": "#/$defs/Money"
+        },
+        "margin_pct": {
+          "$ref": "#/$defs/Pct"
+        },
+        "match": {
+          "const": "resolved",
+          "title": "Match",
+          "type": "string"
+        },
+        "menu_item_id": {
+          "format": "uuid",
+          "title": "Menu Item Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "net_price": {
+          "$ref": "#/$defs/PositiveMoney"
+        },
+        "price_gross": {
+          "$ref": "#/$defs/PositiveMoney"
+        }
+      },
+      "required": [
+        "match",
+        "menu_item_id",
+        "location_id",
+        "name",
+        "cost",
+        "price_gross",
+        "net_price",
+        "margin",
+        "margin_pct",
+        "food_cost",
+        "confidence",
+        "cost_drivers"
+      ],
+      "title": "DishMarginResolved",
+      "type": "object"
+    },
+    "Flag": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "pattern": "\\S",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "Flag",
+      "type": "object"
+    },
+    "LocationRef": {
+      "additionalProperties": false,
+      "properties": {
+        "location_id": {
+          "format": "uuid",
+          "title": "Location Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "location_id",
+        "name"
+      ],
+      "title": "LocationRef",
+      "type": "object"
+    },
+    "Meta": {
+      "additionalProperties": false,
+      "description": "`period_resolved` is the one range a single-period RPC answered for (null for none, and\nfor compare_periods, which carries both ranges in its data).",
+      "properties": {
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "coverage_pct": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "unit=percent_points (calculated, 4 decimals)"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Coverage Pct"
+        },
+        "period_resolved": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Period"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "as_of"
+      ],
+      "title": "Meta",
+      "type": "object"
+    },
+    "Money": {
+      "additionalProperties": false,
+      "properties": {
+        "raw": {
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Raw",
+          "type": "integer"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "Money",
+      "type": "object"
+    },
+    "Pct": {
+      "additionalProperties": false,
+      "description": "A calculated percentage in percent points (+7.2 is 7.2 %), not a database column.",
+      "properties": {
+        "raw": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=percent_points (calculated, 4 decimals)",
+          "title": "Raw"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "Pct",
+      "type": "object"
+    },
+    "Period": {
+      "additionalProperties": false,
+      "description": "Business dates covered by the batch, both inclusive.",
+      "properties": {
+        "from": {
+          "format": "date",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "format": "date",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Period",
+      "type": "object"
+    },
+    "PositiveMoney": {
+      "additionalProperties": false,
+      "description": "Money greater than zero: a price a dish is sold at.",
+      "properties": {
+        "raw": {
+          "description": "unit=centavos, greater than zero",
+          "exclusiveMinimum": 0,
+          "maximum": 9223372036854775807,
+          "title": "Raw",
+          "type": "integer"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "PositiveMoney",
+      "type": "object"
+    },
+    "RpcError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/RpcErrorCode"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "RpcError",
+      "type": "object"
+    },
+    "RpcErrorCode": {
+      "enum": [
+        "invalid_args",
+        "not_found",
+        "no_data",
+        "forbidden",
+        "internal"
+      ],
+      "title": "RpcErrorCode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "data": {
+      "anyOf": [
+        {
+          "discriminator": {
+            "mapping": {
+              "ambiguous": "#/$defs/DishMarginAmbiguous",
+              "needs_location": "#/$defs/DishMarginNeedsLocation",
+              "resolved": "#/$defs/DishMarginResolved"
+            },
+            "propertyName": "match"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/DishMarginResolved"
+            },
+            {
+              "$ref": "#/$defs/DishMarginAmbiguous"
+            },
+            {
+              "$ref": "#/$defs/DishMarginNeedsLocation"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Data"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RpcError"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "flags": {
+      "items": {
+        "$ref": "#/$defs/Flag"
+      },
+      "title": "Flags",
+      "type": "array"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    },
+    "ok": {
+      "title": "Ok",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "ok",
+    "meta"
+  ],
+  "title": "RpcEnvelope[Annotated[Union[DishMarginResolved, DishMarginAmbiguous, DishMarginNeedsLocation], FieldInfo(annotation=NoneType, required=True, discriminator='match')]]",
+  "type": "object"
+}

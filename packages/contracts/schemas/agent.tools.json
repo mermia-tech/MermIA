@@ -1,0 +1,999 @@
+[
+  {
+    "description": "Net sales, tickets, average ticket, guests, discounts and cancellations.",
+    "input_schema": {
+      "$defs": {
+        "Period": {
+          "additionalProperties": false,
+          "description": "Business dates covered by the batch, both inclusive.",
+          "properties": {
+            "from": {
+              "format": "date",
+              "type": "string"
+            },
+            "to": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "location_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "period": {
+          "anyOf": [
+            {
+              "enum": [
+                "today",
+                "yesterday",
+                "this_week",
+                "last_week",
+                "prev_week",
+                "this_month",
+                "last_month",
+                "last_7d",
+                "last_30d"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/Period"
+            }
+          ]
+        }
+      },
+      "required": [
+        "period"
+      ],
+      "type": "object"
+    },
+    "name": "get_sales_summary"
+  },
+  {
+    "description": "Compare one metric between two periods.",
+    "input_schema": {
+      "$defs": {
+        "Period": {
+          "additionalProperties": false,
+          "description": "Business dates covered by the batch, both inclusive.",
+          "properties": {
+            "from": {
+              "format": "date",
+              "type": "string"
+            },
+            "to": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "location_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "metric": {
+          "enum": [
+            "net_sales",
+            "tickets",
+            "avg_ticket",
+            "guests",
+            "food_cost_pct",
+            "units"
+          ],
+          "type": "string"
+        },
+        "period_a": {
+          "anyOf": [
+            {
+              "enum": [
+                "today",
+                "yesterday",
+                "this_week",
+                "last_week",
+                "prev_week",
+                "this_month",
+                "last_month",
+                "last_7d",
+                "last_30d"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/Period"
+            }
+          ]
+        },
+        "period_b": {
+          "anyOf": [
+            {
+              "enum": [
+                "today",
+                "yesterday",
+                "this_week",
+                "last_week",
+                "prev_week",
+                "this_month",
+                "last_month",
+                "last_7d",
+                "last_30d"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/Period"
+            }
+          ]
+        }
+      },
+      "required": [
+        "metric",
+        "period_a",
+        "period_b"
+      ],
+      "type": "object"
+    },
+    "name": "compare_periods"
+  },
+  {
+    "description": "Rank locations by one metric for a period.",
+    "input_schema": {
+      "$defs": {
+        "Period": {
+          "additionalProperties": false,
+          "description": "Business dates covered by the batch, both inclusive.",
+          "properties": {
+            "from": {
+              "format": "date",
+              "type": "string"
+            },
+            "to": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "location_ids": {
+          "anyOf": [
+            {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "metric": {
+          "enum": [
+            "net_sales",
+            "tickets",
+            "avg_ticket",
+            "guests",
+            "food_cost_pct",
+            "units"
+          ],
+          "type": "string"
+        },
+        "period": {
+          "anyOf": [
+            {
+              "enum": [
+                "today",
+                "yesterday",
+                "this_week",
+                "last_week",
+                "prev_week",
+                "this_month",
+                "last_month",
+                "last_7d",
+                "last_30d"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/Period"
+            }
+          ]
+        }
+      },
+      "required": [
+        "metric",
+        "period"
+      ],
+      "type": "object"
+    },
+    "name": "compare_locations"
+  },
+  {
+    "description": "Top dishes by units, revenue or margin.",
+    "input_schema": {
+      "$defs": {
+        "Period": {
+          "additionalProperties": false,
+          "description": "Business dates covered by the batch, both inclusive.",
+          "properties": {
+            "from": {
+              "format": "date",
+              "type": "string"
+            },
+            "to": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "limit": {
+          "default": 5,
+          "maximum": 10,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "location_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "metric": {
+          "enum": [
+            "units",
+            "revenue",
+            "margin",
+            "margin_pct"
+          ],
+          "type": "string"
+        },
+        "order": {
+          "default": "desc",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "type": "string"
+        },
+        "period": {
+          "anyOf": [
+            {
+              "enum": [
+                "today",
+                "yesterday",
+                "this_week",
+                "last_week",
+                "prev_week",
+                "this_month",
+                "last_month",
+                "last_7d",
+                "last_30d"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/Period"
+            }
+          ]
+        }
+      },
+      "required": [
+        "period",
+        "metric"
+      ],
+      "type": "object"
+    },
+    "name": "get_top_dishes"
+  },
+  {
+    "description": "Sales split by payment, staff, hour, weekday, channel or category.",
+    "input_schema": {
+      "$defs": {
+        "Period": {
+          "additionalProperties": false,
+          "description": "Business dates covered by the batch, both inclusive.",
+          "properties": {
+            "from": {
+              "format": "date",
+              "type": "string"
+            },
+            "to": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "by": {
+          "enum": [
+            "payment_method",
+            "staff",
+            "hour",
+            "weekday",
+            "channel",
+            "category"
+          ],
+          "type": "string"
+        },
+        "location_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "period": {
+          "anyOf": [
+            {
+              "enum": [
+                "today",
+                "yesterday",
+                "this_week",
+                "last_week",
+                "prev_week",
+                "this_month",
+                "last_month",
+                "last_7d",
+                "last_30d"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/Period"
+            }
+          ]
+        }
+      },
+      "required": [
+        "period",
+        "by"
+      ],
+      "type": "object"
+    },
+    "name": "get_sales_breakdown"
+  },
+  {
+    "description": "Cancellations or discounts with top items and staff.",
+    "input_schema": {
+      "$defs": {
+        "Period": {
+          "additionalProperties": false,
+          "description": "Business dates covered by the batch, both inclusive.",
+          "properties": {
+            "from": {
+              "format": "date",
+              "type": "string"
+            },
+            "to": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "default": "cancellations",
+          "enum": [
+            "cancellations",
+            "discounts"
+          ],
+          "type": "string"
+        },
+        "location_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "period": {
+          "anyOf": [
+            {
+              "enum": [
+                "today",
+                "yesterday",
+                "this_week",
+                "last_week",
+                "prev_week",
+                "this_month",
+                "last_month",
+                "last_7d",
+                "last_30d"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/Period"
+            }
+          ]
+        }
+      },
+      "required": [
+        "period"
+      ],
+      "type": "object"
+    },
+    "name": "get_cancellations"
+  },
+  {
+    "description": "Cost, price and margin of one dish, by id or name.",
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "dish": {
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "location_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "dish"
+      ],
+      "type": "object"
+    },
+    "name": "get_dish_margin"
+  },
+  {
+    "description": "Theoretical food cost percent and its coverage.",
+    "input_schema": {
+      "$defs": {
+        "Period": {
+          "additionalProperties": false,
+          "description": "Business dates covered by the batch, both inclusive.",
+          "properties": {
+            "from": {
+              "format": "date",
+              "type": "string"
+            },
+            "to": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "group_by": {
+          "default": "none",
+          "enum": [
+            "none",
+            "category"
+          ],
+          "type": "string"
+        },
+        "location_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "period": {
+          "anyOf": [
+            {
+              "enum": [
+                "today",
+                "yesterday",
+                "this_week",
+                "last_week",
+                "prev_week",
+                "this_month",
+                "last_month",
+                "last_7d",
+                "last_30d"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/Period"
+            }
+          ]
+        }
+      },
+      "required": [
+        "period"
+      ],
+      "type": "object"
+    },
+    "name": "get_food_cost_pct"
+  },
+  {
+    "description": "Star, plowhorse, puzzle and dog counts with top items.",
+    "input_schema": {
+      "$defs": {
+        "Period": {
+          "additionalProperties": false,
+          "description": "Business dates covered by the batch, both inclusive.",
+          "properties": {
+            "from": {
+              "format": "date",
+              "type": "string"
+            },
+            "to": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "location_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "period": {
+          "anyOf": [
+            {
+              "enum": [
+                "today",
+                "yesterday",
+                "this_week",
+                "last_week",
+                "prev_week",
+                "this_month",
+                "last_month",
+                "last_7d",
+                "last_30d"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/Period"
+            }
+          ]
+        }
+      },
+      "required": [
+        "period"
+      ],
+      "type": "object"
+    },
+    "name": "get_menu_engineering"
+  },
+  {
+    "description": "Ingredient price moves, dishes over target and price suggestions.",
+    "input_schema": {
+      "$defs": {
+        "Period": {
+          "additionalProperties": false,
+          "description": "Business dates covered by the batch, both inclusive.",
+          "properties": {
+            "from": {
+              "format": "date",
+              "type": "string"
+            },
+            "to": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ],
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "location_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "since": {
+          "anyOf": [
+            {
+              "enum": [
+                "today",
+                "yesterday",
+                "this_week",
+                "last_week",
+                "prev_week",
+                "this_month",
+                "last_month",
+                "last_7d",
+                "last_30d"
+              ],
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/Period"
+            }
+          ],
+          "default": "last_7d"
+        }
+      },
+      "type": "object"
+    },
+    "name": "get_cost_alerts"
+  },
+  {
+    "description": "Last data loaded per source, missing days and stale costs.",
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "location_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "type": "object"
+    },
+    "name": "get_data_status"
+  },
+  {
+    "description": "Propose a change for human approval. Never applies it.",
+    "input_schema": {
+      "$defs": {
+        "IngredientPriceInput": {
+          "additionalProperties": false,
+          "description": "Pesos per `unit`, as the user said it (e.g. $220 per kg).",
+          "properties": {
+            "effective_from": {
+              "format": "date",
+              "type": "string"
+            },
+            "unit": {
+              "enum": [
+                "g",
+                "kg",
+                "ml",
+                "l",
+                "pza"
+              ],
+              "type": "string"
+            },
+            "unit_price": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "pesos per `unit` (> 0)"
+            }
+          },
+          "required": [
+            "unit_price",
+            "unit",
+            "effective_from"
+          ],
+          "type": "object"
+        },
+        "MenuItemPriceInput": {
+          "additionalProperties": false,
+          "description": "Pesos with IVA, as the user said it, for one location named in words.",
+          "properties": {
+            "effective_from": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "location": {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            "price_pesos": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "maximum": 9.223372036854776e+16,
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "pesos with IVA, at most 2 decimals (> 0)"
+            }
+          },
+          "required": [
+            "price_pesos",
+            "location"
+          ],
+          "type": "object"
+        },
+        "NoPayload": {
+          "additionalProperties": false,
+          "description": "No values: the target is the batch.",
+          "properties": {},
+          "type": "object"
+        },
+        "PendingKind": {
+          "enum": [
+            "ingredient_price.set",
+            "recipe.upsert",
+            "menu_item_price.set",
+            "import_batch.approve",
+            "import_batch.rollback"
+          ],
+          "type": "string"
+        },
+        "RecipeLineInput": {
+          "additionalProperties": false,
+          "properties": {
+            "ingredient_name": {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            "qty": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "unit=quantity (> 0)"
+            },
+            "unit": {
+              "enum": [
+                "g",
+                "kg",
+                "ml",
+                "l",
+                "pza"
+              ],
+              "type": "string"
+            },
+            "yield_override_pct": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "exclusiveMinimum": 0.0,
+                      "type": "number"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ],
+                  "description": "unit=percent_points (> 0, max 999.9999)"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "ingredient_name",
+            "qty",
+            "unit"
+          ],
+          "type": "object"
+        },
+        "RecipeUpsertInput": {
+          "additionalProperties": false,
+          "properties": {
+            "lines": {
+              "items": {
+                "$ref": "#/$defs/RecipeLineInput"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "yield_qty": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "unit=quantity (> 0)"
+            }
+          },
+          "required": [
+            "yield_qty",
+            "lines"
+          ],
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/PendingKind"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "target": {
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "values": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IngredientPriceInput"
+            },
+            {
+              "$ref": "#/$defs/MenuItemPriceInput"
+            },
+            {
+              "$ref": "#/$defs/RecipeUpsertInput"
+            },
+            {
+              "$ref": "#/$defs/NoPayload"
+            }
+          ],
+          "default": {}
+        }
+      },
+      "required": [
+        "kind",
+        "target"
+      ],
+      "type": "object"
+    },
+    "name": "propose_change"
+  }
+]

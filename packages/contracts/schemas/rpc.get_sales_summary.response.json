@@ -1,0 +1,312 @@
+{
+  "$defs": {
+    "Flag": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "pattern": "\\S",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "Flag",
+      "type": "object"
+    },
+    "Meta": {
+      "additionalProperties": false,
+      "description": "`period_resolved` is the one range a single-period RPC answered for (null for none, and\nfor compare_periods, which carries both ranges in its data).",
+      "properties": {
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "coverage_pct": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "unit=percent_points (calculated, 4 decimals)"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Coverage Pct"
+        },
+        "period_resolved": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Period"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "as_of"
+      ],
+      "title": "Meta",
+      "type": "object"
+    },
+    "Money": {
+      "additionalProperties": false,
+      "properties": {
+        "raw": {
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Raw",
+          "type": "integer"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "Money",
+      "type": "object"
+    },
+    "Pct": {
+      "additionalProperties": false,
+      "description": "A calculated percentage in percent points (+7.2 is 7.2 %), not a database column.",
+      "properties": {
+        "raw": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=percent_points (calculated, 4 decimals)",
+          "title": "Raw"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "Pct",
+      "type": "object"
+    },
+    "Period": {
+      "additionalProperties": false,
+      "description": "Business dates covered by the batch, both inclusive.",
+      "properties": {
+        "from": {
+          "format": "date",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "format": "date",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Period",
+      "type": "object"
+    },
+    "RpcError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/RpcErrorCode"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "RpcError",
+      "type": "object"
+    },
+    "RpcErrorCode": {
+      "enum": [
+        "invalid_args",
+        "not_found",
+        "no_data",
+        "forbidden",
+        "internal"
+      ],
+      "title": "RpcErrorCode",
+      "type": "string"
+    },
+    "SalesSummaryData": {
+      "additionalProperties": false,
+      "description": "Every figure but `net_sales` is null when the data does not report it: not reported is not\nzero (`daily_sales_agg` and `daily_location_metrics` allow null). The keys stay required, so a\nfigure that is left out is an error. A real zero is 0.",
+      "properties": {
+        "avg_ticket": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Money"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cancellations": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Money"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "change_vs_previous": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pct"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "discounts": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Money"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "guests": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Guests"
+        },
+        "net_sales": {
+          "$ref": "#/$defs/Money"
+        },
+        "tickets": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tickets"
+        }
+      },
+      "required": [
+        "net_sales",
+        "tickets",
+        "avg_ticket",
+        "guests",
+        "discounts",
+        "cancellations"
+      ],
+      "title": "SalesSummaryData",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "data": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SalesSummaryData"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RpcError"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "flags": {
+      "items": {
+        "$ref": "#/$defs/Flag"
+      },
+      "title": "Flags",
+      "type": "array"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    },
+    "ok": {
+      "title": "Ok",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "ok",
+    "meta"
+  ],
+  "title": "RpcEnvelope[SalesSummaryData]",
+  "type": "object"
+}

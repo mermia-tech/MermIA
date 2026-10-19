@@ -1,0 +1,34 @@
+{
+  "args": {
+    "period": "yesterday"
+  },
+  "response": {
+    "ok": true,
+    "data": {
+      "net_sales": {
+        "raw": 184320,
+        "text": "$1,843.20"
+      },
+      "tickets": null,
+      "avg_ticket": null,
+      "guests": null,
+      "discounts": null,
+      "cancellations": null,
+      "change_vs_previous": null
+    },
+    "flags": [
+      {
+        "code": "partial_data",
+        "message": "La fuente no reporta comensales, descuentos ni cancelaciones."
+      }
+    ],
+    "meta": {
+      "as_of": "2026-10-19T08:00:00-06:00",
+      "coverage_pct": 87.5,
+      "period_resolved": {
+        "from": "2026-10-18",
+        "to": "2026-10-18"
+      }
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "$defs": {
+    "ApplyCode": {
+      "description": "Outcomes of apply_pending_change. Business outcomes are returned, never raised.",
+      "enum": [
+        "applied",
+        "already_applied",
+        "not_found",
+        "forbidden_role",
+        "not_pending",
+        "expired",
+        "conflict",
+        "failed"
+      ],
+      "title": "ApplyCode",
+      "type": "string"
+    },
+    "PendingChangeStatus": {
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "expired",
+        "conflict",
+        "applied",
+        "failed"
+      ],
+      "title": "PendingChangeStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "What the confirmation service gets back. `status` is the row's status after the call.\n\nPersisted effects per code (the SQL is MR-32): `applied` commits the write, the status and\nthe audit rows together; `expired`, `conflict` and `failed` set that status and audit it\nwithout touching the target (`failed` rolls the write back first); every other code\nchanges nothing. A state change happens only after the authorization check passed.",
+  "properties": {
+    "code": {
+      "$ref": "#/$defs/ApplyCode"
+    },
+    "message": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Message"
+    },
+    "pending_change_id": {
+      "format": "uuid",
+      "title": "Pending Change Id",
+      "type": "string"
+    },
+    "status": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PendingChangeStatus"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "code",
+    "pending_change_id"
+  ],
+  "title": "ApplyResult",
+  "type": "object"
+}

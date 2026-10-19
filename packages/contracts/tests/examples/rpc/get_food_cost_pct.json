@@ -1,0 +1,41 @@
+{
+  "args": {
+    "period": "this_month",
+    "group_by": "category"
+  },
+  "response": {
+    "ok": true,
+    "data": {
+      "theoretical": {
+        "raw": 34.1,
+        "text": "34.1%"
+      },
+      "target": {
+        "raw": 32.0,
+        "text": "32.0%"
+      },
+      "coverage": {
+        "raw": 87.5,
+        "text": "87.5%"
+      },
+      "by_category": [
+        {
+          "category": "Tacos",
+          "food_cost": {
+            "raw": 33.0,
+            "text": "33.0%"
+          }
+        }
+      ]
+    },
+    "flags": [],
+    "meta": {
+      "as_of": "2026-10-19T08:00:00-06:00",
+      "coverage_pct": 87.5,
+      "period_resolved": {
+        "from": "2026-10-12",
+        "to": "2026-10-18"
+      }
+    }
+  }
+}

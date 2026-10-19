@@ -1,0 +1,41 @@
+{
+  "args": {
+    "period": "last_week"
+  },
+  "response": {
+    "ok": true,
+    "data": {
+      "net_sales": {
+        "raw": 18432050,
+        "text": "$184,320.50"
+      },
+      "tickets": 912,
+      "avg_ticket": {
+        "raw": 20211,
+        "text": "$202.11"
+      },
+      "guests": 1304,
+      "discounts": {
+        "raw": 215000,
+        "text": "$2,150.00"
+      },
+      "cancellations": {
+        "raw": 98000,
+        "text": "$980.00"
+      },
+      "change_vs_previous": {
+        "raw": 7.2,
+        "text": "+7.2%"
+      }
+    },
+    "flags": [],
+    "meta": {
+      "as_of": "2026-10-19T08:00:00-06:00",
+      "coverage_pct": 87.5,
+      "period_resolved": {
+        "from": "2026-10-12",
+        "to": "2026-10-18"
+      }
+    }
+  }
+}

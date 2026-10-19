@@ -1,0 +1,262 @@
+{
+  "$defs": {
+    "DishValue": {
+      "additionalProperties": false,
+      "properties": {
+        "menu_item_id": {
+          "format": "uuid",
+          "title": "Menu Item Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "rank": {
+          "minimum": 1,
+          "title": "Rank",
+          "type": "integer"
+        },
+        "value": {
+          "$ref": "#/$defs/Figure"
+        }
+      },
+      "required": [
+        "rank",
+        "menu_item_id",
+        "name",
+        "value"
+      ],
+      "title": "DishValue",
+      "type": "object"
+    },
+    "Figure": {
+      "additionalProperties": false,
+      "description": "A number whose unit depends on the metric asked for (compare_*, top dishes).\n\nThe unit is not a field: it follows from `metric` through METRIC_UNIT. Money is integer\ncentavos (as Money.raw), counts are whole numbers, units sold are quantities with up to six\ndecimals and percentages are percent points.",
+      "properties": {
+        "raw": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Raw"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "Figure",
+      "type": "object"
+    },
+    "Flag": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "pattern": "\\S",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "Flag",
+      "type": "object"
+    },
+    "Meta": {
+      "additionalProperties": false,
+      "description": "`period_resolved` is the one range a single-period RPC answered for (null for none, and\nfor compare_periods, which carries both ranges in its data).",
+      "properties": {
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "coverage_pct": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "unit=percent_points (calculated, 4 decimals)"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Coverage Pct"
+        },
+        "period_resolved": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Period"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "as_of"
+      ],
+      "title": "Meta",
+      "type": "object"
+    },
+    "Period": {
+      "additionalProperties": false,
+      "description": "Business dates covered by the batch, both inclusive.",
+      "properties": {
+        "from": {
+          "format": "date",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "format": "date",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Period",
+      "type": "object"
+    },
+    "RpcError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/RpcErrorCode"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "RpcError",
+      "type": "object"
+    },
+    "RpcErrorCode": {
+      "enum": [
+        "invalid_args",
+        "not_found",
+        "no_data",
+        "forbidden",
+        "internal"
+      ],
+      "title": "RpcErrorCode",
+      "type": "string"
+    },
+    "TopDishesData": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "enum": [
+            "units",
+            "revenue",
+            "margin",
+            "margin_pct"
+          ],
+          "title": "Metric",
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/$defs/DishValue"
+          },
+          "maxItems": 10,
+          "title": "Rows",
+          "type": "array"
+        }
+      },
+      "required": [
+        "metric",
+        "rows"
+      ],
+      "title": "TopDishesData",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "data": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TopDishesData"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RpcError"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "flags": {
+      "items": {
+        "$ref": "#/$defs/Flag"
+      },
+      "title": "Flags",
+      "type": "array"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    },
+    "ok": {
+      "title": "Ok",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "ok",
+    "meta"
+  ],
+  "title": "RpcEnvelope[TopDishesData]",
+  "type": "object"
+}
