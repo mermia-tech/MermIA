@@ -36,6 +36,7 @@ PARSER = "sr.productos_vendidos@v1"
 HEADER = ("clave", "descripcion", "grupo", "cantidad", "precio", "importe", "descuento", "total")
 TITLE = "productos vendidos"
 SEARCH_ROWS = 15  # the header sits in the title block at the top of the sheet
+MAX_ROWS = 50_000  # far above a real day's menu; a small zip cannot unpack into a huge sheet
 PERIOD = re.compile(r"del\s+(\d{1,2}/\d{1,2}/\d{4})\s+al\s+(\d{1,2}/\d{1,2}/\d{4})")
 UNITS = Decimal("0.000001")
 
@@ -107,13 +108,30 @@ def _units(value: object, where: str) -> Decimal:
     return units.quantize(UNITS)
 
 
+def _is_number(value: object) -> bool:
+    return isinstance(value, int | float | Decimal) and not isinstance(value, bool)
+
+
+def _is_total_row(clave: object, desc: object, cantidad: object, total: object) -> bool:
+    """The closing row: Clave empty or "Total", the word Total, and numeric Cantidad and Total.
+    An item that happens to be called "Total" has a Clave of its own, so it stays an item."""
+    labelled = norm(clave) == "total" or (norm(clave) == "" and norm(desc) == "total")
+    return labelled and _is_number(cantidad) and _is_number(total)
+
+
 def parse(wb: Workbook) -> NormalizedBatch:
-    name = _sheet_name(wb)
-    if name is None:  # the registry calls parse only after matches
+    sheet_name = _sheet_name(wb)
+    if sheet_name is None:  # the registry calls parse only after matches
         raise MalformedReport("El reporte no tiene el formato esperado.", "header not found")
-    sheet_rows = rows(wb, name)
-    h = _header_at(sheet_rows)
+    h = _header_at(rows(wb, sheet_name, max_row=SEARCH_ROWS))
     assert h is not None
+    # at most MAX_ROWS rows below the header (one more is read to know there are too many)
+    sheet_rows = rows(wb, sheet_name, max_row=h + 1 + MAX_ROWS + 1)
+    if len(sheet_rows) > h + 1 + MAX_ROWS:
+        raise MalformedReport(
+            f"El reporte tiene más de {MAX_ROWS:,} renglones; envíame un periodo más corto.",
+            f"more than {MAX_ROWS} rows below the header",
+        )
     title = sheet_rows[:h]
     period = _period(title)
 
@@ -121,6 +139,7 @@ def parse(wb: Workbook) -> NormalizedBatch:
     menu: dict[str, MenuItemIn] = {}
     issues: list[IssueIn] = []
     totals: Totals | None = None
+    seen: dict[str, int] = {}  # item identity -> first row, to refuse repeated items
     for n, row in enumerate(sheet_rows[h + 1 :], start=h + 2):
         cells = (*row, *(None,) * len(HEADER))[: len(HEADER)]
         if all(text(c) is None for c in cells):
@@ -137,7 +156,7 @@ def parse(wb: Workbook) -> NormalizedBatch:
                     f"numeric row after Total at row {n}",
                 )
             continue
-        if norm(clave) == "total" or norm(desc) == "total":
+        if _is_total_row(clave, desc, cantidad, total):
             totals = Totals(
                 net_sales=centavos(total, f"la fila Total ({n})"),
                 units=_units(cantidad, f"la fila Total ({n})"),
@@ -172,7 +191,17 @@ def parse(wb: Workbook) -> NormalizedBatch:
                     row_ref=str(n),
                 )
             )
+        # PROVISIONAL until the pilot export (MR-5): a repeated item is refused, since the
+        # loader would store two rows for the same item and day and double its sales. If SR
+        # repeats a Clave on purpose (one row per modifier, say), summing may be right instead.
         key = text(clave) or name
+        if key in seen:
+            raise MalformedReport(
+                f"Las filas {seen[key]} y {n} repiten el producto «{key}». Envíame el reporte "
+                "con una fila por producto.",
+                f"item {key!r} repeated at rows {seen[key]} and {n}",
+            )
+        seen[key] = n
         menu.setdefault(key, MenuItemIn(external_id=text(clave), name=name, category=text(grupo)))
         items.append(
             ItemSalesIn(
