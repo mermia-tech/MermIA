@@ -1,6 +1,7 @@
 {
   "args": {
-    "period": "last_30d"
+    "period": "last_30d",
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
   },
   "response": {
     "ok": true,
@@ -8,39 +9,48 @@
       "quadrants": [
         {
           "name": "star",
-          "count": 4,
+          "count": 5,
           "top_items": [
-            "Taco al pastor"
+            "Tacos al pastor (orden de 3)",
+            "Tacos de bistec (orden de 3)",
+            "Tacos de suadero (orden de 3)"
           ]
         },
         {
           "name": "plowhorse",
-          "count": 6,
+          "count": 5,
           "top_items": [
-            "Gringa"
+            "Coca-Cola",
+            "Agua de horchata",
+            "Cerveza Corona"
           ]
         },
         {
           "name": "puzzle",
           "count": 3,
-          "top_items": []
+          "top_items": [
+            "Tacos de longaniza (orden de 3)",
+            "Torta de pastor",
+            "Alambre de res"
+          ]
         },
         {
           "name": "dog",
-          "count": 5,
+          "count": 2,
           "top_items": [
-            "Ensalada"
+            "Agua mineral",
+            "Volcán de pastor"
           ]
         }
       ]
     },
     "flags": [],
     "meta": {
-      "as_of": "2026-10-19T08:00:00-06:00",
-      "coverage_pct": 87.5,
+      "as_of": "2026-10-12T10:00:00-06:00",
+      "coverage_pct": 72.6418,
       "period_resolved": {
-        "from": "2026-10-12",
-        "to": "2026-10-18"
+        "from": "2026-09-12",
+        "to": "2026-10-11"
       }
     }
   }

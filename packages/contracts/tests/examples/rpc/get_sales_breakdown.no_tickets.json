@@ -1,7 +1,8 @@
 {
   "args": {
     "period": "yesterday",
-    "by": "category"
+    "by": "category",
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
   },
   "response": {
     "ok": true,
@@ -11,36 +12,72 @@
         {
           "key": "Tacos",
           "net_sales": {
-            "raw": 1500000,
-            "text": "$15,000.00"
+            "raw": 1523500,
+            "text": "$15,235.00"
           },
           "tickets": null,
           "share": {
-            "raw": 62.5,
-            "text": "62.5%"
+            "raw": 48.838,
+            "text": "48.8%"
+          }
+        },
+        {
+          "key": "Especialidades",
+          "net_sales": {
+            "raw": 785500,
+            "text": "$7,855.00"
+          },
+          "tickets": null,
+          "share": {
+            "raw": 25.1803,
+            "text": "25.2%"
           }
         },
         {
           "key": "Bebidas",
           "net_sales": {
-            "raw": 900000,
-            "text": "$9,000.00"
+            "raw": 713500,
+            "text": "$7,135.00"
           },
           "tickets": null,
           "share": {
-            "raw": 37.5,
-            "text": "37.5%"
+            "raw": 22.8723,
+            "text": "22.9%"
+          }
+        },
+        {
+          "key": "Postres",
+          "net_sales": {
+            "raw": 65500,
+            "text": "$655.00"
+          },
+          "tickets": null,
+          "share": {
+            "raw": 2.0997,
+            "text": "2.1%"
+          }
+        },
+        {
+          "key": "Extras",
+          "net_sales": {
+            "raw": 31500,
+            "text": "$315.00"
+          },
+          "tickets": null,
+          "share": {
+            "raw": 1.0098,
+            "text": "1.0%"
           }
         }
       ]
     },
     "flags": [],
     "meta": {
-      "as_of": "2026-10-19T08:00:00-06:00",
-      "coverage_pct": 87.5,
+      "as_of": "2026-10-12T10:00:00-06:00",
+      "coverage_pct": 71.3736,
       "period_resolved": {
-        "from": "2026-10-18",
-        "to": "2026-10-18"
+        "from": "2026-10-11",
+        "to": "2026-10-11"
       }
     }
   }

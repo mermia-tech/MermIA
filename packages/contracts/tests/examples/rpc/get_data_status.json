@@ -1,6 +1,6 @@
 {
   "args": {
-    "location_id": "0f7a1c52-3b6e-7c1a-9d11-000000000001"
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
   },
   "response": {
     "ok": true,
@@ -8,21 +8,27 @@
       "sources": [
         {
           "source_kind": "sr_report",
-          "last_batch_at": "2026-10-18T22:10:00-06:00"
+          "last_batch_at": "2026-10-12T09:00:00-06:00"
+        },
+        {
+          "source_kind": "sr_report",
+          "last_batch_at": "2026-10-12T09:00:00-06:00"
+        },
+        {
+          "source_kind": "sr_report",
+          "last_batch_at": "2026-10-11T09:00:00-06:00"
         }
       ],
-      "missing_business_days": [
-        "2026-10-17"
-      ],
+      "missing_business_days": [],
       "stale_costs": 3,
       "coverage": {
-        "raw": 87.5,
-        "text": "87.5%"
+        "raw": 71.3736,
+        "text": "71.4%"
       }
     },
     "flags": [],
     "meta": {
-      "as_of": "2026-10-19T08:00:00-06:00"
+      "as_of": "2026-10-12T10:00:00-06:00"
     }
   }
 }
