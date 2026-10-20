@@ -1,0 +1,31 @@
+[project]
+name = "mermia-eval"
+version = "0.1.0"
+description = "MermIA LLM eval harness: one question, several models, scored tool / args / numbers."
+requires-python = ">=3.12"
+dependencies = [
+    "agno==3.1.6",
+    "openai",
+    "anthropic",
+    "google-genai",
+    "httpx",
+    "openinference-instrumentation-agno",
+    "opentelemetry-sdk",
+    "opentelemetry-exporter-otlp-proto-http",
+    "mermia-contracts",
+    "mermia-mock-rpc",
+]
+
+[project.scripts]
+mermia-eval = "mermia_eval.cli:main"
+
+[tool.uv.sources]
+mermia-contracts = { workspace = true }
+mermia-mock-rpc = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mermia_eval"]
