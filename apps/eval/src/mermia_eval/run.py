@@ -37,15 +37,15 @@ def run_case(
     agent_factory: Callable[..., Any] = Agent,
     failures: Sequence[str] = (),  # tool backend failures during this run
 ) -> RunResult:
-    agent = agent_factory(
-        model=build_model(model), tools=tools, instructions=SYSTEM_PROMPT, telemetry=False
-    )
     result = RunResult(model, [], [], "", 0, 0, 0, 0, 0.0, None, None)
     with trace.get_tracer("mermia_eval").start_as_current_span("eval.run") as span:
         ctx = span.get_span_context()
         result.trace_id = format(ctx.trace_id, "032x") if ctx.is_valid else None
         start = time.perf_counter()
         try:
+            agent = agent_factory(
+                model=build_model(model), tools=tools, instructions=SYSTEM_PROMPT, telemetry=False
+            )
             out = agent.run(case.question)
         except Exception as e:  # a failing model must not stop the others
             result.error = str(e)

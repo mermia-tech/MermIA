@@ -120,3 +120,13 @@ def test_error_is_not_truncated_in_the_result() -> None:
     assert raised.error is not None and len(raised.error) == 400
     assert answered.error is not None and len(answered.error) == 400
     assert backend.error is not None and backend.error.endswith(long)
+
+
+def test_constructor_failure_is_an_error_not_a_crash() -> None:
+    # e.g. an SDK bump that renames a model kwarg must not stop the other models
+    def broken(**_: Any) -> Any:
+        raise TypeError("unexpected keyword argument 'thinking_level'")
+
+    result = run_case(LUNA, CASE, [], agent_factory=broken)
+    assert result.error is not None and "thinking_level" in result.error
+    assert result.calls == []
