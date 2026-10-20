@@ -143,6 +143,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     if unknown := [m for m in models if m not in known]:
         parser.error(f"unknown model(s): {', '.join(unknown)}")
 
+    cases = load_cases()
+    if not cases:
+        parser.error("no cases found in apps/eval/cases")
+
     env = os.environ
     route_agno_logs(env)
     provider = setup_tracing(env)
@@ -156,7 +160,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     first_error: dict[str, str] = {}
     print(format_header(), flush=True)
     try:
-        for case in load_cases():
+        for case in cases:
             for model in models:
                 results = []
                 for _ in range(args.runs):

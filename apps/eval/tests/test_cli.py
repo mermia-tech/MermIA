@@ -302,3 +302,13 @@ def test_main_routes_agno_logs(monkeypatch: pytest.MonkeyPatch, no_network: None
     monkeypatch.setattr(cli, "run_case", lambda model, case, tools, **kw: _ok(model))
     cli.main(["--models", LUNA])
     assert len(seen) == 1
+
+
+def test_no_cases_is_an_error_not_an_empty_run(
+    monkeypatch: pytest.MonkeyPatch, no_network: None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(cli, "load_cases", lambda: [])
+    with pytest.raises(SystemExit) as exit_info:
+        cli.main([])
+    assert exit_info.value.code == 2
+    assert "no cases" in capsys.readouterr().err
