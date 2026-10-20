@@ -9,7 +9,7 @@ from openinference.instrumentation.agno import AgnoInstrumentor
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 _VARS = ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL")
 
@@ -33,7 +33,7 @@ def setup_tracing(env: Mapping[str, str]) -> TracerProvider | None:
         },
     )
     provider = TracerProvider()
-    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    provider.add_span_processor(BatchSpanProcessor(exporter))
     trace.set_tracer_provider(provider)  # so run_case's span joins the same trace
     AgnoInstrumentor().instrument(tracer_provider=provider)
     return provider

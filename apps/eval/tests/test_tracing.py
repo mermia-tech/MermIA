@@ -73,3 +73,13 @@ def test_setup_makes_the_provider_global(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr(AgnoInstrumentor, "instrument", lambda self, **kw: None)
     provider = tracing.setup_tracing(ENV)
     assert provider is not None and seen == [provider]
+
+
+def test_spans_are_exported_in_the_background(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A synchronous processor would put the Langfuse round trip inside the measured latency.
+    monkeypatch.setattr(otel_trace, "set_tracer_provider", lambda p: None)
+    monkeypatch.setattr(AgnoInstrumentor, "instrument", lambda self, **kw: None)
+    provider = tracing.setup_tracing(ENV)
+    assert provider is not None
+    processors = provider._active_span_processor._span_processors
+    assert [type(p).__name__ for p in processors] == ["BatchSpanProcessor"]

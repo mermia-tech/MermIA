@@ -312,3 +312,16 @@ def test_no_cases_is_an_error_not_an_empty_run(
         cli.main([])
     assert exit_info.value.code == 2
     assert "no cases" in capsys.readouterr().err
+
+
+def test_traces_are_flushed_before_their_scores_are_posted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Spans are exported in the background, so the trace must reach Langfuse before its scores.
+    events: list[str] = []
+    provider = SimpleNamespace(force_flush=lambda: events.append("flush"))
+    monkeypatch.setattr(cli, "setup_tracing", lambda env: provider)
+    monkeypatch.setattr(cli, "post_scores", lambda *a, **k: events.append("scores"))
+    monkeypatch.setattr(cli, "run_case", lambda model, case, tools, **kw: _ok(model))
+    cli.main(["--models", LUNA])
+    assert events[:2] == ["flush", "scores"]

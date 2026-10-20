@@ -171,6 +171,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                         first_error.setdefault(model, r.error)
                     if r.error is None:
                         every_run_errored = False
+                        # spans export in the background; the scores need the trace to be there
+                        if provider is not None:
+                            provider.force_flush()
                         post_scores(env, r.trace_id, _scores(case, r))
                 print(format_row(summarize(results, case, prices)[0]), flush=True)
     finally:
