@@ -26,31 +26,49 @@
 --   item 6): a trigger on recipe_line rejects it, and the cost walk stops at depth 8.
 
 -- Recipe structure guard -------------------------------------------------------------------
+-- Costing resolves a sub-recipe line through the ingredient it produces (the recipe of record
+-- for that ingredient on the day), so cycles are checked on the ingredient graph: ingredient A
+-- leads to B when some recipe producing A has a sub-recipe line whose recipe produces B. That
+-- catches cycles that only close through another version of a recipe.
+create function app.ingredient_reaches(tenant uuid, start uuid, target uuid) returns boolean
+language sql stable set search_path = ''
+as $$
+  with recursive reach(ingredient) as (
+    select start
+    union
+    select sr.produces_ingredient_id
+    from reach
+    join public.recipe r on r.tenant_id = tenant and r.produces_ingredient_id = reach.ingredient
+    join public.recipe_line rl on rl.tenant_id = tenant and rl.recipe_id = r.id and rl.sub_recipe_id is not null
+    join public.recipe sr on sr.tenant_id = tenant and sr.id = rl.sub_recipe_id
+    where sr.produces_ingredient_id is not null
+  )
+  select exists (select 1 from reach where ingredient = target)
+$$;
+
 create function app.check_recipe_line() returns trigger
 language plpgsql set search_path = ''
 as $$
+declare
+  makes uuid;  -- what the line's recipe produces (null for a dish)
+  uses uuid;   -- what the line's sub-recipe produces
 begin
   if new.sub_recipe_id is null then
     return new;
   end if;
-  -- serialize structure changes per tenant, so two concurrent lines cannot close a cycle
+  -- serialize structure changes per tenant, so two concurrent changes cannot close a cycle
   perform pg_advisory_xact_lock(hashtextextended('recipe_structure:' || new.tenant_id::text, 0));
   if new.sub_recipe_id = new.recipe_id then
     raise exception 'a recipe cannot use itself' using errcode = '23514';
   end if;
-  if not exists (select 1 from public.recipe r
-                 where r.tenant_id = new.tenant_id and r.id = new.sub_recipe_id and r.produces_ingredient_id is not null) then
+  select r.produces_ingredient_id into uses from public.recipe r
+  where r.tenant_id = new.tenant_id and r.id = new.sub_recipe_id;
+  if uses is null then
     raise exception 'a sub-recipe must produce an ingredient (not be a dish recipe)' using errcode = '23514';
   end if;
-  if exists (
-    with recursive below(id) as (
-      select new.sub_recipe_id
-      union
-      select rl.sub_recipe_id from public.recipe_line rl join below b on rl.recipe_id = b.id
-      where rl.tenant_id = new.tenant_id and rl.sub_recipe_id is not null
-    )
-    select 1 from below where id = new.recipe_id
-  ) then
+  select r.produces_ingredient_id into makes from public.recipe r
+  where r.tenant_id = new.tenant_id and r.id = new.recipe_id;
+  if makes is not null and app.ingredient_reaches(new.tenant_id, uses, makes) then
     raise exception 'sub-recipe % would make a cycle with recipe %', new.sub_recipe_id, new.recipe_id
       using errcode = '23514';
   end if;
@@ -61,22 +79,32 @@ $$;
 create trigger recipe_line_structure before insert or update of recipe_id, sub_recipe_id on public.recipe_line
   for each row execute function app.check_recipe_line();
 
--- A recipe used as a sub-recipe must keep producing an ingredient.
+-- A recipe used as a sub-recipe must keep producing an ingredient, and a recipe that starts
+-- producing an ingredient must not close a cycle through its own sub-recipe lines.
 create function app.check_recipe_kind() returns trigger
 language plpgsql set search_path = ''
 as $$
 begin
+  perform pg_advisory_xact_lock(hashtextextended('recipe_structure:' || new.tenant_id::text, 0));
   if new.produces_ingredient_id is null and exists (
     select 1 from public.recipe_line rl where rl.tenant_id = new.tenant_id and rl.sub_recipe_id = new.id
   ) then
     raise exception 'recipe % is used as a sub-recipe and must produce an ingredient', new.id
       using errcode = '23514';
   end if;
+  if new.produces_ingredient_id is not null and exists (
+    select 1 from public.recipe_line rl join public.recipe sr on sr.tenant_id = rl.tenant_id and sr.id = rl.sub_recipe_id
+    where rl.tenant_id = new.tenant_id and rl.recipe_id = new.id
+      and app.ingredient_reaches(new.tenant_id, sr.produces_ingredient_id, new.produces_ingredient_id)
+  ) then
+    raise exception 'recipe % would make a cycle through the ingredient it produces', new.id
+      using errcode = '23514';
+  end if;
   return new;
 end
 $$;
 
-create trigger recipe_kind before update of produces_ingredient_id, menu_item_id on public.recipe
+create trigger recipe_kind before insert or update of produces_ingredient_id, menu_item_id on public.recipe
   for each row execute function app.check_recipe_kind();
 
 -- Price and recipe of record ---------------------------------------------------------------
@@ -120,13 +148,17 @@ declare
   all_priced boolean := true;
   all_firm boolean;
   portions numeric;
+  is_sub boolean;
 begin
   if depth > 8 then
     raise exception 'recipe % nests more than 8 levels', recipe using errcode = '54001';
   end if;
-  select r.status = 'confirmed', r.yield_qty into all_firm, portions from public.recipe r where r.id = recipe;
+  select r.status = 'confirmed', r.yield_qty, r.produces_ingredient_id is not null
+  into all_firm, portions, is_sub from public.recipe r where r.id = recipe;
   for l in
     select rl.qty_base, rl.ingredient_id, rl.sub_recipe_id,
+           -- yield applies to bought ingredients; a sub-recipe's loss is already in its yield_qty,
+           -- so yield_override_pct on a sub-recipe line is not used
            coalesce(rl.yield_override_pct, i.default_yield_pct) as yield_pct,
            -- the sub-recipe in effect for the ingredient this line's sub-recipe produces
            app.recipe_of_record(null, sr.produces_ingredient_id, on_date) as sub_id
@@ -160,8 +192,9 @@ begin
                   and (p.source = 'cfdi' or (p.source = 'nota' and p.confidence = 'confirmed'));
     end if;
   end loop;
-  -- per unit of yield: a portion for a dish recipe, a base unit for a sub-recipe
-  if coalesce(portions, 1) <= 0 then
+  -- per unit of yield: a portion for a dish recipe (1 when unset), a base unit for a sub-recipe
+  -- (which must say how much it yields: an unset yield would make every gram cost the batch)
+  if (is_sub and portions is null) or coalesce(portions, 1) <= 0 then
     all_priced := false;
   else
     total := total / coalesce(portions, 1);
@@ -183,7 +216,7 @@ declare
   written int := 0;
   n int;
 begin
-  if from_date > to_date or to_date - from_date > 400 then
+  if from_date > to_date or to_date - from_date >= 400 then  -- at most 400 days
     raise exception 'invalid range % .. %', from_date, to_date using errcode = '22023';
   end if;
   -- one recompute per tenant at a time (a price job and a batch job may overlap)
@@ -195,7 +228,7 @@ begin
     for item in
       select m.id as menu_item_id, app.recipe_of_record(m.id, null, d) as recipe_id
       from public.menu_item m
-      where m.tenant_id = tenant
+      where m.tenant_id = tenant and m.is_active  -- any kind with a recipe (dish, drink, modifier, combo)
     loop
       continue when item.recipe_id is null;
       begin
@@ -207,8 +240,9 @@ begin
       insert into public.dish_cost_snapshot
         (tenant_id, menu_item_id, location_id, date, cost, price_net, margin, food_cost_pct, confidence)
       select tenant, item.menu_item_id, mp.location_id, d, x.cost, x.price_net, x.price_net - x.cost,
-             -- numeric(7,4): a near-free item (cost over ~10x its price) has no food cost %
-             case when x.price_net > 0 and 100.0 * x.cost / x.price_net < 1000
+             -- numeric(7,4): a near-free item (cost over ~10x its price) has no food cost %; the
+             -- rounded value is tested, since 999.99996 rounds to 1000.0000
+             case when x.price_net > 0 and round(100.0 * x.cost / x.price_net, 4) < 1000
                   then round(100.0 * x.cost / x.price_net, 4) end,
              (case when c.firm then 'confirmed' else 'estimated' end)::app.cost_confidence
       from (
@@ -231,7 +265,11 @@ begin
 end
 $$;
 
-revoke all on function app.check_recipe_line(), app.check_recipe_kind(), app.price_of_record(uuid, date),
-  app.recipe_of_record(uuid, uuid, date),
-  app.recipe_cost(uuid, date, int), app.compute_dish_costs(uuid, date, date) from public, anon, authenticated;
-grant execute on function app.compute_dish_costs(uuid, date, date) to service_role;
+-- The engine runs as the backend (service_role, invoker rights): it needs its helpers too.
+-- The helpers take no tenant: every row they read is reached through ids of one tenant, and the
+-- composite foreign keys keep recipe lines, sub-recipes and prices inside it.
+revoke all on function app.ingredient_reaches(uuid, uuid, uuid), app.check_recipe_line(), app.check_recipe_kind(),
+  app.price_of_record(uuid, date), app.recipe_of_record(uuid, uuid, date), app.recipe_cost(uuid, date, int),
+  app.compute_dish_costs(uuid, date, date) from public, anon, authenticated;
+grant execute on function app.price_of_record(uuid, date), app.recipe_of_record(uuid, uuid, date),
+  app.recipe_cost(uuid, date, int), app.compute_dish_costs(uuid, date, date) to service_role;

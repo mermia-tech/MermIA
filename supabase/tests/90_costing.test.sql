@@ -110,5 +110,75 @@ select is((select count(*) from public.dish_cost_snapshot where date = '2026-10-
 select throws_ok($$update public.recipe set produces_ingredient_id = null, menu_item_id = (select item from pastor)
                    where id = (select recipe from salsa)$$, '23514', null, 'a sub-recipe in use keeps producing an ingredient');
 
+-- review on #62 ----------------------------------------------------------------------------------
+-- the backend role runs the engine (invoker rights: it needs the helpers too)
+select ok(has_function_privilege('service_role', 'app.recipe_cost(uuid, date, int)', 'execute')
+          and has_function_privilege('service_role', 'app.recipe_of_record(uuid, uuid, date)', 'execute')
+          and has_function_privilege('service_role', 'app.price_of_record(uuid, date)', 'execute'), 'service_role runs the helpers');
+select ok(not has_function_privilege('authenticated', 'app.recipe_cost(uuid, date, int)', 'execute'), 'clients do not');
+create function pg_temp.as_service_role() returns int language plpgsql as $$
+declare n int;
+begin
+  execute 'set local role service_role';
+  select app.compute_dish_costs((select id from public.tenant limit 1), '2026-10-11', '2026-10-11') into n;
+  reset role;
+  return n;
+end $$;
+select is(pg_temp.as_service_role(), 30, 'compute_dish_costs runs as service_role');
+
+-- a cycle that closes only through another version of a recipe (the costing follows the
+-- ingredient a sub-recipe produces, so the guard does too)
+insert into public.ingredient (id, tenant_id, name, base_unit) values ('dddddddd-0000-7000-8000-0000000000e1', (select id from t), 'Base X', 'g');
+insert into public.recipe (id, tenant_id, produces_ingredient_id, recipe_version, yield_qty, status)
+values ('dddddddd-0000-7000-8000-0000000000e2', (select id from t), 'dddddddd-0000-7000-8000-0000000000e1', 1, 100, 'confirmed');
+insert into public.recipe_line (tenant_id, recipe_id, sub_recipe_id, qty_base)
+values ((select id from t), 'dddddddd-0000-7000-8000-0000000000e2', (select recipe from salsa), 10);
+insert into public.recipe (id, tenant_id, produces_ingredient_id, recipe_version, yield_qty, status)
+select 'dddddddd-0000-7000-8000-0000000000e3', (select id from t), r.produces_ingredient_id, 2, r.yield_qty, 'confirmed'
+from public.recipe r where r.id = (select recipe from salsa);
+select throws_ok($$insert into public.recipe_line (tenant_id, recipe_id, sub_recipe_id, qty_base)
+                   values ((select id from t), 'dddddddd-0000-7000-8000-0000000000e3', 'dddddddd-0000-7000-8000-0000000000e2', 5)$$,
+                 '23514', null, 'salsa v2 using a base made from salsa v1 is a cycle');
+
+-- 8% IVA (border zone): net = gross - IVA at that rate
+update public.menu_item_price p set tax_rate = 0.08
+where p.menu_item_id = (select item from pastor) and p.location_id = (select id from public.location where name = 'Centro');
+select app.compute_dish_costs((select id from t), '2026-10-12', '2026-10-12');
+select is((select s.price_net from public.dish_cost_snapshot s join public.location l on l.id = s.location_id
+           where s.menu_item_id = (select item from pastor) and s.date = '2026-10-12' and l.name = 'Centro'),
+          (select p.price_gross - round(p.price_gross * 0.08 / 1.08) from public.menu_item_price p join public.location l on l.id = p.location_id
+           where p.menu_item_id = (select item from pastor) and l.name = 'Centro' and p.effective_from <= '2026-10-12'
+             and (p.effective_to is null or p.effective_to >= '2026-10-12') order by p.effective_from desc limit 1)::bigint,
+          'a location with 8% IVA takes 8% out of the menu price');
+
+-- confidence edges: a nota marked confirmed counts; a price exactly 30 days old does not
+update public.recipe_line rl set qty_base = rl.qty_base / 4 where rl.recipe_id = (select recipe from pastor);
+update public.recipe set yield_qty = 1 where id = (select recipe from pastor);
+delete from public.ingredient_price p where p.effective_from = '2026-10-12';
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source, confidence)
+select distinct (select id from t), rl.ingredient_id, (select unit_price_net from app.price_of_record(rl.ingredient_id, '2026-10-12')),
+       '2026-10-12'::date, 'nota'::app.ingredient_price_source, 'confirmed'
+from public.recipe_line rl where rl.recipe_id in ((select recipe from pastor), (select recipe from salsa)) and rl.ingredient_id is not null;
+select app.compute_dish_costs((select id from t), '2026-10-12', '2026-10-12');
+select is((select string_agg(distinct confidence::text, ',') from public.dish_cost_snapshot
+           where menu_item_id = (select item from pastor) and date = '2026-10-12'), 'confirmed', 'a nota marked confirmed counts as confirmed');
+select app.compute_dish_costs((select id from t), '2026-11-11', '2026-11-11');
+select is((select string_agg(distinct confidence::text, ',') from public.dish_cost_snapshot
+           where menu_item_id = (select item from pastor) and date = '2026-11-11'), 'estimated', 'a price exactly 30 days old is no longer fresh');
+
+-- a sub-recipe that does not say what it yields cannot cost per unit
+update public.recipe set yield_qty = null
+where produces_ingredient_id = (select produces_ingredient_id from public.recipe where id = (select recipe from salsa));  -- v1 and v2
+select app.compute_dish_costs((select id from t), '2026-10-12', '2026-10-12');
+select is((select count(*) from public.dish_cost_snapshot where menu_item_id = (select item from pastor) and date = '2026-10-12'), 0::bigint,
+          'a sub-recipe without yield_qty leaves the dish uncosted');
+
+-- an inactive item is not costed
+update public.menu_item set is_active = false where external_id = 'P002';
+select app.compute_dish_costs((select id from t), '2026-10-12', '2026-10-12');
+select is((select count(*) from public.dish_cost_snapshot s join public.menu_item m on m.id = s.menu_item_id
+           where m.external_id = 'P002' and s.date = '2026-10-12'), 0::bigint, 'an inactive item is not costed');
+select throws_ok($$select app.compute_dish_costs((select id from t), '2025-01-01', '2026-02-05')$$, '22023', null, 'more than 400 days');
+
 select * from finish();
 rollback;
