@@ -142,3 +142,30 @@ def test_list_marker_keeps_a_year_at_line_start() -> None:
     reply = "2026. El costo es $18.40"
     assert score_numbers(case, reply, ['{"c": "$18.40", "y": 2026}']) == 1.0
     assert score_numbers(case, reply, ['{"c": "$18.40"}']) == 0.0
+
+
+def test_numbers_ids_dates_and_raw_values_are_not_known_figures() -> None:
+    # Digits inside UUIDs, ISO dates and raw centavos are not figures the agent may quote.
+    for invented in (
+        "vendes 12 órdenes",
+        "hay 405 órdenes",
+        "desde hace 2026 días",
+        "cuesta $6,500",
+    ):
+        assert score_numbers(CASE, f"{REPLY} {invented}", [ANSWER]) == 0.0, invented
+    assert score_numbers(CASE, REPLY, [ANSWER]) == 1.0
+
+
+def test_numbers_a_known_date_may_be_quoted_whole() -> None:
+    assert score_numbers(_bare(), "Datos al 2026-10-12.", [ANSWER]) == 1.0
+
+
+def test_numbers_extracted_when_glued_to_a_currency_code() -> None:
+    assert score_numbers(_bare(), "subir a MXN70.00", ['{"c": "$65.00"}']) == 0.0
+    assert score_numbers(_bare(), "cuesta USD65.00", ['{"c": "$65.00"}']) == 1.0
+
+
+def test_numbers_sign_before_the_dollar_sign_counts() -> None:
+    case, tool = _bare(), '{"m": "-$37.63"}'
+    assert score_numbers(case, "pérdida de $37.63", [tool]) == 0.0
+    assert score_numbers(case, "pérdida de -$37.63", [tool]) == 1.0
