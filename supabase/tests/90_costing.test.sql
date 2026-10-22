@@ -73,5 +73,42 @@ select is((select count(*) from public.dish_cost_snapshot where menu_item_id = (
 select is((select count(*) from public.dish_cost_snapshot where date = '2026-10-12'), 28::bigint, 'the other dishes keep theirs');
 select throws_ok($$select app.compute_dish_costs((select id from t), '2026-10-12', '2026-10-01')$$, '22023', null, 'a reversed range');
 
+-- skeptic findings ----------------------------------------------------------------------------
+delete from public.recipe_line where recipe_id = (select recipe from pastor) and ingredient_id = 'dddddddd-0000-7000-8000-0000000000c1';
+-- a newer benchmark price never beats a real one (03 C.4)
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+select distinct (select id from t), rl.ingredient_id, 9999, '2026-10-12'::date, 'benchmark'::app.ingredient_price_source
+from public.recipe_line rl where rl.recipe_id = (select recipe from pastor) and rl.ingredient_id is not null;
+select app.compute_dish_costs((select id from t), '2026-10-12', '2026-10-12');
+select is((select s.cost from public.dish_cost_snapshot s join public.location l on l.id = s.location_id
+           where s.menu_item_id = (select item from pastor) and s.date = '2026-10-12' and l.name = 'Centro'), 1840::bigint,
+          'a newer benchmark price does not override the cost of record');
+-- an undated draft revision never overrides the confirmed recipe
+insert into public.recipe (id, tenant_id, menu_item_id, recipe_version, yield_qty, status)
+select 'dddddddd-0000-7000-8000-0000000000d1', (select id from t), item, 99, 1, 'draft' from pastor;
+insert into public.recipe_line (tenant_id, recipe_id, ingredient_id, qty_base)
+select (select id from t), 'dddddddd-0000-7000-8000-0000000000d1', rl.ingredient_id, rl.qty_base * 3
+from public.recipe_line rl where rl.recipe_id = (select recipe from pastor) and rl.ingredient_id is not null;
+select is(app.recipe_of_record((select item from pastor), null, '2026-09-01'), (select recipe from pastor),
+          'a draft never overrides a confirmed recipe');
+delete from public.recipe_line where recipe_id = 'dddddddd-0000-7000-8000-0000000000d1';
+delete from public.recipe where id = 'dddddddd-0000-7000-8000-0000000000d1';
+-- a recipe for 4 portions costs one portion
+update public.recipe r set yield_qty = 4 where r.id = (select recipe from pastor);
+update public.recipe_line rl set qty_base = rl.qty_base * 4 where rl.recipe_id = (select recipe from pastor);
+select app.compute_dish_costs((select id from t), '2026-10-12', '2026-10-12');
+select is((select s.cost from public.dish_cost_snapshot s join public.location l on l.id = s.location_id
+           where s.menu_item_id = (select item from pastor) and s.date = '2026-10-12' and l.name = 'Centro'), 1840::bigint,
+          'a 4-portion recipe with 4x the quantities costs the same per portion');
+-- a near-free item does not abort the recompute
+update public.menu_item_price p set price_gross = 100 where p.menu_item_id = (select item from pastor);
+select lives_ok($$select app.compute_dish_costs((select id from t), '2026-10-12', '2026-10-12')$$, 'a $1 dish does not abort the recompute');
+select is((select count(*) from public.dish_cost_snapshot where date = '2026-10-12' and menu_item_id = (select item from pastor)
+           and food_cost_pct is null), 2::bigint, 'its food cost % is unknown (null), not an error');
+select is((select count(*) from public.dish_cost_snapshot where date = '2026-10-12'), 30::bigint, 'and every dish is still costed');
+-- a recipe used as a sub-recipe cannot become a dish recipe
+select throws_ok($$update public.recipe set produces_ingredient_id = null, menu_item_id = (select item from pastor)
+                   where id = (select recipe from salsa)$$, '23514', null, 'a sub-recipe in use keeps producing an ingredient');
+
 select * from finish();
 rollback;
