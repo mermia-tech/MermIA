@@ -1,0 +1,77 @@
+-- MR-25: costing engine rules on the El Güero seed (dish values are checked in
+-- apps/api/tests/costing against fixtures/el_guero/expected.json).
+begin;
+select * from no_plan();
+
+create temp table t as select id from public.tenant;
+create temp table pastor as
+select m.id as item, r.id as recipe from public.menu_item m join public.recipe r on r.menu_item_id = m.id where m.external_id = 'P001';
+create temp table salsa as select r.id as recipe from public.recipe r where r.produces_ingredient_id is not null;
+
+-- privileges ---------------------------------------------------------------------------------
+select ok(has_function_privilege('service_role', 'app.compute_dish_costs(uuid, date, date)', 'execute'), 'the backend recomputes costs');
+select ok(not has_function_privilege('authenticated', 'app.compute_dish_costs(uuid, date, date)', 'execute'), 'clients cannot');
+select ok(not has_function_privilege('anon', 'app.compute_dish_costs(uuid, date, date)', 'execute'), 'nor can anon');
+
+-- recipe structure (MR-53 item 6) --------------------------------------------------------------
+select throws_ok($$insert into public.recipe_line (tenant_id, recipe_id, sub_recipe_id, qty_base)
+                   select (select id from t), recipe, recipe, 1 from salsa$$, '23514', null, 'a recipe cannot use itself');
+select throws_ok($$insert into public.recipe_line (tenant_id, recipe_id, sub_recipe_id, qty_base)
+                   select (select id from t), (select recipe from salsa), recipe, 1 from pastor$$, '23514', null,
+                 'a dish recipe cannot be a sub-recipe');
+-- a second sub-recipe that uses the salsa; then the salsa using it is a cycle
+insert into public.ingredient (id, tenant_id, name, base_unit) values ('dddddddd-0000-7000-8000-0000000000c1', (select id from t), 'Base de prueba', 'g');
+insert into public.recipe (id, tenant_id, produces_ingredient_id, recipe_version, yield_qty, status)
+values ('dddddddd-0000-7000-8000-0000000000c2', (select id from t), 'dddddddd-0000-7000-8000-0000000000c1', 1, 1000, 'confirmed');
+insert into public.recipe_line (tenant_id, recipe_id, sub_recipe_id, qty_base)
+values ((select id from t), 'dddddddd-0000-7000-8000-0000000000c2', (select recipe from salsa), 100);
+select throws_ok($$insert into public.recipe_line (tenant_id, recipe_id, sub_recipe_id, qty_base)
+                   select (select id from t), recipe, 'dddddddd-0000-7000-8000-0000000000c2', 1 from salsa$$, '23514', null,
+                 'two sub-recipes cannot use each other');
+select lives_ok($$insert into public.recipe_line (tenant_id, recipe_id, sub_recipe_id, qty_base)
+                  select (select id from t), recipe, 'dddddddd-0000-7000-8000-0000000000c2', 10 from pastor$$,
+                'a dish may use a sub-recipe that uses another');
+
+-- snapshots ----------------------------------------------------------------------------------
+select is(app.compute_dish_costs((select id from t), '2026-10-12', '2026-10-12'), 30, 'the 15 costed dishes at 2 locations');
+select is((select count(*) from public.dish_cost_snapshot where date = '2026-10-12' and margin <> price_net - cost), 0::bigint, 'margin = net price - cost');
+select is((select count(*) from public.dish_cost_snapshot where date = '2026-10-12'
+           and food_cost_pct <> round(100.0 * cost / price_net, 4)), 0::bigint, 'food cost % = cost / net price');
+select is((select string_agg(distinct confidence::text, ',') from public.dish_cost_snapshot where date = '2026-10-12'), 'estimated',
+          'seed prices are older than 30 days: estimated, never confirmed');
+select is(app.compute_dish_costs((select id from t), '2026-10-12', '2026-10-12'), 30, 'recomputing rewrites, never duplicates');
+select is((select count(*) from public.dish_cost_snapshot where date = '2026-10-12'), 30::bigint, 'still 30 rows');
+
+-- a fresh CFDI price for every ingredient of a confirmed recipe makes the dish confirmed
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+select distinct (select id from t), rl.ingredient_id, (select unit_price_net from app.price_of_record(rl.ingredient_id, '2026-10-12')),
+       '2026-10-12'::date, 'cfdi'::app.ingredient_price_source
+from public.recipe_line rl where rl.recipe_id in ((select recipe from pastor), (select recipe from salsa)) and rl.ingredient_id is not null;
+delete from public.recipe_line where recipe_id = (select recipe from pastor) and sub_recipe_id = 'dddddddd-0000-7000-8000-0000000000c2';
+select app.compute_dish_costs((select id from t), '2026-10-12', '2026-10-12');
+select is((select string_agg(distinct s.confidence::text, ',') from public.dish_cost_snapshot s
+           where s.menu_item_id = (select item from pastor) and s.date = '2026-10-12'), 'confirmed',
+          'fresh CFDI prices on confirmed recipes (dish and salsa) give confirmed');
+select is((select cost from public.dish_cost_snapshot s join public.location l on l.id = s.location_id
+           where s.menu_item_id = (select item from pastor) and s.date = '2026-10-12' and l.name = 'Centro'), 1840::bigint,
+          'same prices, same cost');
+
+-- source priority on the same day: the CFDI wins over a manual price
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+select (select id from t), rl.ingredient_id, 999, '2026-10-12'::date, 'manual'::app.ingredient_price_source
+from public.recipe_line rl where rl.recipe_id = (select recipe from pastor) and rl.ingredient_id is not null limit 1;
+select is((select source::text from app.price_of_record((select rl.ingredient_id from public.recipe_line rl
+           where rl.recipe_id = (select recipe from pastor) and rl.ingredient_id is not null limit 1), '2026-10-12')), 'cfdi',
+          'on the same day a CFDI beats a manual price');
+
+-- a dish with an unpriced ingredient gets no snapshot (missing, flagged by the RPCs)
+insert into public.recipe_line (tenant_id, recipe_id, ingredient_id, qty_base)
+select (select id from t), recipe, 'dddddddd-0000-7000-8000-0000000000c1', 5 from pastor;
+select app.compute_dish_costs((select id from t), '2026-10-12', '2026-10-12');
+select is((select count(*) from public.dish_cost_snapshot where menu_item_id = (select item from pastor) and date = '2026-10-12'), 0::bigint,
+          'an unpriced line leaves the dish without a cost');
+select is((select count(*) from public.dish_cost_snapshot where date = '2026-10-12'), 28::bigint, 'the other dishes keep theirs');
+select throws_ok($$select app.compute_dish_costs((select id from t), '2026-10-12', '2026-10-01')$$, '22023', null, 'a reversed range');
+
+select * from finish();
+rollback;
