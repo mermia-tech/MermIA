@@ -130,3 +130,11 @@ def test_constructor_failure_is_an_error_not_a_crash() -> None:
     result = run_case(LUNA, CASE, [], agent_factory=broken)
     assert result.error is not None and "thinking_level" in result.error
     assert result.calls == []
+
+
+def test_cancelled_run_is_an_error_not_a_score() -> None:
+    # Agno turns a Ctrl-C or cancel into a normal output with status cancelled
+    out = RunOutput(content="", status=RunStatus.cancelled)
+    result = run_case(LUNA, CASE, [], agent_factory=_factory(out))
+    assert result.error is not None
+    assert result.calls == []

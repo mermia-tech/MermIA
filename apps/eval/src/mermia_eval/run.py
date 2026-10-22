@@ -54,8 +54,8 @@ def run_case(
     if out is None:
         return result
     result.text = str(out.content or "")
-    if out.status == RunStatus.error:  # Agno returns provider errors as the answer text
-        result.error = result.text
+    if out.status != RunStatus.completed:  # provider errors come back as the answer text
+        result.error = result.text or f"run {out.status}"
         return result
     for t in out.tools or []:
         result.calls.append(ToolCall(t.tool_name or "", dict(t.tool_args or {})))
