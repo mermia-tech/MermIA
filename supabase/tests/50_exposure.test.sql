@@ -60,7 +60,8 @@ select ok(not has_schema_privilege('anon', 'api', 'usage'), 'anon has no usage o
 select is((select count(*) from pg_proc where pronamespace in ('api'::regnamespace, 'app'::regnamespace)
            and (prosrc ilike '%request.jwt%' or prosrc ilike '%set_config%')), 0::bigint, 'no RPC reads or sets request.jwt settings directly');
 select is((select count(*) from pg_trigger t join pg_class c on c.oid = t.tgrelid where c.relnamespace = 'public'::regnamespace and not t.tgisinternal
-           and t.tgname not in ('touch_row', 'membership_locations', 'audit_log_no_row_mutation', 'audit_log_no_truncate')), 0::bigint,
+           and t.tgname not in ('touch_row', 'membership_locations', 'audit_log_no_row_mutation', 'audit_log_no_truncate',
+                              'recipe_line_structure', 'recipe_kind')), 0::bigint,
           'only the reviewed triggers exist');
 
 -- membership scope: the explicit flag (A12, A19) -----------------------------------------------------------------
