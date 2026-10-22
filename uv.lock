@@ -458,6 +458,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "mermia-contracts" },
     { name = "openpyxl" },
+    { name = "psycopg", extra = ["binary"] },
     { name = "uvicorn" },
 ]
 
@@ -472,6 +473,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "mermia-contracts", editable = "packages/contracts" },
     { name = "openpyxl", specifier = ">=3.1" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
     { name = "uvicorn", specifier = ">=0.34" },
 ]
 
