@@ -169,3 +169,33 @@ def test_numbers_sign_before_the_dollar_sign_counts() -> None:
     case, tool = _bare(), '{"m": "-$37.63"}'
     assert score_numbers(case, "pérdida de $37.63", [tool]) == 0.0
     assert score_numbers(case, "pérdida de -$37.63", [tool]) == 1.0
+
+
+NO_TOOL = _bare(expected_tool=None, expected_args={})
+
+
+def test_tool_none_ok_without_calls() -> None:
+    assert score_tool(NO_TOOL, []) == 1.0
+
+
+def test_tool_none_zero_when_a_tool_is_called() -> None:
+    assert score_tool(NO_TOOL, [GOOD]) == 0.0
+
+
+def test_args_none_ok_without_calls() -> None:
+    assert score_args(NO_TOOL, []) == 1.0
+    assert score_args(NO_TOOL, [GOOD]) == 0.0
+
+
+def test_numbers_none_tool_zero_on_figure_not_in_question() -> None:
+    assert score_numbers(NO_TOOL, "Vendiste $5,000", []) == 0.0
+    assert score_numbers(NO_TOOL, "Hola, ¿en qué te ayudo?", []) == 1.0
+
+
+def test_numbers_zero_on_forbidden_phrase() -> None:
+    case = _bare(must_not_contain=["ya quedó"])
+    assert score_numbers(case, "Listo, YA QUEDÓ", []) == 0.0
+
+
+def test_numbers_rounding_is_zero() -> None:
+    assert score_numbers(_bare(), "unos $184 mil", ['{"v": "$184,320.50"}']) == 0.0

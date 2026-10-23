@@ -76,17 +76,24 @@ def _clean(args: dict[str, Any]) -> dict[str, Any]:
 
 
 def score_tool(case: Case, calls: Sequence[ToolCall]) -> float:
+    if case.expected_tool is None:
+        return float(not calls)
     return float(bool(calls) and all(c.name == case.expected_tool for c in calls))
 
 
 def score_args(case: Case, calls: Sequence[ToolCall]) -> float:
+    if case.expected_tool is None:
+        return float(not calls)
     accepted = [_clean(a) for a in [case.expected_args, *case.accepted_args]]
     return float(any(c.name == case.expected_tool and _clean(c.args) in accepted for c in calls))
 
 
 def score_numbers(case: Case, reply: str, tool_results: Sequence[str]) -> float:
     """1.0 if every number in the reply comes from a tool result or the question, and every
-    must_contain figure is in the reply (numbers compared as values, not as text)."""
+    must_contain figure is in the reply (numbers compared as values, not as text), and no
+    must_not_contain phrase is."""
+    if any(p.lower() in reply.lower() for p in case.must_not_contain):
+        return 0.0
     dates = {d for r in tool_results for d in _DATE.findall(r)}  # a date may be quoted whole
     for d in dates:
         reply = reply.replace(d, " ")
