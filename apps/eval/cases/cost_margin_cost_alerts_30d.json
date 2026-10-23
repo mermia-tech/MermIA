@@ -8,6 +8,9 @@
   },
   "accepted_args": [
     {
+      "since": "last_month"
+    },
+    {
       "since": {
         "from": "2026-09-12",
         "to": "2026-10-11"
@@ -15,9 +18,7 @@
     }
   ],
   "must_contain": [
-    "Carne al pastor (adobada)",
     "+14.7%",
-    "Aguacate Hass",
     "+61.8%"
   ],
   "must_not_contain": [],

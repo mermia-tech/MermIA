@@ -14,7 +14,9 @@
       }
     }
   ],
-  "must_contain": [],
+  "must_contain": [
+    "$184,320.50"
+  ],
   "must_not_contain": [],
   "expected_figures": []
 }

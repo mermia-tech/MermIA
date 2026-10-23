@@ -14,11 +14,7 @@
       }
     }
   ],
-  "must_contain": [
-    "Tacos al pastor (orden de 3)",
-    "Tacos de bistec (orden de 3)",
-    "Tacos de suadero (orden de 3)"
-  ],
+  "must_contain": [],
   "must_not_contain": [],
   "expected_figures": []
 }

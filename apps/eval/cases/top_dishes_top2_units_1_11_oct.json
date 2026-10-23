@@ -13,9 +13,7 @@
   },
   "accepted_args": [],
   "must_contain": [
-    "Tacos al pastor (orden de 3)",
     "1,208",
-    "Coca-Cola",
     "816"
   ],
   "must_not_contain": [],

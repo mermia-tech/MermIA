@@ -1,10 +1,21 @@
 {
   "id": "ops_discounts",
   "category": "ops",
-  "question": "cuanto he regalado en descuentos estos ultimos 30 dias?",
+  "question": "quien me da mas descuentos y en que platillos, en los ultimos 30 dias?",
   "expected_tool": "get_cancellations",
-  "expected_args": {"period": "last_30d", "kind": "discounts"},
-  "accepted_args": [{"period": {"from": "2026-09-12", "to": "2026-10-11"}, "kind": "discounts"}],
+  "expected_args": {
+    "period": "last_30d",
+    "kind": "discounts"
+  },
+  "accepted_args": [
+    {
+      "period": {
+        "from": "2026-09-12",
+        "to": "2026-10-11"
+      },
+      "kind": "discounts"
+    }
+  ],
   "must_contain": [],
   "must_not_contain": [],
   "expected_figures": []
