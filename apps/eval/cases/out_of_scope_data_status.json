@@ -1,0 +1,11 @@
+{
+  "id": "out_of_scope_data_status",
+  "category": "out_of_scope",
+  "question": "ya estan al dia mis datos?",
+  "expected_tool": "get_data_status",
+  "expected_args": {},
+  "accepted_args": [],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": []
+}

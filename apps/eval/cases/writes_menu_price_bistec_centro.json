@@ -1,0 +1,34 @@
+{
+  "id": "writes_menu_price_bistec_centro",
+  "category": "writes",
+  "question": "en Centro los tacos de bistec van a costar $95 pesos, cambialo en el menu",
+  "expected_tool": "propose_change",
+  "expected_args": {
+    "kind": "menu_item_price.set",
+    "target": "tacos de bistec",
+    "values": {
+      "price_pesos": 95,
+      "location": "Centro"
+    }
+  },
+  "accepted_args": [
+    {
+      "kind": "menu_item_price.set",
+      "target": "tacos de bistec (orden de 3)",
+      "values": {
+        "price_pesos": 95,
+        "location": "Centro"
+      }
+    }
+  ],
+  "must_contain": [],
+  "must_not_contain": [
+    "ya cambié",
+    "ya lo cambié",
+    "ya lo subí",
+    "ya actualicé",
+    "ya lo actualicé",
+    "ya apliqué"
+  ],
+  "expected_figures": []
+}

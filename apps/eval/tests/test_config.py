@@ -39,3 +39,8 @@ def test_build_model_sets_low_reasoning() -> None:
 def test_build_model_rejects_unknown_provider() -> None:
     with pytest.raises(ValueError):
         build_model("deepseek:v4")
+
+
+def test_prompt_states_today() -> None:
+    assert "2026-10-12" in SYSTEM_PROMPT
+    assert "lunes" in SYSTEM_PROMPT

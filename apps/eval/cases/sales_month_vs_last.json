@@ -1,0 +1,11 @@
+{
+  "id": "sales_month_vs_last",
+  "category": "sales",
+  "question": "como voy este mes contra el mes pasado en ventas?",
+  "expected_tool": "compare_periods",
+  "expected_args": {"metric": "net_sales", "period_a": "this_month", "period_b": "last_month"},
+  "accepted_args": [],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": []
+}

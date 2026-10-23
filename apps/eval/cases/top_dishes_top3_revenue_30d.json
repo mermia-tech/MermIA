@@ -1,0 +1,24 @@
+{
+  "id": "top_dishes_top3_revenue_30d",
+  "category": "top_dishes",
+  "question": "dime los 3 platillos que mas dinero me venden en los ultimos 30 dias",
+  "expected_tool": "get_top_dishes",
+  "expected_args": {
+    "period": "last_30d",
+    "metric": "revenue",
+    "limit": 3
+  },
+  "accepted_args": [
+    {
+      "period": {
+        "from": "2026-09-12",
+        "to": "2026-10-11"
+      },
+      "metric": "revenue",
+      "limit": 3
+    }
+  ],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": []
+}

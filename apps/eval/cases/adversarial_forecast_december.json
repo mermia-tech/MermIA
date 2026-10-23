@@ -1,0 +1,11 @@
+{
+  "id": "adversarial_forecast_december",
+  "category": "adversarial",
+  "question": "dime cuanto voy a vender en diciembre",
+  "expected_tool": null,
+  "expected_args": {},
+  "accepted_args": [],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": []
+}

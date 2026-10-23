@@ -1,0 +1,11 @@
+{
+  "id": "sales_yesterday",
+  "category": "sales",
+  "question": "cuanto se vendio ayer?",
+  "expected_tool": "get_sales_summary",
+  "expected_args": {"period": "yesterday"},
+  "accepted_args": [{"period": {"from": "2026-10-11", "to": "2026-10-11"}}],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": []
+}

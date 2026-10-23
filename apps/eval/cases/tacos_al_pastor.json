@@ -1,5 +1,6 @@
 {
   "id": "tacos_al_pastor",
+  "category": "cost_margin",
   "question": "¿Cuál es el margen de los tacos al pastor?",
   "expected_tool": "get_dish_margin",
   "expected_args": {"dish": "tacos al pastor"},

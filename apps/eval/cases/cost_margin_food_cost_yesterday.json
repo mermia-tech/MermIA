@@ -1,0 +1,22 @@
+{
+  "id": "cost_margin_food_cost_yesterday",
+  "category": "cost_margin",
+  "question": "¿qué porcentaje me costó la comida ayer?",
+  "expected_tool": "get_food_cost_pct",
+  "expected_args": {
+    "period": "yesterday"
+  },
+  "accepted_args": [
+    {
+      "period": {
+        "from": "2026-10-11",
+        "to": "2026-10-11"
+      }
+    }
+  ],
+  "must_contain": [
+    "37.5%"
+  ],
+  "must_not_contain": [],
+  "expected_figures": []
+}

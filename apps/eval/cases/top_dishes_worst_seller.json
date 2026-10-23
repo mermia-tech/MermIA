@@ -1,0 +1,26 @@
+{
+  "id": "top_dishes_worst_seller",
+  "category": "top_dishes",
+  "question": "cual es el platillo que menos se vendio el mes pasado",
+  "expected_tool": "get_top_dishes",
+  "expected_args": {
+    "period": "last_month",
+    "metric": "units",
+    "order": "asc",
+    "limit": 1
+  },
+  "accepted_args": [
+    {
+      "period": {
+        "from": "2026-09-01",
+        "to": "2026-09-30"
+      },
+      "metric": "units",
+      "order": "asc",
+      "limit": 1
+    }
+  ],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": []
+}

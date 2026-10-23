@@ -1,0 +1,24 @@
+{
+  "id": "top_dishes_top_margin",
+  "category": "top_dishes",
+  "question": "¿cuál es el platillo que más ganancia en pesos me deja este mes?",
+  "expected_tool": "get_top_dishes",
+  "expected_args": {
+    "period": "this_month",
+    "metric": "margin",
+    "limit": 1
+  },
+  "accepted_args": [
+    {
+      "period": {
+        "from": "2026-10-01",
+        "to": "2026-10-11"
+      },
+      "metric": "margin",
+      "limit": 1
+    }
+  ],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": []
+}
