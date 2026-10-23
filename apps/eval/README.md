@@ -15,4 +15,6 @@ Scores are 0 or 1 per run and are averaged over the runs that did not error. `-`
 - **`--mock-url` and real data:** the tool answers become part of each Langfuse trace. Pointed at a real backend, `--mock-url` sends that real data to Langfuse; use it only with the mock.
 - **Add a model:** one line in `MODELS` (`config.py`), with its price if known.
 - **Add a case:** a JSON file in `cases/` (`question`, `expected_tool`, `expected_args`, optional `accepted_args`, `must_contain`). `must_contain` figures must appear in the mock's answer; a test checks it.
+- **Review the figures:** `uv run python -m mermia_eval.review` prints every case with the source of each expected figure (`pending` = the mock cannot return it).
+- **More case fields:** `category`, `expected_tool` (may be `null`: answer without a tool), `must_not_contain`, `expected_figures` (documentation only).
 - **Tests:** `uv run pytest apps/eval` (offline).
