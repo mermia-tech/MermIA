@@ -1,0 +1,23 @@
+{
+  "id": "top_dishes_top2_units_1_11_oct",
+  "category": "top_dishes",
+  "question": "cuales son los 2 platillos que mas he vendido del 1 al 11 de octubre",
+  "expected_tool": "get_top_dishes",
+  "expected_args": {
+    "period": {
+      "from": "2026-10-01",
+      "to": "2026-10-11"
+    },
+    "metric": "units",
+    "limit": 2
+  },
+  "accepted_args": [],
+  "must_contain": [
+    "Tacos al pastor (orden de 3)",
+    "1,208",
+    "Coca-Cola",
+    "816"
+  ],
+  "must_not_contain": [],
+  "expected_figures": []
+}

@@ -1,0 +1,16 @@
+{
+  "id": "cost_margin_food_cost_range",
+  "category": "cost_margin",
+  "question": "cual fue mi food cost del 1 al 7 de octubre",
+  "expected_tool": "get_food_cost_pct",
+  "expected_args": {
+    "period": {
+      "from": "2026-10-01",
+      "to": "2026-10-07"
+    }
+  },
+  "accepted_args": [],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": []
+}

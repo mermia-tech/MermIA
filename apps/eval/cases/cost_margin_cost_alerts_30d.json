@@ -1,0 +1,25 @@
+{
+  "id": "cost_margin_cost_alerts_30d",
+  "category": "cost_margin",
+  "question": "¿qué insumos me subieron de precio en el último mes y cuánto?",
+  "expected_tool": "get_cost_alerts",
+  "expected_args": {
+    "since": "last_30d"
+  },
+  "accepted_args": [
+    {
+      "since": {
+        "from": "2026-09-12",
+        "to": "2026-10-11"
+      }
+    }
+  ],
+  "must_contain": [
+    "Carne al pastor (adobada)",
+    "+14.7%",
+    "Aguacate Hass",
+    "+61.8%"
+  ],
+  "must_not_contain": [],
+  "expected_figures": []
+}

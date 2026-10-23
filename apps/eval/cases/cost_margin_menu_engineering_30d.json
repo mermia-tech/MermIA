@@ -1,0 +1,24 @@
+{
+  "id": "cost_margin_menu_engineering_30d",
+  "category": "cost_margin",
+  "question": "dime cuales son mis platillos estrella de los ultimos 30 dias",
+  "expected_tool": "get_menu_engineering",
+  "expected_args": {
+    "period": "last_30d"
+  },
+  "accepted_args": [
+    {
+      "period": {
+        "from": "2026-09-12",
+        "to": "2026-10-11"
+      }
+    }
+  ],
+  "must_contain": [
+    "Tacos al pastor (orden de 3)",
+    "Tacos de bistec (orden de 3)",
+    "Tacos de suadero (orden de 3)"
+  ],
+  "must_not_contain": [],
+  "expected_figures": []
+}

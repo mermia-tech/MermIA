@@ -1,0 +1,13 @@
+{
+  "id": "cost_margin_bistec_margin",
+  "category": "cost_margin",
+  "question": "cuanto me deja una orden de tacos de bistec",
+  "expected_tool": "get_dish_margin",
+  "expected_args": {
+    "dish": "tacos de bistec"
+  },
+  "accepted_args": [],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": []
+}
