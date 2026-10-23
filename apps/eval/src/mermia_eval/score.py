@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
+from mermia_contracts.agent_tools import tool_definitions
 from mermia_eval.cases import Case
 
 # A sign counts only when it is not glued to a word or digit ("2026-10-20" has no negatives),
@@ -70,9 +71,34 @@ def _lower(value: Any) -> Any:
     return value
 
 
-def _clean(args: dict[str, Any]) -> dict[str, Any]:
-    # null means omitted; text is compared without case
-    return {k: _lower(v) for k, v in args.items() if v is not None}
+def _drop_nulls(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {k: _drop_nulls(v) for k, v in value.items() if v is not None}
+    if isinstance(value, list):
+        return [_drop_nulls(v) for v in value]
+    return value
+
+
+_DEFAULTS = {
+    t["name"]: {
+        k: p["default"]
+        for k, p in t["input_schema"].get("properties", {}).items()
+        if "default" in p
+    }
+    for t in tool_definitions()
+}
+
+
+def _clean(tool: str, args: dict[str, Any]) -> dict[str, Any]:
+    # null means omitted, a schema default means omitted, the free-text reason is not scored;
+    # text is compared without case
+    defaults = _DEFAULTS.get(tool, {})
+    lowered = _lower(_drop_nulls(args))
+    return {
+        k: v
+        for k, v in lowered.items()
+        if k != "reason" and not (k in defaults and v == _lower(defaults[k]))
+    }
 
 
 def score_tool(case: Case, calls: Sequence[ToolCall]) -> float:
@@ -84,8 +110,10 @@ def score_tool(case: Case, calls: Sequence[ToolCall]) -> float:
 def score_args(case: Case, calls: Sequence[ToolCall]) -> float:
     if case.expected_tool is None:
         return float(not calls)
-    accepted = [_clean(a) for a in [case.expected_args, *case.accepted_args]]
-    return float(any(c.name == case.expected_tool and _clean(c.args) in accepted for c in calls))
+    accepted = [_clean(case.expected_tool, a) for a in [case.expected_args, *case.accepted_args]]
+    return float(
+        any(c.name == case.expected_tool and _clean(c.name, c.args) in accepted for c in calls)
+    )
 
 
 def score_numbers(case: Case, reply: str, tool_results: Sequence[str]) -> float:
