@@ -30,3 +30,9 @@ def test_table_names_the_source_of_a_derived_figure() -> None:
     row = review_table([_case("a", expected_figures=[value, "$0.01"])]).splitlines()[2]
     assert name in row
     assert "pending" in row
+
+
+def test_table_keeps_one_row_per_case_with_pipe_and_newline() -> None:
+    lines = review_table([_case("a", question="uno | dos\ntres")]).splitlines()
+    assert len(lines) == 3
+    assert "uno \\| dos tres" in lines[2]

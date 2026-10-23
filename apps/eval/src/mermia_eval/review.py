@@ -4,15 +4,17 @@ import json
 
 from mermia_contracts.agent_tools import tools_sha256
 from mermia_eval.cases import Case, load_cases
-from mermia_eval.figures import derived_figures
-
-TODAY = "2026-10-12"  # fixtures/el_guero/expected.json "today"
+from mermia_eval.figures import EXPECTED, derived_figures
 
 
 def _figure(fig: str, case: Case, sources: dict[str, str]) -> str:
     names = ", ".join(n for n, v in sources.items() if v == fig) or "sin fuente"
     pending = "" if fig in case.must_contain else " (pending)"  # the mock cannot return it
     return f"{fig} [{names}]{pending}"
+
+
+def _cell(s: str) -> str:
+    return " ".join(s.split()).replace("|", "\\|")
 
 
 def review_table(cases: list[Case]) -> str:
@@ -33,11 +35,12 @@ def review_table(cases: list[Case]) -> str:
                 figs,
             ]
         )
-    return "\n".join("| " + " | ".join(cell.replace("|", "\\|") for cell in r) + " |" for r in rows)
+    return "\n".join("| " + " | ".join(_cell(x) for x in r) + " |" for r in rows)
 
 
 def main() -> None:
-    print(f"tools_sha256: {tools_sha256()} | today: {TODAY}\n")
+    today = json.loads(EXPECTED.read_text())["today"]
+    print(f"tools_sha256: {tools_sha256()} | today: {today}\n")
     print(review_table(load_cases()))
 
 
