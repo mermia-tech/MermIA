@@ -1,0 +1,11 @@
+{
+  "id": "out_of_scope_wine_pairing",
+  "category": "out_of_scope",
+  "question": "que vino me recomiendas para acompanar el menu?",
+  "expected_tool": null,
+  "expected_args": {},
+  "accepted_args": [],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": []
+}

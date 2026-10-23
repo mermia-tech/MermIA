@@ -103,3 +103,20 @@ def test_case_without_category_is_rejected(tmp_path: Path) -> None:
 
 def test_expected_figures_default_empty() -> None:
     assert next(c for c in load_cases() if c.id == "tacos_al_pastor").expected_figures == []
+
+
+def test_forty_cases_in_the_planned_categories() -> None:
+    cases = load_cases()
+    counts = {c: sum(x.category == c for x in cases) for c in {x.category for x in cases}}
+    assert len(cases) == 40
+    assert counts == {
+        "sales": 7,
+        "top_dishes": 6,
+        "cost_margin": 6,
+        "ops": 4,
+        "locations": 3,
+        "ambiguous": 3,
+        "writes": 4,
+        "out_of_scope": 4,
+        "adversarial": 3,
+    }
