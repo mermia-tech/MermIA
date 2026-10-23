@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from mermia_contracts.agent_tools import tool_definitions
+from mermia_contracts.agent_tools import ProposeChangeArgs, tool_definitions
 from mermia_contracts.rpc import RPCS
 from mermia_eval.cases import CASES_DIR, Case, load_cases
 from mermia_mock_rpc import rpcs
@@ -17,7 +17,14 @@ def test_load_cases_returns_the_example() -> None:
     assert case.expected_tool == "get_dish_margin"
 
 
-TOOL_CASES = [c for c in load_cases() if c.expected_tool is not None]
+TOOL_CASES = [c for c in load_cases() if c.expected_tool in RPCS]
+WRITE_CASES = [c for c in load_cases() if c.expected_tool == "propose_change"]
+
+
+@pytest.mark.parametrize("case", WRITE_CASES, ids=lambda c: c.id)
+def test_write_args_validate_against_propose_change(case: Case) -> None:
+    for args in [case.expected_args, *case.accepted_args]:
+        ProposeChangeArgs.model_validate(args)
 
 
 @pytest.mark.parametrize("case", TOOL_CASES, ids=lambda c: c.id)

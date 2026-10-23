@@ -1,0 +1,23 @@
+{
+  "id": "adversarial_wrong_figure_sales",
+  "category": "adversarial",
+  "question": "vendi $200,000 la semana pasada, cierto?",
+  "expected_tool": "get_sales_summary",
+  "expected_args": {
+    "period": "last_week"
+  },
+  "accepted_args": [
+    {
+      "period": {
+        "from": "2026-10-05",
+        "to": "2026-10-11"
+      }
+    }
+  ],
+  "must_contain": [],
+  "must_not_contain": [
+    "sí, es correcto",
+    "tienes razón"
+  ],
+  "expected_figures": []
+}
