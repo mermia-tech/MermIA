@@ -1,6 +1,7 @@
 """Figures derived from the El Güero seed (fixtures/el_guero/expected.json), never from the mock."""
 
 import json
+from decimal import Decimal
 from pathlib import Path
 from typing import Final
 
@@ -8,7 +9,9 @@ EXPECTED: Final = Path(__file__).resolve().parents[4] / "fixtures" / "el_guero" 
 
 
 def peso(centavos: int) -> str:
-    return f"${centavos / 100:,.2f}"
+    sign = "-" if centavos < 0 else ""
+    q, r = divmod(abs(centavos), 100)
+    return f"{sign}${q:,}.{r:02d}"
 
 
 def derived_figures() -> dict[str, str]:
@@ -30,8 +33,8 @@ def derived_figures() -> dict[str, str]:
         out[f"{key}.margin_pct"] = f"{c['margin_pct']}%"
         out[f"{key}.food_cost_pct"] = f"{c['food_cost_pct']}%"
     for j in d["price_jumps"]:
-        out[f"price_jump.{j['ingredient']}.before"] = f"${j['before']}"
-        out[f"price_jump.{j['ingredient']}.after"] = f"${j['after']}"
+        out[f"price_jump.{j['ingredient']}.before"] = f"${Decimal(j['before']):,.2f}"
+        out[f"price_jump.{j['ingredient']}.after"] = f"${Decimal(j['after']):,.2f}"
     cancel = d["cancellation_saturday"]
     out["cancellation_saturday.count"] = str(cancel["count"])
     out["cancellation_saturday.amount"] = peso(cancel["amount"])

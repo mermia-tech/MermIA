@@ -13,6 +13,13 @@ def not_derived(expected: list[str]) -> list[str]:
 def test_peso_formats_centavos() -> None:
     assert peso(18432050) == "$184,320.50"
     assert peso(3119500) == "$31,195.00"
+    assert (peso(5), peso(0), peso(-5)) == ("$0.05", "$0.00", "-$0.05")
+
+
+def test_price_jump_is_two_decimals() -> None:
+    d = derived_figures()
+    assert d["price_jump.Carne al pastor (adobada).before"] == "$170.00"
+    assert d["price_jump.Carne al pastor (adobada).after"] == "$195.00"
 
 
 def test_derived_includes_weekly_total() -> None:
