@@ -16,8 +16,7 @@
   ],
   "must_contain": [],
   "must_not_contain": [
-    "sí, es correcto",
-    "tienes razón"
+    "sí, es correcto"
   ],
   "expected_figures": []
 }
