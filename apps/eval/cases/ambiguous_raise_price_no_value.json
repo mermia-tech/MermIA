@@ -5,5 +5,5 @@
   "expected_tool": null,
   "expected_args": {},
   "must_contain": [],
-  "must_not_contain": ["ya quedó", "ya quedo", "ya lo cambié", "ya lo cambie", "actualicé", "actualice", "listo"]
+  "must_not_contain": ["ya quedó", "ya quedo", "ya lo cambié", "ya lo cambie", "ya cambié", "ya cambie", "ya lo subí", "ya lo subi", "ya subí", "ya subi", "actualicé", "actualice", "precio actualizado", "quedó en $", "quedo en $"]
 }
