@@ -12,9 +12,9 @@ from mermia_mock_rpc import rpcs
 
 def test_load_cases_returns_the_example() -> None:
     cases = load_cases()
-    assert [c.id for c in cases] == ["tacos_al_pastor"]
-    assert cases[0].question == "¿Cuál es el margen de los tacos al pastor?"
-    assert cases[0].expected_tool == "get_dish_margin"
+    case = next(c for c in cases if c.id == "tacos_al_pastor")
+    assert case.question == "¿Cuál es el margen de los tacos al pastor?"
+    assert case.expected_tool == "get_dish_margin"
 
 
 TOOL_CASES = [c for c in load_cases() if c.expected_tool is not None]
@@ -41,8 +41,9 @@ def test_ids_are_unique() -> None:
 
 
 def test_only_case_files_in_cases_dir() -> None:
-    files = [p.name for p in CASES_DIR.iterdir() if not p.name.startswith(".")]
-    assert files == [f"{c.id}.json" for c in load_cases()]
+    files = [p for p in CASES_DIR.iterdir() if not p.name.startswith(".")]
+    assert [p.name for p in files if p.suffix != ".json"] == []
+    assert sorted(p.stem for p in files) == sorted(c.id for c in load_cases())
 
 
 def test_expected_tool_is_a_known_tool_or_none() -> None:
