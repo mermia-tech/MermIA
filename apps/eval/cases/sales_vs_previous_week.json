@@ -11,7 +11,7 @@
       "period_b": {"from": "2026-09-28", "to": "2026-10-04"}
     }
   ],
-  "must_contain": ["+7.2%", "$171,905.00"],
+  "must_contain": ["+$12,415.50", "+7.2%"],
   "must_not_contain": [],
   "expected_figures": []
 }
