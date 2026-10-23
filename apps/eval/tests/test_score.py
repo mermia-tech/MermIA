@@ -7,7 +7,7 @@ from mermia_eval.cases import Case, load_cases
 from mermia_eval.score import ToolCall, score_args, score_numbers, score_tool
 from mermia_mock_rpc import rpcs
 
-CASE = load_cases()[0]
+CASE = next(c for c in load_cases() if c.id == "tacos_al_pastor")
 ANSWER = json.dumps(rpcs.build("get_dish_margin"), ensure_ascii=False)
 GOOD = ToolCall("get_dish_margin", {"dish": "tacos al pastor"})
 REPLY = "El margen es $37.63 (67.2%), con costo $18.40 y precio $65.00."

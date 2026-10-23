@@ -1,0 +1,11 @@
+{
+  "id": "sales_by_weekday",
+  "category": "sales",
+  "question": "que dia de la semana es el que mas me deja en los ultimos 30 dias",
+  "expected_tool": "get_sales_breakdown",
+  "expected_args": {"period": "last_30d", "by": "weekday"},
+  "accepted_args": [{"period": {"from": "2026-09-12", "to": "2026-10-11"}, "by": "weekday"}],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": []
+}

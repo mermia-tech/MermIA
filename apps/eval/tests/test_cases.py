@@ -95,4 +95,4 @@ def test_case_without_category_is_rejected(tmp_path: Path) -> None:
 
 
 def test_expected_figures_default_empty() -> None:
-    assert load_cases()[0].expected_figures == []
+    assert next(c for c in load_cases() if c.id == "tacos_al_pastor").expected_figures == []

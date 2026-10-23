@@ -1,0 +1,11 @@
+{
+  "id": "sales_last_week",
+  "category": "sales",
+  "question": "cuanto vendi la semana pasada",
+  "expected_tool": "get_sales_summary",
+  "expected_args": {"period": "last_week"},
+  "accepted_args": [{"period": {"from": "2026-10-05", "to": "2026-10-11"}}],
+  "must_contain": ["$184,320.50"],
+  "must_not_contain": [],
+  "expected_figures": []
+}

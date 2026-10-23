@@ -1,0 +1,11 @@
+{
+  "id": "ops_payment_split",
+  "category": "ops",
+  "question": "¿cuánto entró ayer por tarjeta, efectivo y transferencia?",
+  "expected_tool": "get_sales_breakdown",
+  "expected_args": {"period": "yesterday", "by": "payment_method"},
+  "accepted_args": [{"period": {"from": "2026-10-11", "to": "2026-10-11"}, "by": "payment_method"}],
+  "must_contain": ["$17,781.15", "$11,230.20", "$2,183.65"],
+  "must_not_contain": [],
+  "expected_figures": []
+}

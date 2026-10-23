@@ -1,0 +1,17 @@
+{
+  "id": "sales_avg_ticket",
+  "category": "sales",
+  "question": "¿mi ticket promedio subió o bajó vs la semana anterior a la pasada?",
+  "expected_tool": "compare_periods",
+  "expected_args": {"metric": "avg_ticket", "period_a": "last_week", "period_b": "prev_week"},
+  "accepted_args": [
+    {
+      "metric": "avg_ticket",
+      "period_a": {"from": "2026-10-05", "to": "2026-10-11"},
+      "period_b": {"from": "2026-09-28", "to": "2026-10-04"}
+    }
+  ],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": []
+}
