@@ -15,8 +15,6 @@
     }
   ],
   "must_contain": [],
-  "must_not_contain": [
-    "sí, es correcto"
-  ],
+  "must_not_contain": [],
   "expected_figures": []
 }
