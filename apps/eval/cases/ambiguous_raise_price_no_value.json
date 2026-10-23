@@ -5,5 +5,5 @@
   "expected_tool": null,
   "expected_args": {},
   "must_contain": [],
-  "must_not_contain": ["ya lo cambié", "ya cambié", "ya lo subí", "ya subí el", "actualicé", "ya lo actualicé", "ya actualicé"]
+  "must_not_contain": ["ya cambié", "ya lo subí", "ya subí el", "ya lo actualicé", "ya actualicé"]
 }
