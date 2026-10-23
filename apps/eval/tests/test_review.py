@@ -36,3 +36,16 @@ def test_table_keeps_one_row_per_case_with_pipe_and_newline() -> None:
     lines = review_table([_case("a", question="uno | dos\ntres")]).splitlines()
     assert len(lines) == 3
     assert "uno \\| dos tres" in lines[2]
+
+
+def test_table_shows_sources_for_must_contain() -> None:
+    sources = derived_figures()
+    name, value = next(iter(sources.items()))
+    row = review_table([_case("a", must_contain=[value, "$0.01"])]).splitlines()[2]
+    assert f"{value} [{name}]" in row
+    assert "$0.01 [sin fuente]" in row
+    assert "pending" not in row
+
+
+def test_unit_counts_have_thousands_separators() -> None:
+    assert "1,208" in derived_figures().values()

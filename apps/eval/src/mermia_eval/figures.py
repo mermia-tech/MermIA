@@ -23,7 +23,7 @@ def derived_figures() -> dict[str, str]:
                 out[f"{loc}.{kind}.{day}"] = peso(centavos)
     for loc, dishes in d["top_dishes_this_month_by_units"].items():
         for dish in dishes:
-            out[f"{loc}.top_units.{dish['code']}"] = str(dish["units"])
+            out[f"{loc}.top_units.{dish['code']}"] = f"{dish['units']:,}"
     for c in d["dish_costs_today"]:
         key = f"{c['location']}.dish.{c['code']}"
         out[f"{key}.cost"] = peso(c["cost"])

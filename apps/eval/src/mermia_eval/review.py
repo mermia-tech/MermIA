@@ -23,6 +23,7 @@ def review_table(cases: list[Case]) -> str:
     rows = [head, ["---"] * len(head)]
     for c in cases:
         figs = "; ".join(_figure(f, c, sources) for f in c.expected_figures)
+        must = "; ".join(_figure(f, c, sources) for f in c.must_contain)
         args = json.dumps(c.expected_args, ensure_ascii=False)
         rows.append(
             [
@@ -31,7 +32,7 @@ def review_table(cases: list[Case]) -> str:
                 c.question,
                 c.expected_tool or "ninguna",
                 args,
-                "; ".join(c.must_contain),
+                must,
                 figs,
             ]
         )

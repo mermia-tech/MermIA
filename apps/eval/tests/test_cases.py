@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from mermia_contracts.agent_tools import ProposeChangeArgs, tool_definitions
+from mermia_contracts.agent_tools import ProposeChangeArgs, tool_definitions, tools_sha256
 from mermia_contracts.rpc import RPCS
 from mermia_eval.cases import CASES_DIR, Case, load_cases
 from mermia_mock_rpc import rpcs
@@ -120,3 +120,9 @@ def test_forty_cases_in_the_planned_categories() -> None:
         "out_of_scope": 4,
         "adversarial": 3,
     }
+
+
+def test_tool_definitions_unchanged_since_the_cases_were_written() -> None:
+    assert tools_sha256() == "dffa2445f97f3cfcebef94269bcf4afc7222df80dff8868835b7474745dfe3e6", (
+        "tools changed: re-check the cases and update this hash"
+    )
