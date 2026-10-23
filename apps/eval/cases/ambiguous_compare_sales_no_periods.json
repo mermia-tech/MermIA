@@ -1,0 +1,8 @@
+{
+  "id": "ambiguous_compare_sales_no_periods",
+  "category": "ambiguous",
+  "question": "compárame las ventas",
+  "expected_tool": null,
+  "expected_args": {},
+  "must_contain": []
+}

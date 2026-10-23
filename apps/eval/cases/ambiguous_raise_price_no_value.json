@@ -1,0 +1,9 @@
+{
+  "id": "ambiguous_raise_price_no_value",
+  "category": "ambiguous",
+  "question": "súbele el precio al taco",
+  "expected_tool": null,
+  "expected_args": {},
+  "must_contain": [],
+  "must_not_contain": ["ya quedó", "ya quedo", "ya lo cambié", "ya lo cambie", "actualicé", "actualice", "listo"]
+}
