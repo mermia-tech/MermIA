@@ -169,3 +169,54 @@ def test_numbers_sign_before_the_dollar_sign_counts() -> None:
     case, tool = _bare(), '{"m": "-$37.63"}'
     assert score_numbers(case, "pérdida de $37.63", [tool]) == 0.0
     assert score_numbers(case, "pérdida de -$37.63", [tool]) == 1.0
+
+
+AS_OF = '{"meta": {"as_of": "2026-10-12T09:00:00-06:00"}, "t": "$184,320.50"}'
+
+
+def test_numbers_utc_offset_is_not_a_known_figure() -> None:
+    assert score_numbers(_bare(), "Tuviste 6 cancelaciones.", [AS_OF]) == 0.0
+    assert score_numbers(_bare(), "Hubo 0 cancelaciones.", [AS_OF]) == 0.0
+
+
+def test_numbers_date_part_of_a_datetime_may_be_quoted() -> None:
+    assert score_numbers(_bare(), "Datos al 2026-10-12.", [AS_OF]) == 1.0
+
+
+def test_numbers_glued_currency_code_ignores_case() -> None:
+    assert score_numbers(_bare(), "Cuesta mxn99.00", ['{"p": "$65.00"}']) == 0.0
+    assert score_numbers(_bare(), "Cuesta usd65.00", ['{"p": "$65.00"}']) == 1.0
+
+
+SALES = (
+    '{"period": {"from": "2026-10-05", "to": "2026-10-11"}, "total": "$184,320.50",'
+    ' "meta": {"as_of": "2026-10-12T09:00:00-06:00"}}'
+)
+
+
+@pytest.mark.parametrize(
+    "reply",
+    [
+        "Del 5 al 11 de octubre vendiste $184,320.50.",
+        "Vendiste $184,320.50. Datos al 12 de octubre.",
+        "Vendiste $184,320.50. Datos al 12 de Octubre de 2026.",
+        "Vendiste $184,320.50 al 12/10/2026.",
+        "Del 05/10/2026 al 11/10/2026 vendiste $184,320.50.",
+    ],
+)
+def test_numbers_spanish_forms_of_tool_dates_are_fine(reply: str) -> None:
+    assert score_numbers(_bare(), reply, [SALES]) == 1.0
+
+
+@pytest.mark.parametrize(
+    "reply",
+    [
+        "Al 20 de octubre vendiste $184,320.50.",
+        "Del 3 al 11 de octubre vendiste $184,320.50.",
+        "Al 12 de octubre de 2025 vendiste $184,320.50.",
+        "Al 20/10/2026 vendiste $184,320.50.",
+        "Vendiste $184,320.50. Tuviste 12 cancelaciones.",
+    ],
+)
+def test_numbers_dates_not_in_tool_data_still_fail(reply: str) -> None:
+    assert score_numbers(_bare(), reply, [SALES]) == 0.0

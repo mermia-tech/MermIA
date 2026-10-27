@@ -12,6 +12,8 @@ Environment (in `.env`): `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`
 
 Scores are 0 or 1 per run and are averaged over the runs that did not error. `-` means every run of that model errored. Cost is `n/a` when the model has no price in `config.py`. Langfuse also computes a cost per trace and can price models the local table lacks; use it to cross-check, the harness does not read it.
 
+The numbers score wants each figure as the tool shows it: a rounded or shortened figure ("67%" for 67.16%, "$184 mil") counts as invented and scores 0. The tool's dates may be quoted in ISO or Spanish form ("del 5 al 11 de octubre", "12/10/2026").
+
 - **`--mock-url` and real data:** the tool answers become part of each Langfuse trace. Pointed at a real backend, `--mock-url` sends that real data to Langfuse; use it only with the mock.
 - **Add a model:** one line in `MODELS` (`config.py`), with its price if known.
 - **Add a case:** a JSON file in `cases/` (`question`, `expected_tool`, `expected_args`, optional `accepted_args`, `must_contain`). `must_contain` figures must appear in the mock's answer; a test checks it.
