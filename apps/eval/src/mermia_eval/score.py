@@ -2,6 +2,7 @@
 
 import json
 import re
+import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
@@ -61,13 +62,25 @@ def _tool_numbers(result: str) -> set[Decimal]:
     return found
 
 
-def _lower(value: Any) -> Any:
+_PLAIN_NUMBER = re.compile(r"-?\d+(\.\d+)?")
+
+
+def _fold(text: str) -> str:
+    """Lower case without accents, so "Cambié" and "cambie" match."""
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
+def _norm(value: Any) -> Any:
+    """Text without case, numbers (and numeric strings, which C4 allows) as Decimals."""
     if isinstance(value, str):
-        return value.lower()
+        return Decimal(value) if _PLAIN_NUMBER.fullmatch(value) else value.lower()
+    if isinstance(value, int | float) and not isinstance(value, bool):
+        return Decimal(str(value))
     if isinstance(value, dict):
-        return {k: _lower(v) for k, v in value.items()}
+        return {k: _norm(v) for k, v in value.items()}
     if isinstance(value, list):
-        return [_lower(v) for v in value]
+        return [_norm(v) for v in value]
     return value
 
 
@@ -91,28 +104,29 @@ _DEFAULTS = {
 
 def _clean(tool: str, args: dict[str, Any]) -> dict[str, Any]:
     # null means omitted, a schema default means omitted, the free-text reason is not scored;
-    # text is compared without case
+    # text is compared without case, numbers by value
     defaults = _DEFAULTS.get(tool, {})
-    lowered = _lower(_drop_nulls(args))
+    lowered = _norm(_drop_nulls(args))
     return {
         k: v
         for k, v in lowered.items()
-        if k != "reason" and not (k in defaults and v == _lower(defaults[k]))
+        if k != "reason" and not (k in defaults and v == _norm(defaults[k]))
     }
 
 
 def score_tool(case: Case, calls: Sequence[ToolCall]) -> float:
     if case.expected_tool is None:
-        return float(not calls)
+        return float(all(c.name in case.accepted_tools for c in calls))
     return float(bool(calls) and all(c.name == case.expected_tool for c in calls))
 
 
 def score_args(case: Case, calls: Sequence[ToolCall]) -> float:
     if case.expected_tool is None:
-        return float(not calls)
+        return score_tool(case, calls)
     accepted = [_clean(case.expected_tool, a) for a in [case.expected_args, *case.accepted_args]]
     return float(
-        any(c.name == case.expected_tool and _clean(c.name, c.args) in accepted for c in calls)
+        bool(calls)
+        and all(c.name == case.expected_tool and _clean(c.name, c.args) in accepted for c in calls)
     )
 
 
@@ -120,7 +134,7 @@ def score_numbers(case: Case, reply: str, tool_results: Sequence[str]) -> float:
     """1.0 if every number in the reply comes from a tool result or the question, and every
     must_contain figure is in the reply (numbers compared as values, not as text), and no
     must_not_contain phrase is."""
-    if any(p.lower() in reply.lower() for p in case.must_not_contain):
+    if any(_fold(p) in _fold(reply) for p in case.must_not_contain):
         return 0.0
     dates = {d for r in tool_results for d in _DATE.findall(r)}  # a date may be quoted whole
     for d in dates:

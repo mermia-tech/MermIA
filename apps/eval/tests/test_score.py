@@ -237,3 +237,33 @@ def test_args_reason_ignored() -> None:
 def test_args_non_default_wrong_value_is_zero() -> None:
     assert score_args(TOP, _top(limit=3)) == 0.0
     assert score_args(TOP, _top(order="asc")) == 0.0
+
+
+def test_args_every_call_must_match() -> None:
+    assert score_args(TOP, _top() + _top(limit=3)) == 0.0
+    assert score_args(TOP, _top() + _top()) == 1.0
+
+
+def test_args_numeric_string_equals_number() -> None:
+    case = TOP.model_copy(update={"expected_args": {"period": "last_30d", "limit": 3}})
+    for limit in ("3", 3.0, "3.00"):
+        assert score_args(case, _top(limit=limit)) == 1.0
+    assert score_args(case, _top(limit="30")) == 0.0
+
+
+def test_numbers_forbidden_phrase_ignores_accents() -> None:
+    case = _bare(must_not_contain=["ya cambié"])
+    assert score_numbers(case, "Listo, ya cambie el precio", []) == 0.0
+    assert score_numbers(_bare(must_not_contain=["ya cambie"]), "Ya cambié el precio", []) == 0.0
+
+
+FORECAST = _bare(expected_tool=None, expected_args={}, accepted_tools=["get_sales_summary"])
+CONTEXT = [ToolCall("get_sales_summary", {"period": "last_week"})]
+
+
+def test_none_tool_accepts_listed_tool_for_context() -> None:
+    for score in (score_tool, score_args):
+        assert score(FORECAST, []) == 1.0
+        assert score(FORECAST, CONTEXT) == 1.0
+        assert score(FORECAST, [GOOD]) == 0.0
+        assert score(FORECAST, [*CONTEXT, GOOD]) == 0.0

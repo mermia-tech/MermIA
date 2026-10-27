@@ -28,6 +28,7 @@ class Case(BaseModel):
     category: Category
     expected_tool: str | None  # None: the agent must answer without calling a tool
     expected_args: dict[str, Any]
+    accepted_tools: list[str] = []  # with expected_tool None: tools it may call for context
     accepted_args: list[dict[str, Any]] = []  # other argument sets that mean the same
     must_contain: list[str]  # figures the reply must show
     must_not_contain: list[str] = []  # phrases the reply must not say
