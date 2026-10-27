@@ -22,5 +22,8 @@
     "+61.8%"
   ],
   "must_not_contain": [],
-  "expected_figures": []
+  "expected_figures": [
+    "+14.7%",
+    "+61.8%"
+  ]
 }

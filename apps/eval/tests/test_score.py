@@ -9,7 +9,8 @@ from mermia_mock_rpc import rpcs
 
 CASE = next(c for c in load_cases() if c.id == "tacos_al_pastor")
 ANSWER = json.dumps(rpcs.build("get_dish_margin"), ensure_ascii=False)
-GOOD = ToolCall("get_dish_margin", {"dish": "tacos al pastor"})
+CENTRO = "705e8e51-376b-5785-adbb-405eff4e2a22"
+GOOD = ToolCall("get_dish_margin", {"dish": "tacos al pastor", "location_id": CENTRO})
 REPLY = "El margen es $37.63 (67.2%), con costo $18.40 y precio $65.00."
 
 
@@ -30,7 +31,9 @@ def test_tool_repeated_expected_call_is_fine() -> None:
 
 
 def test_args_null_equals_omitted() -> None:
-    call = ToolCall("get_dish_margin", {"dish": "tacos al pastor", "location_id": None})
+    call = ToolCall(
+        "get_dish_margin", {"dish": "tacos al pastor", "location_id": CENTRO, "reason": None}
+    )
     assert score_args(CASE, [call]) == 1.0
 
 
@@ -43,8 +46,12 @@ def test_args_zero_when_no_call() -> None:
 
 
 def test_args_accepts_alternative() -> None:
-    case = CASE.model_copy(update={"accepted_args": [{"dish": "tacos al pastor (orden de 3)"}]})
-    call = ToolCall("get_dish_margin", {"dish": "tacos al pastor (orden de 3)"})
+    case = CASE.model_copy(
+        update={"accepted_args": [{"dish": "tacos al pastor (orden de 3)", "location_id": CENTRO}]}
+    )
+    call = ToolCall(
+        "get_dish_margin", {"dish": "tacos al pastor (orden de 3)", "location_id": CENTRO}
+    )
     assert score_args(case, [call]) == 1.0
 
 
@@ -90,7 +97,12 @@ def test_numbers_comma_only_before_three_digits() -> None:
 
 
 def test_args_ignore_case() -> None:
-    assert score_args(CASE, [ToolCall("get_dish_margin", {"dish": "Tacos Al Pastor"})]) == 1.0
+    assert (
+        score_args(
+            CASE, [ToolCall("get_dish_margin", {"dish": "Tacos Al Pastor", "location_id": CENTRO})]
+        )
+        == 1.0
+    )
 
 
 def test_args_case_insensitive_inside_nested_values() -> None:
@@ -267,3 +279,34 @@ def test_none_tool_accepts_listed_tool_for_context() -> None:
         assert score(FORECAST, CONTEXT) == 1.0
         assert score(FORECAST, [GOOD]) == 0.0
         assert score(FORECAST, [*CONTEXT, GOOD]) == 0.0
+
+
+def _case(id: str) -> Case:
+    return next(c for c in load_cases() if c.id == id)
+
+
+def test_menu_price_accepts_effective_from_and_numeric_string() -> None:
+    case = _case("writes_menu_price_torta_polanco")
+    args = {"kind": "menu_item_price.set", "target": "torta de pastor"}
+    values = {"price_pesos": "110", "location": "Polanco", "effective_from": "2026-10-12"}
+    assert score_args(case, [ToolCall("propose_change", {**args, "values": values})]) == 1.0
+    wrong = {**args, "values": {**values, "price_pesos": 11}}
+    assert score_args(case, [ToolCall("propose_change", wrong)]) == 0.0
+
+
+def test_month_vs_last_accepts_like_for_like() -> None:
+    case = _case("sales_month_vs_last")
+    call = ToolCall(
+        "compare_periods",
+        {
+            "metric": "net_sales",
+            "period_a": "this_month",
+            "period_b": {"from": "2026-09-01", "to": "2026-09-11"},
+        },
+    )
+    assert score_args(case, [call]) == 1.0
+
+
+def test_forecast_may_call_sales_summary_for_context() -> None:
+    case = _case("adversarial_forecast_december")
+    assert score_tool(case, [ToolCall("get_sales_summary", {"period": "last_30d"})]) == 1.0

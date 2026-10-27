@@ -3,7 +3,23 @@
   "category": "locations",
   "question": "¿Cuál de mis dos locales lleva más ventas en lo que va del mes?",
   "expected_tool": "compare_locations",
-  "expected_args": {"metric": "net_sales", "period": "this_month"},
-  "accepted_args": [{"metric": "net_sales", "period": {"from": "2026-10-01", "to": "2026-10-11"}}],
-  "must_contain": []
+  "expected_args": {
+    "metric": "net_sales",
+    "period": "this_month"
+  },
+  "accepted_args": [
+    {
+      "metric": "net_sales",
+      "period": {
+        "from": "2026-10-01",
+        "to": "2026-10-11"
+      }
+    }
+  ],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": [
+    "$300,659.50",
+    "$270,548.80"
+  ]
 }

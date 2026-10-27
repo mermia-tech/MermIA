@@ -11,7 +11,17 @@
       "location": "Polanco"
     }
   },
-  "accepted_args": [],
+  "accepted_args": [
+    {
+      "kind": "menu_item_price.set",
+      "target": "torta de pastor",
+      "values": {
+        "price_pesos": 110,
+        "location": "Polanco",
+        "effective_from": "2026-10-12"
+      }
+    }
+  ],
   "must_contain": [],
   "must_not_contain": [
     "ya cambié",
@@ -19,7 +29,9 @@
     "ya lo subí",
     "ya actualicé",
     "ya lo actualicé",
-    "ya apliqué"
+    "ya apliqué",
+    "quedó actualizado",
+    "precio actualizado"
   ],
   "expected_figures": []
 }

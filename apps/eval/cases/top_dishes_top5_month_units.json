@@ -20,5 +20,11 @@
   ],
   "must_contain": [],
   "must_not_contain": [],
-  "expected_figures": []
+  "expected_figures": [
+    "1,208",
+    "816",
+    "562",
+    "534",
+    "474"
+  ]
 }

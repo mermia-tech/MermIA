@@ -1,11 +1,26 @@
 {
   "id": "sales_last_week",
   "category": "sales",
-  "question": "cuanto vendi la semana pasada",
+  "question": "cuanto vendi la semana pasada en Centro",
   "expected_tool": "get_sales_summary",
-  "expected_args": {"period": "last_week"},
-  "accepted_args": [{"period": {"from": "2026-10-05", "to": "2026-10-11"}}],
-  "must_contain": ["$184,320.50"],
+  "expected_args": {
+    "period": "last_week",
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
+  },
+  "accepted_args": [
+    {
+      "period": {
+        "from": "2026-10-05",
+        "to": "2026-10-11"
+      },
+      "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
+    }
+  ],
+  "must_contain": [
+    "$184,320.50"
+  ],
   "must_not_contain": [],
-  "expected_figures": []
+  "expected_figures": [
+    "$184,320.50"
+  ]
 }

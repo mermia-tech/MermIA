@@ -1,17 +1,35 @@
 {
   "id": "sales_vs_previous_week",
   "category": "sales",
-  "question": "vendi mas o menos que la semana de antes? dime cuanto fue la diferencia en ventas",
+  "question": "vendi mas o menos que la semana de antes en Centro? dime cuanto fue la diferencia en ventas",
   "expected_tool": "compare_periods",
-  "expected_args": {"metric": "net_sales", "period_a": "last_week", "period_b": "prev_week"},
+  "expected_args": {
+    "metric": "net_sales",
+    "period_a": "last_week",
+    "period_b": "prev_week",
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
+  },
   "accepted_args": [
     {
       "metric": "net_sales",
-      "period_a": {"from": "2026-10-05", "to": "2026-10-11"},
-      "period_b": {"from": "2026-09-28", "to": "2026-10-04"}
+      "period_a": {
+        "from": "2026-10-05",
+        "to": "2026-10-11"
+      },
+      "period_b": {
+        "from": "2026-09-28",
+        "to": "2026-10-04"
+      },
+      "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
     }
   ],
-  "must_contain": ["+$12,415.50", "+7.2%"],
+  "must_contain": [
+    "+$12,415.50",
+    "+7.2%"
+  ],
   "must_not_contain": [],
-  "expected_figures": []
+  "expected_figures": [
+    "+$12,415.50",
+    "+7.2%"
+  ]
 }

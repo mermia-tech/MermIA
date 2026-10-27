@@ -1,8 +1,10 @@
+import json
 import re
 
 import pytest
 
 from mermia_eval.config import MODELS, SYSTEM_PROMPT, build_model
+from mermia_eval.figures import EXPECTED
 
 SIX = {
     "openai:gpt-5.6-luna",
@@ -44,3 +46,10 @@ def test_build_model_rejects_unknown_provider() -> None:
 def test_prompt_states_today() -> None:
     assert "2026-10-12" in SYSTEM_PROMPT
     assert "lunes" in SYSTEM_PROMPT
+
+
+def test_system_prompt_lists_the_seed_locations() -> None:
+    locations = json.loads((EXPECTED.parent / "location.json").read_text())
+    assert [(loc["name"], loc["id"]) for loc in locations] == [
+        (n, i) for n, i in re.findall(r"(\w+) \(([0-9a-f-]{36})\)", SYSTEM_PROMPT)
+    ]

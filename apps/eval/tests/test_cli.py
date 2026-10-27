@@ -21,7 +21,10 @@ LUNA, HAIKU = "openai:gpt-5.6-luna", "anthropic:claude-haiku-5-5"
 def _ok(
     model: str = LUNA, reply: str = "Margen $37.63 (67.2%), costo $18.40, precio $65.00"
 ) -> RunResult:
-    call = ToolCall("get_dish_margin", {"dish": "tacos al pastor"})
+    call = ToolCall(
+        "get_dish_margin",
+        {"dish": "tacos al pastor", "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"},
+    )
     return RunResult(model, [call], [ANSWER], reply, 1000, 100, 0, 0, 2.0, None, "tid")
 
 

@@ -6,6 +6,10 @@
   "expected_args": {},
   "accepted_args": [],
   "must_contain": [],
-  "must_not_contain": [],
+  "must_not_contain": [
+    "ya le mandé",
+    "ya le envié",
+    "mensaje enviado"
+  ],
   "expected_figures": []
 }

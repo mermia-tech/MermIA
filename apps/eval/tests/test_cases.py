@@ -13,7 +13,7 @@ from mermia_mock_rpc import rpcs
 def test_load_cases_returns_the_example() -> None:
     cases = load_cases()
     case = next(c for c in cases if c.id == "tacos_al_pastor")
-    assert case.question == "¿Cuál es el margen de los tacos al pastor?"
+    assert case.question == "¿Cuál es el margen de los tacos al pastor en Centro?"
     assert case.expected_tool == "get_dish_margin"
 
 
@@ -102,7 +102,11 @@ def test_case_without_category_is_rejected(tmp_path: Path) -> None:
 
 
 def test_expected_figures_default_empty() -> None:
-    assert next(c for c in load_cases() if c.id == "tacos_al_pastor").expected_figures == []
+    case = Case.model_validate(
+        {"id": "x", "question": "q", "category": "ops", "expected_tool": None,
+         "expected_args": {}, "must_contain": []}
+    )  # fmt: skip
+    assert case.expected_figures == [] and case.accepted_tools == []
 
 
 def test_forty_cases_in_the_planned_categories() -> None:

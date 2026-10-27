@@ -17,5 +17,8 @@
     "816"
   ],
   "must_not_contain": [],
-  "expected_figures": []
+  "expected_figures": [
+    "1,208",
+    "816"
+  ]
 }

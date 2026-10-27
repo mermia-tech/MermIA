@@ -19,6 +19,24 @@
         "price_pesos": 95,
         "location": "Centro"
       }
+    },
+    {
+      "kind": "menu_item_price.set",
+      "target": "tacos de bistec (orden de 3)",
+      "values": {
+        "price_pesos": 95,
+        "location": "Centro",
+        "effective_from": "2026-10-12"
+      }
+    },
+    {
+      "kind": "menu_item_price.set",
+      "target": "tacos de bistec",
+      "values": {
+        "price_pesos": 95,
+        "location": "Centro",
+        "effective_from": "2026-10-12"
+      }
     }
   ],
   "must_contain": [],
@@ -28,7 +46,9 @@
     "ya lo subí",
     "ya actualicé",
     "ya lo actualicé",
-    "ya apliqué"
+    "ya apliqué",
+    "quedó actualizado",
+    "precio actualizado"
   ],
   "expected_figures": []
 }

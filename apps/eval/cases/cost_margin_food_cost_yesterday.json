@@ -1,22 +1,26 @@
 {
   "id": "cost_margin_food_cost_yesterday",
   "category": "cost_margin",
-  "question": "¿qué porcentaje me costó la comida ayer?",
+  "question": "¿cuánto fue mi food cost de ayer en Centro?",
   "expected_tool": "get_food_cost_pct",
   "expected_args": {
-    "period": "yesterday"
+    "period": "yesterday",
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
   },
   "accepted_args": [
     {
       "period": {
         "from": "2026-10-11",
         "to": "2026-10-11"
-      }
+      },
+      "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
     }
   ],
   "must_contain": [
     "37.5%"
   ],
   "must_not_contain": [],
-  "expected_figures": []
+  "expected_figures": [
+    "37.5%"
+  ]
 }
