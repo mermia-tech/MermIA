@@ -13,7 +13,7 @@ from mermia_eval.run import RunResult, run_case
 from mermia_eval.score import ToolCall
 from mermia_mock_rpc import rpcs
 
-CASE = load_cases()[0]
+CASE = next(c for c in load_cases() if c.id == "tacos_al_pastor")
 ANSWER = json.dumps(rpcs.build("get_dish_margin"), ensure_ascii=False)
 LUNA, HAIKU = "openai:gpt-5.6-luna", "anthropic:claude-haiku-5-5"
 
@@ -21,7 +21,10 @@ LUNA, HAIKU = "openai:gpt-5.6-luna", "anthropic:claude-haiku-5-5"
 def _ok(
     model: str = LUNA, reply: str = "Margen $37.63 (67.2%), costo $18.40, precio $65.00"
 ) -> RunResult:
-    call = ToolCall("get_dish_margin", {"dish": "tacos al pastor"})
+    call = ToolCall(
+        "get_dish_margin",
+        {"dish": "tacos al pastor", "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"},
+    )
     return RunResult(model, [call], [ANSWER], reply, 1000, 100, 0, 0, 2.0, None, "tid")
 
 
@@ -53,6 +56,7 @@ def test_format_table_shows_na_cost_and_dash_scores() -> None:
 def no_network(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cli, "setup_tracing", lambda env: None)
     monkeypatch.setattr(cli, "post_scores", lambda *a, **k: None)
+    monkeypatch.setattr(cli, "load_cases", lambda: [CASE])  # these tests are about one case
 
 
 def test_exit_code_is_zero_with_low_scores(

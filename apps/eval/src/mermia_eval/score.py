@@ -2,11 +2,13 @@
 
 import json
 import re
+import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
+from mermia_contracts.agent_tools import tool_definitions
 from mermia_eval.cases import Case
 
 # A sign counts only when it is not glued to a word or digit ("2026-10-20" has no negatives),
@@ -107,33 +109,80 @@ def _strip_dates(reply: str, dates: set[str]) -> str:
     return _SLASH_DATE.sub(slash, _SPANISH_DATE.sub(spanish, reply))
 
 
-def _lower(value: Any) -> Any:
+_PLAIN_NUMBER = re.compile(r"-?\d+(\.\d+)?")
+
+
+def _fold(text: str) -> str:
+    """Lower case without accents, so "Cambié" and "cambie" match."""
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
+def _norm(value: Any) -> Any:
+    """Text without case, numbers (and numeric strings, which C4 allows) as Decimals."""
     if isinstance(value, str):
-        return value.lower()
+        return Decimal(value) if _PLAIN_NUMBER.fullmatch(value) else value.lower()
+    if isinstance(value, int | float) and not isinstance(value, bool):
+        return Decimal(str(value))
     if isinstance(value, dict):
-        return {k: _lower(v) for k, v in value.items()}
+        return {k: _norm(v) for k, v in value.items()}
     if isinstance(value, list):
-        return [_lower(v) for v in value]
+        return [_norm(v) for v in value]
     return value
 
 
-def _clean(args: dict[str, Any]) -> dict[str, Any]:
-    # null means omitted; text is compared without case
-    return {k: _lower(v) for k, v in args.items() if v is not None}
+def _drop_nulls(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {k: _drop_nulls(v) for k, v in value.items() if v is not None}
+    if isinstance(value, list):
+        return [_drop_nulls(v) for v in value]
+    return value
+
+
+_DEFAULTS = {
+    t["name"]: {
+        k: p["default"]
+        for k, p in t["input_schema"].get("properties", {}).items()
+        if "default" in p
+    }
+    for t in tool_definitions()
+}
+
+
+def _clean(tool: str, args: dict[str, Any]) -> dict[str, Any]:
+    # null means omitted, a schema default means omitted, the free-text reason is not scored;
+    # text is compared without case, numbers by value
+    defaults = _DEFAULTS.get(tool, {})
+    lowered = _norm(_drop_nulls(args))
+    return {
+        k: v
+        for k, v in lowered.items()
+        if k != "reason" and not (k in defaults and v == _norm(defaults[k]))
+    }
 
 
 def score_tool(case: Case, calls: Sequence[ToolCall]) -> float:
+    if case.expected_tool is None:
+        return float(all(c.name in case.accepted_tools for c in calls))
     return float(bool(calls) and all(c.name == case.expected_tool for c in calls))
 
 
 def score_args(case: Case, calls: Sequence[ToolCall]) -> float:
-    accepted = [_clean(a) for a in [case.expected_args, *case.accepted_args]]
-    return float(any(c.name == case.expected_tool and _clean(c.args) in accepted for c in calls))
+    if case.expected_tool is None:
+        return score_tool(case, calls)
+    accepted = [_clean(case.expected_tool, a) for a in [case.expected_args, *case.accepted_args]]
+    return float(
+        bool(calls)
+        and all(c.name == case.expected_tool and _clean(c.name, c.args) in accepted for c in calls)
+    )
 
 
 def score_numbers(case: Case, reply: str, tool_results: Sequence[str]) -> float:
     """1.0 if every number in the reply comes from a tool result or the question, and every
-    must_contain figure is in the reply (numbers compared as values, not as text)."""
+    must_contain figure is in the reply (numbers compared as values, not as text), and no
+    must_not_contain phrase is."""
+    if any(_fold(p) in _fold(reply) for p in case.must_not_contain):
+        return 0.0
     reply = _strip_dates(reply, {d for r in tool_results for d in _DATE.findall(r)})
     shown = _numbers(_LIST_MARKER.sub("", reply))  # "7. " of a list is not a figure
     known = _numbers(case.question).union(*(_tool_numbers(r) for r in tool_results))

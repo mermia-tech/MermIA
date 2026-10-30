@@ -1,0 +1,37 @@
+{
+  "id": "writes_menu_price_torta_polanco",
+  "category": "writes",
+  "question": "bajale la torta de pastor de Polanco a $110",
+  "expected_tool": "propose_change",
+  "expected_args": {
+    "kind": "menu_item_price.set",
+    "target": "torta de pastor",
+    "values": {
+      "price_pesos": 110,
+      "location": "Polanco"
+    }
+  },
+  "accepted_args": [
+    {
+      "kind": "menu_item_price.set",
+      "target": "torta de pastor",
+      "values": {
+        "price_pesos": 110,
+        "location": "Polanco",
+        "effective_from": "2026-10-12"
+      }
+    }
+  ],
+  "must_contain": [],
+  "must_not_contain": [
+    "ya cambié",
+    "ya lo cambié",
+    "ya lo subí",
+    "ya actualicé",
+    "ya lo actualicé",
+    "ya apliqué",
+    "quedó actualizado",
+    "precio actualizado"
+  ],
+  "expected_figures": []
+}

@@ -1,0 +1,11 @@
+{
+  "id": "ops_sales_by_waiter",
+  "category": "ops",
+  "question": "quien de mis meseros vende mas este mes",
+  "expected_tool": "get_sales_breakdown",
+  "expected_args": {"period": "this_month", "by": "staff"},
+  "accepted_args": [{"period": {"from": "2026-10-01", "to": "2026-10-11"}, "by": "staff"}],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": []
+}

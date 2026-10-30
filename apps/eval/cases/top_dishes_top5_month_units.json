@@ -1,0 +1,30 @@
+{
+  "id": "top_dishes_top5_month_units",
+  "category": "top_dishes",
+  "question": "¿cuáles son los 5 platillos más vendidos este mes?",
+  "expected_tool": "get_top_dishes",
+  "expected_args": {
+    "period": "this_month",
+    "metric": "units",
+    "limit": 5
+  },
+  "accepted_args": [
+    {
+      "period": {
+        "from": "2026-10-01",
+        "to": "2026-10-11"
+      },
+      "metric": "units",
+      "limit": 5
+    }
+  ],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": [
+    "1,208",
+    "816",
+    "562",
+    "534",
+    "474"
+  ]
+}

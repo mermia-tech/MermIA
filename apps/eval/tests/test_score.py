@@ -7,9 +7,10 @@ from mermia_eval.cases import Case, load_cases
 from mermia_eval.score import ToolCall, score_args, score_numbers, score_tool
 from mermia_mock_rpc import rpcs
 
-CASE = load_cases()[0]
+CASE = next(c for c in load_cases() if c.id == "tacos_al_pastor")
 ANSWER = json.dumps(rpcs.build("get_dish_margin"), ensure_ascii=False)
-GOOD = ToolCall("get_dish_margin", {"dish": "tacos al pastor"})
+CENTRO = "705e8e51-376b-5785-adbb-405eff4e2a22"
+GOOD = ToolCall("get_dish_margin", {"dish": "tacos al pastor", "location_id": CENTRO})
 REPLY = "El margen es $37.63 (67.2%), con costo $18.40 y precio $65.00."
 
 
@@ -30,7 +31,9 @@ def test_tool_repeated_expected_call_is_fine() -> None:
 
 
 def test_args_null_equals_omitted() -> None:
-    call = ToolCall("get_dish_margin", {"dish": "tacos al pastor", "location_id": None})
+    call = ToolCall(
+        "get_dish_margin", {"dish": "tacos al pastor", "location_id": CENTRO, "reason": None}
+    )
     assert score_args(CASE, [call]) == 1.0
 
 
@@ -43,8 +46,12 @@ def test_args_zero_when_no_call() -> None:
 
 
 def test_args_accepts_alternative() -> None:
-    case = CASE.model_copy(update={"accepted_args": [{"dish": "tacos al pastor (orden de 3)"}]})
-    call = ToolCall("get_dish_margin", {"dish": "tacos al pastor (orden de 3)"})
+    case = CASE.model_copy(
+        update={"accepted_args": [{"dish": "tacos al pastor (orden de 3)", "location_id": CENTRO}]}
+    )
+    call = ToolCall(
+        "get_dish_margin", {"dish": "tacos al pastor (orden de 3)", "location_id": CENTRO}
+    )
     assert score_args(case, [call]) == 1.0
 
 
@@ -90,7 +97,12 @@ def test_numbers_comma_only_before_three_digits() -> None:
 
 
 def test_args_ignore_case() -> None:
-    assert score_args(CASE, [ToolCall("get_dish_margin", {"dish": "Tacos Al Pastor"})]) == 1.0
+    assert (
+        score_args(
+            CASE, [ToolCall("get_dish_margin", {"dish": "Tacos Al Pastor", "location_id": CENTRO})]
+        )
+        == 1.0
+    )
 
 
 def test_args_case_insensitive_inside_nested_values() -> None:
@@ -169,6 +181,135 @@ def test_numbers_sign_before_the_dollar_sign_counts() -> None:
     case, tool = _bare(), '{"m": "-$37.63"}'
     assert score_numbers(case, "pérdida de $37.63", [tool]) == 0.0
     assert score_numbers(case, "pérdida de -$37.63", [tool]) == 1.0
+
+
+NO_TOOL = _bare(expected_tool=None, expected_args={})
+
+
+def test_tool_none_ok_without_calls() -> None:
+    assert score_tool(NO_TOOL, []) == 1.0
+
+
+def test_tool_none_zero_when_a_tool_is_called() -> None:
+    assert score_tool(NO_TOOL, [GOOD]) == 0.0
+
+
+def test_args_none_ok_without_calls() -> None:
+    assert score_args(NO_TOOL, []) == 1.0
+    assert score_args(NO_TOOL, [GOOD]) == 0.0
+
+
+def test_numbers_none_tool_zero_on_figure_not_in_question() -> None:
+    assert score_numbers(NO_TOOL, "Vendiste $5,000", []) == 0.0
+    assert score_numbers(NO_TOOL, "Hola, ¿en qué te ayudo?", []) == 1.0
+
+
+def test_numbers_zero_on_forbidden_phrase() -> None:
+    case = _bare(must_not_contain=["ya quedó"])
+    assert score_numbers(case, "Listo, YA QUEDÓ", []) == 0.0
+
+
+def test_numbers_rounding_is_zero() -> None:
+    assert score_numbers(_bare(), "unos $184 mil", ['{"v": "$184,320.50"}']) == 0.0
+
+
+TOP = CASE.model_copy(
+    update={
+        "expected_tool": "get_top_dishes",
+        "expected_args": {"period": "last_30d", "limit": 5},
+        "accepted_args": [],
+    }
+)
+
+
+def _top(**args: Any) -> list[ToolCall]:
+    return [ToolCall("get_top_dishes", {"period": "last_30d", **args})]
+
+
+def test_args_default_limit_omitted_equals_explicit() -> None:
+    omitted = TOP.model_copy(update={"expected_args": {"period": "last_30d"}})
+    for case in (TOP, omitted):
+        assert score_args(case, _top()) == 1.0
+        assert score_args(case, _top(limit=5)) == 1.0
+
+
+def test_args_schema_default_order_ignored() -> None:
+    assert score_args(TOP, _top(order="desc")) == 1.0
+
+
+def test_args_nested_null_removed() -> None:
+    case = TOP.model_copy(update={"expected_args": {"period": "last_30d", "x": {"a": 1}}})
+    assert score_args(case, _top(x={"a": 1, "effective_from": None})) == 1.0
+
+
+def test_args_reason_ignored() -> None:
+    assert score_args(TOP, _top(reason="porque si")) == 1.0
+
+
+def test_args_non_default_wrong_value_is_zero() -> None:
+    assert score_args(TOP, _top(limit=3)) == 0.0
+    assert score_args(TOP, _top(order="asc")) == 0.0
+
+
+def test_args_every_call_must_match() -> None:
+    assert score_args(TOP, _top() + _top(limit=3)) == 0.0
+    assert score_args(TOP, _top() + _top()) == 1.0
+
+
+def test_args_numeric_string_equals_number() -> None:
+    case = TOP.model_copy(update={"expected_args": {"period": "last_30d", "limit": 3}})
+    for limit in ("3", 3.0, "3.00"):
+        assert score_args(case, _top(limit=limit)) == 1.0
+    assert score_args(case, _top(limit="30")) == 0.0
+
+
+def test_numbers_forbidden_phrase_ignores_accents() -> None:
+    case = _bare(must_not_contain=["ya cambié"])
+    assert score_numbers(case, "Listo, ya cambie el precio", []) == 0.0
+    assert score_numbers(_bare(must_not_contain=["ya cambie"]), "Ya cambié el precio", []) == 0.0
+
+
+FORECAST = _bare(expected_tool=None, expected_args={}, accepted_tools=["get_sales_summary"])
+CONTEXT = [ToolCall("get_sales_summary", {"period": "last_week"})]
+
+
+def test_none_tool_accepts_listed_tool_for_context() -> None:
+    for score in (score_tool, score_args):
+        assert score(FORECAST, []) == 1.0
+        assert score(FORECAST, CONTEXT) == 1.0
+        assert score(FORECAST, [GOOD]) == 0.0
+        assert score(FORECAST, [*CONTEXT, GOOD]) == 0.0
+
+
+def _case(id: str) -> Case:
+    return next(c for c in load_cases() if c.id == id)
+
+
+def test_menu_price_accepts_effective_from_and_numeric_string() -> None:
+    case = _case("writes_menu_price_torta_polanco")
+    args = {"kind": "menu_item_price.set", "target": "torta de pastor"}
+    values = {"price_pesos": "110", "location": "Polanco", "effective_from": "2026-10-12"}
+    assert score_args(case, [ToolCall("propose_change", {**args, "values": values})]) == 1.0
+    wrong = {**args, "values": {**values, "price_pesos": 11}}
+    assert score_args(case, [ToolCall("propose_change", wrong)]) == 0.0
+
+
+def test_month_vs_last_accepts_like_for_like() -> None:
+    case = _case("sales_month_vs_last")
+    call = ToolCall(
+        "compare_periods",
+        {
+            "metric": "net_sales",
+            "period_a": "this_month",
+            "period_b": {"from": "2026-09-01", "to": "2026-09-11"},
+        },
+    )
+    assert score_args(case, [call]) == 1.0
+
+
+def test_forecast_may_call_sales_summary_for_context() -> None:
+    case = _case("adversarial_forecast_december")
+    assert score_tool(case, [ToolCall("get_sales_summary", {"period": "last_30d"})]) == 1.0
 
 
 AS_OF = '{"meta": {"as_of": "2026-10-12T09:00:00-06:00"}, "t": "$184,320.50"}'

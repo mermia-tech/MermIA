@@ -1,7 +1,24 @@
 {
   "id": "tacos_al_pastor",
-  "question": "¿Cuál es el margen de los tacos al pastor?",
+  "category": "cost_margin",
+  "question": "¿Cuál es el margen de los tacos al pastor en Centro?",
   "expected_tool": "get_dish_margin",
-  "expected_args": {"dish": "tacos al pastor"},
-  "must_contain": ["$18.40", "$65.00", "$37.63", "67.2%"]
+  "expected_args": {
+    "dish": "tacos al pastor",
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
+  },
+  "must_contain": [
+    "$18.40",
+    "$65.00",
+    "$37.63",
+    "67.2%"
+  ],
+  "accepted_args": [],
+  "must_not_contain": [],
+  "expected_figures": [
+    "$18.40",
+    "$65.00",
+    "$37.63",
+    "67.2%"
+  ]
 }

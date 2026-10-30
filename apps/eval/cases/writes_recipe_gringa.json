@@ -1,0 +1,38 @@
+{
+  "id": "writes_recipe_gringa",
+  "category": "writes",
+  "question": "la receta de la gringa de pastor ahora rinde 1 y lleva 120 g de carne al pastor y 90 g de queso oaxaca, actualizala",
+  "expected_tool": "propose_change",
+  "expected_args": {
+    "kind": "recipe.upsert",
+    "target": "gringa de pastor",
+    "values": {
+      "yield_qty": 1,
+      "lines": [
+        {
+          "ingredient_name": "carne al pastor",
+          "qty": 120,
+          "unit": "g"
+        },
+        {
+          "ingredient_name": "queso oaxaca",
+          "qty": 90,
+          "unit": "g"
+        }
+      ]
+    }
+  },
+  "accepted_args": [],
+  "must_contain": [],
+  "must_not_contain": [
+    "ya cambié",
+    "ya lo cambié",
+    "ya lo subí",
+    "ya actualicé",
+    "ya lo actualicé",
+    "ya apliqué",
+    "quedó actualizado",
+    "precio actualizado"
+  ],
+  "expected_figures": []
+}

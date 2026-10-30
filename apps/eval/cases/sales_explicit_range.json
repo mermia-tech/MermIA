@@ -1,0 +1,22 @@
+{
+  "id": "sales_explicit_range",
+  "category": "sales",
+  "question": "me dices las ventas del 5 al 11 de octubre",
+  "expected_tool": "get_sales_summary",
+  "expected_args": {
+    "period": {
+      "from": "2026-10-05",
+      "to": "2026-10-11"
+    }
+  },
+  "accepted_args": [
+    {
+      "period": "last_week"
+    }
+  ],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": [
+    "$345,241.30"
+  ]
+}

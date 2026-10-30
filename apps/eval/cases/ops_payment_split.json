@@ -1,0 +1,28 @@
+{
+  "id": "ops_payment_split",
+  "category": "ops",
+  "question": "¿cuánto entró ayer en Centro por tarjeta, efectivo y transferencia?",
+  "expected_tool": "get_sales_breakdown",
+  "expected_args": {
+    "period": "yesterday",
+    "by": "payment_method",
+    "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
+  },
+  "accepted_args": [
+    {
+      "period": {
+        "from": "2026-10-11",
+        "to": "2026-10-11"
+      },
+      "by": "payment_method",
+      "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
+    }
+  ],
+  "must_contain": [
+    "$17,781.15",
+    "$11,230.20",
+    "$2,183.65"
+  ],
+  "must_not_contain": [],
+  "expected_figures": []
+}

@@ -1,0 +1,35 @@
+{
+  "id": "sales_month_vs_last",
+  "category": "sales",
+  "question": "como voy este mes contra el mes pasado en ventas?",
+  "expected_tool": "compare_periods",
+  "expected_args": {
+    "metric": "net_sales",
+    "period_a": "this_month",
+    "period_b": "last_month"
+  },
+  "accepted_args": [
+    {
+      "metric": "net_sales",
+      "period_a": "this_month",
+      "period_b": {
+        "from": "2026-09-01",
+        "to": "2026-09-11"
+      }
+    },
+    {
+      "metric": "net_sales",
+      "period_a": {
+        "from": "2026-10-01",
+        "to": "2026-10-11"
+      },
+      "period_b": {
+        "from": "2026-09-01",
+        "to": "2026-09-11"
+      }
+    }
+  ],
+  "must_contain": [],
+  "must_not_contain": [],
+  "expected_figures": []
+}

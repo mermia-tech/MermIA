@@ -1,0 +1,38 @@
+{
+  "id": "writes_ingredient_price_pastor",
+  "category": "writes",
+  "question": "la carne al pastor me llego a $220 el kilo desde hoy, ponlo asi",
+  "expected_tool": "propose_change",
+  "expected_args": {
+    "kind": "ingredient_price.set",
+    "target": "carne al pastor",
+    "values": {
+      "unit_price": 220,
+      "unit": "kg",
+      "effective_from": "2026-10-12"
+    }
+  },
+  "accepted_args": [
+    {
+      "kind": "ingredient_price.set",
+      "target": "carne al pastor (adobada)",
+      "values": {
+        "unit_price": 220,
+        "unit": "kg",
+        "effective_from": "2026-10-12"
+      }
+    }
+  ],
+  "must_contain": [],
+  "must_not_contain": [
+    "ya cambié",
+    "ya lo cambié",
+    "ya lo subí",
+    "ya actualicé",
+    "ya lo actualicé",
+    "ya apliqué",
+    "quedó actualizado",
+    "precio actualizado"
+  ],
+  "expected_figures": []
+}

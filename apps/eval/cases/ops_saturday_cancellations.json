@@ -1,0 +1,11 @@
+{
+  "id": "ops_saturday_cancellations",
+  "category": "ops",
+  "question": "cuantas cuentas cancelaron el sabado",
+  "expected_tool": "get_cancellations",
+  "expected_args": {"period": {"from": "2026-10-10", "to": "2026-10-10"}},
+  "accepted_args": [{"period": {"from": "2026-10-10", "to": "2026-10-10"}, "kind": "cancellations"}],
+  "must_contain": ["17"],
+  "must_not_contain": [],
+  "expected_figures": ["17"]
+}

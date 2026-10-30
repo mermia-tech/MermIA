@@ -12,7 +12,7 @@ from mermia_eval.config import Price
 from mermia_eval.run import RunResult, cost_usd, run_case
 from mermia_eval.score import ToolCall
 
-CASE = load_cases()[0]
+CASE = next(c for c in load_cases() if c.id == "tacos_al_pastor")
 LUNA = "openai:gpt-5.6-luna"
 
 

@@ -1,0 +1,9 @@
+{
+  "id": "locations_worst_food_cost",
+  "category": "locations",
+  "question": "en cual sucursal me esta saliendo mas caro el food cost estos ultimos 30 dias",
+  "expected_tool": "compare_locations",
+  "expected_args": {"metric": "food_cost_pct", "period": "last_30d"},
+  "accepted_args": [{"metric": "food_cost_pct", "period": {"from": "2026-09-12", "to": "2026-10-11"}}],
+  "must_contain": []
+}

@@ -1,0 +1,8 @@
+{
+  "id": "ambiguous_followup_no_context",
+  "category": "ambiguous",
+  "question": "¿y el de Polanco?",
+  "expected_tool": null,
+  "expected_args": {},
+  "must_contain": []
+}

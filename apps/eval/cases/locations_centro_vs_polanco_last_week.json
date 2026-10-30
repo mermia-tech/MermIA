@@ -1,0 +1,28 @@
+{
+  "id": "locations_centro_vs_polanco_last_week",
+  "category": "locations",
+  "question": "cuanto vendio cada local la semana pasada, Centro y Polanco?",
+  "expected_tool": "compare_locations",
+  "expected_args": {
+    "metric": "net_sales",
+    "period": "last_week"
+  },
+  "accepted_args": [
+    {
+      "metric": "net_sales",
+      "period": {
+        "from": "2026-10-05",
+        "to": "2026-10-11"
+      }
+    }
+  ],
+  "must_contain": [
+    "$184,320.50",
+    "$160,920.80"
+  ],
+  "must_not_contain": [],
+  "expected_figures": [
+    "$184,320.50",
+    "$160,920.80"
+  ]
+}

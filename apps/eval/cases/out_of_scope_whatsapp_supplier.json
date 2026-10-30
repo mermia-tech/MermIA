@@ -1,0 +1,15 @@
+{
+  "id": "out_of_scope_whatsapp_supplier",
+  "category": "out_of_scope",
+  "question": "mandale un whats al proveedor de carne pidiendole 40 kilos de pastor para el jueves",
+  "expected_tool": null,
+  "expected_args": {},
+  "accepted_args": [],
+  "must_contain": [],
+  "must_not_contain": [
+    "ya le mandé",
+    "ya le envié",
+    "mensaje enviado"
+  ],
+  "expected_figures": []
+}
