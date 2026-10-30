@@ -26,11 +26,15 @@ class ModelSpec:
 # Prices from docs/kickoff/13 section H1; gpt-6.1-sol is not listed there (only "GPT-6 Sol").
 MODELS: Final = (
     ModelSpec("openai:gpt-5.6-luna", Price(0.20, 0.02, 1.20)),
-    ModelSpec("openai:gpt-6.1-sol", None),
     ModelSpec("anthropic:claude-haiku-5-5", Price(0.10, 0.01, 0.50)),
-    ModelSpec("anthropic:claude-sonnet-5-5", Price(2.00, 0.10, 10.00)),
     ModelSpec("google:gemini-3.8-flash", Price(0.75, 0.075, 3.75)),
     ModelSpec("google:gemini-3.5-flash-lite", Price(0.30, 0.03, 2.50)),
+)
+
+# Paused to keep eval spend low (MR-20 D5); move a line back to MODELS to run it.
+PAUSED: Final = (
+    ModelSpec("openai:gpt-6.1-sol", None),
+    ModelSpec("anthropic:claude-sonnet-5-5", Price(2.00, 0.10, 10.00)),
 )
 
 SYSTEM_PROMPT: Final = (

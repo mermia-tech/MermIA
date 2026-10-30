@@ -1,22 +1,31 @@
 """`uv run --env-file .env mermia-eval`: every model answers every case; print the scores."""
 
 import argparse
+import dataclasses
 import logging
 import os
+import subprocess
 import sys
 from collections.abc import Mapping, Sequence
+from datetime import UTC, datetime
+from pathlib import Path
 from statistics import fmean
 from typing import Any
 from urllib.parse import quote
 
 from agno.utils.log import configure_agno_logging
 
+from mermia_contracts.agent_tools import tools_sha256
 from mermia_eval.cases import Case, load_cases
-from mermia_eval.config import MODELS, Price
+from mermia_eval.config import MODELS, PAUSED, Price
+from mermia_eval.gate import ScoredRun, format_gate, gate_rows, write_dump
+from mermia_eval.judge import CROSS_JUDGE, JUDGE, judge_tone, needs_cross
 from mermia_eval.run import RunResult, cost_usd, run_case
 from mermia_eval.score import score_args, score_numbers, score_tool
 from mermia_eval.tools import build_tools, make_rpc_caller
 from mermia_eval.tracing import post_scores, setup_tracing
+
+OUT_DIR = Path(__file__).resolve().parents[2] / "out"  # git-ignored run dumps
 
 
 def _scores(case: Case, r: RunResult) -> dict[str, float]:
@@ -120,6 +129,30 @@ def route_agno_logs(env: Mapping[str, str]) -> None:
     )
 
 
+def _scored(case: Case, r: RunResult, price: Price | None, judge: bool) -> ScoredRun:
+    run = ScoredRun(
+        model=r.model,
+        case_id=case.id,
+        category=case.category,
+        question=case.question,
+        reply=r.text,
+        calls=[dataclasses.asdict(c) for c in r.calls],
+        scores=None if r.error is not None else _scores(case, r),
+        tone=None,
+        tone_cross=None,
+        tone_reason="",
+        seconds=r.seconds,
+        cost=cost_usd(r, price),
+        error=r.error,
+    )
+    if judge and r.error is None:
+        run.tone, run.tone_reason = judge_tone(JUDGE, case.question, r.text)
+        if needs_cross(r.model):
+            run.tone_cross, cross_reason = judge_tone(CROSS_JUDGE, case.question, r.text)
+            run.tone_reason += f" | cross: {cross_reason}"
+    return run
+
+
 def _positive_int(text: str) -> int:
     value = int(text)  # argparse reports a ValueError as "invalid ... value"
     if value < 1:
@@ -132,6 +165,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--runs", type=_positive_int, default=1, help="runs per model and case")
     parser.add_argument("--models", help="comma-separated provider:model ids (default: all)")
     parser.add_argument("--mock-url", help="a running Mock RPC (default: in-process)")
+    parser.add_argument("--judge", action="store_true", help=f"score tone with {JUDGE} (paid)")
+    parser.add_argument("--out", type=Path, help="run dump (default: apps/eval/out/<time>.json)")
     args = parser.parse_args(argv)
 
     known = {m.id for m in MODELS}
@@ -140,6 +175,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         models = [m.strip() for m in args.models.split(",")]
         if "" in models:
             parser.error("--models has an empty id")
+    if paused := [m for m in models if m in {p.id for p in PAUSED}]:
+        parser.error(f"paused to keep eval spend low (config.PAUSED): {', '.join(paused)}")
     if unknown := [m for m in models if m not in known]:
         parser.error(f"unknown model(s): {', '.join(unknown)}")
 
@@ -155,6 +192,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     backend = make_rpc_caller(args.mock_url)
     tools = build_tools(backend)
     prices = {m.id: m.price for m in MODELS}
+    out = args.out or OUT_DIR / f"{datetime.now(UTC):%Y%m%dT%H%M%SZ}.json"
+    commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True)
+    meta = {"git_commit": commit.stdout.strip(), "tools_sha256": tools_sha256()}
+    scored: list[ScoredRun] = []
 
     every_run_errored = True
     first_error: dict[str, str] = {}
@@ -169,14 +210,20 @@ def main(argv: Sequence[str] | None = None) -> int:
                     results.append(r)
                     if r.error is not None:
                         first_error.setdefault(model, r.error)
+                    run = _scored(case, r, prices.get(model), args.judge)
+                    scored.append(run)
                     if r.error is None:
                         every_run_errored = False
                         # spans export in the background; the scores need the trace to be there
                         if provider is not None:
                             provider.force_flush()
-                        post_scores(env, r.trace_id, _scores(case, r))
+                        tone = {} if run.tone_gate is None else {"tone": float(run.tone_gate)}
+                        post_scores(env, r.trace_id, _scores(case, r) | tone)
                 print(format_row(summarize(results, case, prices)[0]), flush=True)
+        print(f"\n{format_gate(gate_rows(scored))}", flush=True)
     finally:
+        write_dump(out, scored, meta)  # also on a crash or Ctrl-C: an hour of paid runs is kept
+        print(f"runs written to {out}", file=sys.stderr)
         if provider is not None:
             provider.force_flush()
         for model, error in first_error.items():  # the table only counts errors; say what they were

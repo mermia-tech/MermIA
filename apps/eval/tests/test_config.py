@@ -3,26 +3,26 @@ import re
 
 import pytest
 
-from mermia_eval.config import MODELS, SYSTEM_PROMPT, build_model
+from mermia_eval.config import MODELS, PAUSED, SYSTEM_PROMPT, build_model
 from mermia_eval.figures import EXPECTED
 
-SIX = {
+ACTIVE = {
     "openai:gpt-5.6-luna",
-    "openai:gpt-6.1-sol",
     "anthropic:claude-haiku-5-5",
-    "anthropic:claude-sonnet-5-5",
     "google:gemini-3.8-flash",
     "google:gemini-3.5-flash-lite",
 }
+PAUSED_IDS = {"openai:gpt-6.1-sol", "anthropic:claude-sonnet-5-5"}  # MR-20 D5: eval budget
 
 
 def test_models_are_provider_colon_id() -> None:
-    assert {m.id for m in MODELS} == SIX
-    assert all(re.fullmatch(r"(openai|anthropic|google):\S+", m.id) for m in MODELS)
+    assert {m.id for m in MODELS} == ACTIVE
+    assert {m.id for m in PAUSED} == PAUSED_IDS
+    assert all(re.fullmatch(r"(openai|anthropic|google):\S+", m.id) for m in MODELS + PAUSED)
 
 
 def test_only_gpt_6_1_sol_has_no_price() -> None:
-    assert {m.id for m in MODELS if m.price is None} == {"openai:gpt-6.1-sol"}
+    assert {m.id for m in MODELS + PAUSED if m.price is None} == {"openai:gpt-6.1-sol"}
 
 
 def test_system_prompt_is_spanish_and_forbids_inventing_numbers() -> None:
