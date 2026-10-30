@@ -1,4 +1,7 @@
-"""C4: the 12 agent tools in Anthropic tool format, derived from C3 plus propose_change.
+"""C4: the 12 agent tools (name, description, JSON Schema), derived from C3 plus propose_change.
+
+The shape is provider-neutral: the eval harness hands each tool to Agno as it is, and Agno sends it
+to Anthropic, OpenAI or Google.
 
 Each read tool is the RPC of the same name (rpc.RPCS); `propose_change` is the only write tool.
 Its schema stays flat (kind, target, values, reason), and `values` is typed per kind: one closed
