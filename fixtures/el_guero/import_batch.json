@@ -5,7 +5,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-08-17",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-08-17:2026-08-17",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -20,7 +20,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-08-17",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-08-17:2026-08-17",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -35,7 +35,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-08-18",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-08-18:2026-08-18",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -50,7 +50,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-08-18",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-08-18:2026-08-18",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -65,7 +65,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-08-19",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-08-19:2026-08-19",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -80,7 +80,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-08-19",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-08-19:2026-08-19",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -95,7 +95,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-08-20",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-08-20:2026-08-20",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -110,7 +110,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-08-20",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-08-20:2026-08-20",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -125,7 +125,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-08-21",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-08-21:2026-08-21",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -140,7 +140,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-08-21",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-08-21:2026-08-21",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -155,7 +155,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-08-22",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-08-22:2026-08-22",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -170,7 +170,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-08-22",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-08-22:2026-08-22",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -185,7 +185,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-08-23",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-08-23:2026-08-23",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -200,7 +200,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-08-23",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-08-23:2026-08-23",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -215,7 +215,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-08-24",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-08-24:2026-08-24",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -230,7 +230,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-08-24",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-08-24:2026-08-24",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -245,7 +245,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-08-25",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-08-25:2026-08-25",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -260,7 +260,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-08-25",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-08-25:2026-08-25",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -275,7 +275,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-08-26",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-08-26:2026-08-26",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -290,7 +290,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-08-26",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-08-26:2026-08-26",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -305,7 +305,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-08-27",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-08-27:2026-08-27",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -320,7 +320,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-08-27",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-08-27:2026-08-27",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -335,7 +335,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-08-28",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-08-28:2026-08-28",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -350,7 +350,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-08-28",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-08-28:2026-08-28",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -365,7 +365,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-08-29",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-08-29:2026-08-29",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -380,7 +380,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-08-29",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-08-29:2026-08-29",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -395,7 +395,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-08-30",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-08-30:2026-08-30",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -410,7 +410,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-08-30",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-08-30:2026-08-30",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -425,7 +425,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-08-31",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-08-31:2026-08-31",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -440,7 +440,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-08-31",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-08-31:2026-08-31",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -455,7 +455,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-01",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-01:2026-09-01",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -470,7 +470,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-01",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-01:2026-09-01",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -485,7 +485,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-02",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-02:2026-09-02",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -500,7 +500,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-02",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-02:2026-09-02",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -515,7 +515,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-03",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-03:2026-09-03",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -530,7 +530,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-03",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-03:2026-09-03",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -545,7 +545,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-04",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-04:2026-09-04",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -560,7 +560,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-04",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-04:2026-09-04",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -575,7 +575,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-05",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-05:2026-09-05",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -590,7 +590,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-05",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-05:2026-09-05",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -605,7 +605,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-06",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-06:2026-09-06",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -620,7 +620,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-06",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-06:2026-09-06",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -635,7 +635,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-07",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-07:2026-09-07",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -650,7 +650,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-07",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-07:2026-09-07",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -665,7 +665,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-08",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-08:2026-09-08",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -680,7 +680,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-08",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-08:2026-09-08",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -695,7 +695,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-09",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-09:2026-09-09",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -710,7 +710,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-09",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-09:2026-09-09",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -725,7 +725,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-10",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-10:2026-09-10",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -740,7 +740,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-10",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-10:2026-09-10",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -755,7 +755,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-11",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-11:2026-09-11",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -770,7 +770,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-11",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-11:2026-09-11",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -785,7 +785,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-12",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-12:2026-09-12",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -800,7 +800,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-12",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-12:2026-09-12",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -815,7 +815,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-13",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-13:2026-09-13",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -830,7 +830,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-13",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-13:2026-09-13",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -845,7 +845,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-14",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-14:2026-09-14",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -860,7 +860,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-14",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-14:2026-09-14",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -875,7 +875,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-15",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-15:2026-09-15",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -890,7 +890,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-15",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-15:2026-09-15",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -905,7 +905,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-16",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-16:2026-09-16",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -920,7 +920,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-16",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-16:2026-09-16",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -935,7 +935,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-17",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-17:2026-09-17",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -950,7 +950,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-17",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-17:2026-09-17",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -965,7 +965,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-18",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-18:2026-09-18",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -980,7 +980,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-18",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-18:2026-09-18",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -995,7 +995,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-19",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-19:2026-09-19",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1010,7 +1010,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-19",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-19:2026-09-19",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1025,7 +1025,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-20",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-20:2026-09-20",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1040,7 +1040,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-20",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-20:2026-09-20",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1055,7 +1055,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-21",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-21:2026-09-21",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1070,7 +1070,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-21",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-21:2026-09-21",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1085,7 +1085,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-22",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-22:2026-09-22",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1100,7 +1100,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-22",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-22:2026-09-22",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1115,7 +1115,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-23",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-23:2026-09-23",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1130,7 +1130,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-23",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-23:2026-09-23",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1145,7 +1145,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-24",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-24:2026-09-24",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1160,7 +1160,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-24",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-24:2026-09-24",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1175,7 +1175,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-25",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-25:2026-09-25",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1190,7 +1190,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-25",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-25:2026-09-25",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1205,7 +1205,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-26",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-26:2026-09-26",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1220,7 +1220,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-26",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-26:2026-09-26",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1235,7 +1235,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-27",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-27:2026-09-27",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1250,7 +1250,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-27",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-27:2026-09-27",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1265,7 +1265,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-28",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-28:2026-09-28",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1280,7 +1280,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-28",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-28:2026-09-28",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1295,7 +1295,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-29",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-29:2026-09-29",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1310,7 +1310,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-29",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-29:2026-09-29",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1325,7 +1325,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-09-30",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-09-30:2026-09-30",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1340,7 +1340,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-09-30",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-09-30:2026-09-30",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1355,7 +1355,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-10-01",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-10-01:2026-10-01",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1370,7 +1370,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-10-01",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-10-01:2026-10-01",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1385,7 +1385,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-10-02",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-10-02:2026-10-02",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1400,7 +1400,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-10-02",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-10-02:2026-10-02",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1415,7 +1415,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-10-03",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-10-03:2026-10-03",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1430,7 +1430,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-10-03",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-10-03:2026-10-03",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1445,7 +1445,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-10-04",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-10-04:2026-10-04",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1460,7 +1460,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-10-04",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-10-04:2026-10-04",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1475,7 +1475,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-10-05",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-10-05:2026-10-05",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1490,7 +1490,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-10-05",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-10-05:2026-10-05",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1505,7 +1505,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-10-06",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-10-06:2026-10-06",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1520,7 +1520,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-10-06",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-10-06:2026-10-06",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1535,7 +1535,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-10-07",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-10-07:2026-10-07",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1550,7 +1550,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-10-07",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-10-07:2026-10-07",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1565,7 +1565,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-10-08",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-10-08:2026-10-08",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1580,7 +1580,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-10-08",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-10-08:2026-10-08",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1595,7 +1595,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-10-09",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-10-09:2026-10-09",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1610,7 +1610,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-10-09",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-10-09:2026-10-09",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1625,7 +1625,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-10-10",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-10-10:2026-10-10",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1640,7 +1640,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-10-10",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-10-10:2026-10-10",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1655,7 +1655,7 @@
   "source_id": "4d2c8a0d-96ed-5ce6-b52b-ec0b79c1d57e",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L1:items:2026-10-11",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.productos_vendidos:2026-10-11:2026-10-11",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1670,7 +1670,7 @@
   "source_id": "1ae50354-9849-54d8-a23b-313b5019ce19",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L1:daily:2026-10-11",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.ventas_por_dia:2026-10-11:2026-10-11",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1685,7 +1685,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-08-17",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-08-17:2026-08-17",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1700,7 +1700,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-08-17",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-08-17:2026-08-17",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1715,7 +1715,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-08-18",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-08-18:2026-08-18",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1730,7 +1730,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-08-18",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-08-18:2026-08-18",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1745,7 +1745,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-08-19",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-08-19:2026-08-19",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1760,7 +1760,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-08-19",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-08-19:2026-08-19",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1775,7 +1775,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-08-20",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-08-20:2026-08-20",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1790,7 +1790,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-08-20",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-08-20:2026-08-20",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1805,7 +1805,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-08-21",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-08-21:2026-08-21",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1820,7 +1820,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-08-21",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-08-21:2026-08-21",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1835,7 +1835,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-08-22",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-08-22:2026-08-22",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1850,7 +1850,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-08-22",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-08-22:2026-08-22",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1865,7 +1865,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-08-23",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-08-23:2026-08-23",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1880,7 +1880,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-08-23",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-08-23:2026-08-23",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1895,7 +1895,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-08-24",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-08-24:2026-08-24",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1910,7 +1910,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-08-24",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-08-24:2026-08-24",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1925,7 +1925,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-08-25",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-08-25:2026-08-25",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1940,7 +1940,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-08-25",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-08-25:2026-08-25",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1955,7 +1955,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-08-26",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-08-26:2026-08-26",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -1970,7 +1970,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-08-26",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-08-26:2026-08-26",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -1985,7 +1985,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-08-27",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-08-27:2026-08-27",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2000,7 +2000,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-08-27",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-08-27:2026-08-27",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2015,7 +2015,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-08-28",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-08-28:2026-08-28",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2030,7 +2030,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-08-28",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-08-28:2026-08-28",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2045,7 +2045,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-08-29",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-08-29:2026-08-29",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2060,7 +2060,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-08-29",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-08-29:2026-08-29",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2075,7 +2075,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-08-30",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-08-30:2026-08-30",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2090,7 +2090,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-08-30",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-08-30:2026-08-30",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2105,7 +2105,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-08-31",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-08-31:2026-08-31",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2120,7 +2120,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-08-31",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-08-31:2026-08-31",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2135,7 +2135,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-01",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-01:2026-09-01",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2150,7 +2150,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-01",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-01:2026-09-01",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2165,7 +2165,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-02",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-02:2026-09-02",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2180,7 +2180,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-02",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-02:2026-09-02",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2195,7 +2195,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-03",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-03:2026-09-03",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2210,7 +2210,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-03",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-03:2026-09-03",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2225,7 +2225,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-04",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-04:2026-09-04",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2240,7 +2240,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-04",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-04:2026-09-04",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2255,7 +2255,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-05",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-05:2026-09-05",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2270,7 +2270,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-05",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-05:2026-09-05",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2285,7 +2285,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-06",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-06:2026-09-06",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2300,7 +2300,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-06",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-06:2026-09-06",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2315,7 +2315,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-07",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-07:2026-09-07",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2330,7 +2330,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-07",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-07:2026-09-07",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2345,7 +2345,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-08",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-08:2026-09-08",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2360,7 +2360,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-08",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-08:2026-09-08",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2375,7 +2375,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-09",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-09:2026-09-09",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2390,7 +2390,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-09",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-09:2026-09-09",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2405,7 +2405,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-10",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-10:2026-09-10",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2420,7 +2420,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-10",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-10:2026-09-10",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2435,7 +2435,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-11",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-11:2026-09-11",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2450,7 +2450,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-11",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-11:2026-09-11",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2465,7 +2465,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-12",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-12:2026-09-12",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2480,7 +2480,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-12",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-12:2026-09-12",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2495,7 +2495,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-13",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-13:2026-09-13",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2510,7 +2510,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-13",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-13:2026-09-13",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2525,7 +2525,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-14",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-14:2026-09-14",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2540,7 +2540,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-14",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-14:2026-09-14",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2555,7 +2555,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-15",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-15:2026-09-15",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2570,7 +2570,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-15",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-15:2026-09-15",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2585,7 +2585,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-16",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-16:2026-09-16",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2600,7 +2600,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-16",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-16:2026-09-16",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2615,7 +2615,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-17",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-17:2026-09-17",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2630,7 +2630,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-17",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-17:2026-09-17",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2645,7 +2645,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-18",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-18:2026-09-18",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2660,7 +2660,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-18",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-18:2026-09-18",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2675,7 +2675,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-19",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-19:2026-09-19",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2690,7 +2690,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-19",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-19:2026-09-19",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2705,7 +2705,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-20",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-20:2026-09-20",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2720,7 +2720,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-20",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-20:2026-09-20",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2735,7 +2735,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-21",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-21:2026-09-21",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2750,7 +2750,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-21",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-21:2026-09-21",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2765,7 +2765,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-22",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-22:2026-09-22",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2780,7 +2780,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-22",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-22:2026-09-22",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2795,7 +2795,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-23",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-23:2026-09-23",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2810,7 +2810,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-23",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-23:2026-09-23",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2825,7 +2825,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-24",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-24:2026-09-24",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2840,7 +2840,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-24",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-24:2026-09-24",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2855,7 +2855,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-25",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-25:2026-09-25",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2870,7 +2870,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-25",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-25:2026-09-25",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2885,7 +2885,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-26",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-26:2026-09-26",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2900,7 +2900,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-26",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-26:2026-09-26",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2915,7 +2915,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-27",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-27:2026-09-27",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2930,7 +2930,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-27",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-27:2026-09-27",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2945,7 +2945,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-28",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-28:2026-09-28",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2960,7 +2960,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-28",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-28:2026-09-28",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -2975,7 +2975,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-29",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-29:2026-09-29",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -2990,7 +2990,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-29",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-29:2026-09-29",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -3005,7 +3005,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-09-30",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-09-30:2026-09-30",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -3020,7 +3020,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-09-30",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-09-30:2026-09-30",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -3035,7 +3035,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-10-01",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-10-01:2026-10-01",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -3050,7 +3050,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-10-01",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-10-01:2026-10-01",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -3065,7 +3065,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-10-02",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-10-02:2026-10-02",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -3080,7 +3080,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-10-02",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-10-02:2026-10-02",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -3095,7 +3095,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-10-03",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-10-03:2026-10-03",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -3110,7 +3110,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-10-03",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-10-03:2026-10-03",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -3125,7 +3125,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-10-04",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-10-04:2026-10-04",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -3140,7 +3140,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-10-04",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-10-04:2026-10-04",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -3155,7 +3155,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-10-05",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-10-05:2026-10-05",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -3170,7 +3170,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-10-05",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-10-05:2026-10-05",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -3185,7 +3185,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-10-06",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-10-06:2026-10-06",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -3200,7 +3200,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-10-06",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-10-06:2026-10-06",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -3215,7 +3215,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-10-07",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-10-07:2026-10-07",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -3230,7 +3230,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-10-07",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-10-07:2026-10-07",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -3245,7 +3245,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-10-08",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-10-08:2026-10-08",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -3260,7 +3260,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-10-08",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-10-08:2026-10-08",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -3275,7 +3275,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-10-09",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-10-09:2026-10-09",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -3290,7 +3290,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-10-09",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-10-09:2026-10-09",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -3305,7 +3305,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-10-10",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-10-10:2026-10-10",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -3320,7 +3320,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-10-10",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-10-10:2026-10-10",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -3335,7 +3335,7 @@
   "source_id": "fa8c2869-6189-5a6b-bbf3-ed0381d8a2bf",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.productos_vendidos@v1",
-  "slice_key": "L2:items:2026-10-11",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.productos_vendidos:2026-10-11:2026-10-11",
   "status": "applied",
   "stats": {
    "lines": 41
@@ -3350,7 +3350,7 @@
   "source_id": "8e668213-f158-5044-9ccc-1f062d074aa8",
   "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
   "parser": "sr.ventas_por_dia@v1",
-  "slice_key": "L2:daily:2026-10-11",
+  "slice_key": "fdda5e3b-6bcd-5c48-a6de-f524be37463e:sr.ventas_por_dia:2026-10-11:2026-10-11",
   "status": "applied",
   "stats": {
    "lines": 1
@@ -3365,7 +3365,7 @@
   "source_id": "5db82f2e-3177-507b-b191-65d5bdf8eb89",
   "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
   "parser": "sr.cancelaciones@v1",
-  "slice_key": "L1:cancellations:2026-10-10",
+  "slice_key": "705e8e51-376b-5785-adbb-405eff4e2a22:sr.cancelaciones:2026-10-10:2026-10-10",
   "status": "applied",
   "stats": {
    "lines": 17

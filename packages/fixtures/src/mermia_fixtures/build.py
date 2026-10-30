@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
+from mermia_contracts.batch import Period
+from mermia_contracts.keys import normalize_name, slice_key
 from mermia_fixtures import restaurant as r
 
 Row = dict[str, Any]
@@ -428,7 +430,9 @@ def build() -> tuple[dict[str, list[Row]], list[ItemDay], list[Day]]:
                         "source_id": src[(lo.key, kind)],
                         "location_id": loc_id[lo.key],
                         "parser": parser,
-                        "slice_key": f"{lo.key}:{kind}:{d.isoformat()}",
+                        "slice_key": slice_key(
+                            loc_id[lo.key], parser, Period.model_validate({"from": d, "to": d})
+                        ),
                         "status": "applied",
                         "stats": {"lines": lines},
                         "quality": "file",
@@ -535,7 +539,11 @@ def build() -> tuple[dict[str, list[Row]], list[ItemDay], list[Day]]:
             "source_id": src[(cancel_loc, "cancellations")],
             "location_id": loc_id[cancel_loc],
             "parser": PARSER_CANCELLATIONS,
-            "slice_key": f"{cancel_loc}:cancellations:{cancel_day.isoformat()}",
+            "slice_key": slice_key(
+                loc_id[cancel_loc],
+                PARSER_CANCELLATIONS,
+                Period.model_validate({"from": cancel_day, "to": cancel_day}),
+            ),
             "status": "applied",
             "stats": {"lines": len(r.CANCEL_WAITERS)},
             "quality": "file",
@@ -768,7 +776,4 @@ def _costing(t: dict[str, list[Row]], tenant: str) -> None:
 
 
 def normalize(name: str) -> str:
-    import unicodedata
-
-    plain = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
-    return " ".join(plain.lower().replace("(", " ").replace(")", " ").split())
+    return normalize_name(name)

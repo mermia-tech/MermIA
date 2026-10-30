@@ -16,11 +16,34 @@ from mermia_eval.cases import Case
 # a comma is a thousands separator only before exactly three digits; "+" is no sign.
 _NUMBER = re.compile(
     r"(?:(?<![\w.])|(?<=MXN)|(?<=USD))([-\u2212]?)\$?"
-    r"(\d{1,3}(?:,\d{3})+(?!\d)(?:\.\d+)?|\d+(?:\.\d+)?|\.\d+)"
+    r"(\d{1,3}(?:,\d{3})+(?!\d)(?:\.\d+)?|\d+(?:\.\d+)?|\.\d+)",
+    re.IGNORECASE,
 )
 # Digits that are not figures: ids and dates inside the tool data.
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.IGNORECASE)
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+_DATETIME = re.compile(r"\d{4}-\d{2}-\d{2}(?:T[\d:.]+(?:[+-]\d{2}:\d{2}|Z)?)?")  # with UTC offset
+_MONTHS = [
+    "enero",
+    "febrero",
+    "marzo",
+    "abril",
+    "mayo",
+    "junio",
+    "julio",
+    "agosto",
+    "septiembre",
+    "octubre",
+    "noviembre",
+    "diciembre",
+]
+# "12 de octubre (de 2026)" and a range "del 5 al 11 de octubre"; "12/10/2026" is dd/mm/yyyy.
+_SPANISH_DATE = re.compile(
+    r"\b(\d{1,2})(?:\s+(?:al|y|a)\s+(\d{1,2}))?\s+de\s+(" + "|".join(_MONTHS) + r")"
+    r"(?:\s+del?\s+(\d{4}))?\b",
+    re.IGNORECASE,
+)
+_SLASH_DATE = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
 _LIST_MARKER = re.compile(r"(?m)^[ \t]*\d{1,2}[.)][ \t]+")
 
 
@@ -51,7 +74,7 @@ def _tool_numbers(result: str) -> set[Decimal]:
             for item in value:
                 walk(item)
         elif isinstance(value, str):
-            found.update(_numbers(_DATE.sub(" ", _UUID.sub(" ", value))))
+            found.update(_numbers(_DATETIME.sub(" ", _UUID.sub(" ", value))))
         elif isinstance(value, int | float) and not isinstance(value, bool):
             found.add(Decimal(str(value)))
 
@@ -60,6 +83,30 @@ def _tool_numbers(result: str) -> set[Decimal]:
     except ValueError:  # not JSON (an error text): every digit run counts
         found = _numbers(result)
     return found
+
+
+def _strip_dates(reply: str, dates: set[str]) -> str:
+    """Remove the tool's dates from the reply, in ISO or Spanish form; other dates stay."""
+    days = {tuple(map(int, d.split("-"))) for d in dates}
+
+    def known(day: str, month: int, year: str | None) -> bool:
+        return any(
+            (year is None or int(year) == y) and (m, int(day)) == (month, d) for y, m, d in days
+        )
+
+    def spanish(match: re.Match[str]) -> str:
+        first, second, month, year = match.groups()
+        m = _MONTHS.index(month.lower()) + 1
+        ok = all(known(day, m, year) for day in (first, second) if day)
+        return " " if ok else match.group()
+
+    def slash(match: re.Match[str]) -> str:
+        day, month, year = match.groups()
+        return " " if known(day, int(month), year) else match.group()
+
+    for d in dates:
+        reply = reply.replace(d, " ")
+    return _SLASH_DATE.sub(slash, _SPANISH_DATE.sub(spanish, reply))
 
 
 _PLAIN_NUMBER = re.compile(r"-?\d+(\.\d+)?")
@@ -136,9 +183,7 @@ def score_numbers(case: Case, reply: str, tool_results: Sequence[str]) -> float:
     must_not_contain phrase is."""
     if any(_fold(p) in _fold(reply) for p in case.must_not_contain):
         return 0.0
-    dates = {d for r in tool_results for d in _DATE.findall(r)}  # a date may be quoted whole
-    for d in dates:
-        reply = reply.replace(d, " ")
+    reply = _strip_dates(reply, {d for r in tool_results for d in _DATE.findall(r)})
     shown = _numbers(_LIST_MARKER.sub("", reply))  # "7. " of a list is not a figure
     known = _numbers(case.question).union(*(_tool_numbers(r) for r in tool_results))
     required = set().union(*(_numbers(f) for f in case.must_contain))
