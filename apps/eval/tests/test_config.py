@@ -3,7 +3,7 @@ import re
 
 import pytest
 
-from mermia_eval.config import MODELS, PAUSED, SYSTEM_PROMPT, build_model
+from mermia_eval.config import MODELS, PAUSED, SYSTEM_PROMPT, TIMEOUT, build_model
 from mermia_eval.figures import EXPECTED
 
 ACTIVE = {
@@ -36,6 +36,10 @@ def test_build_model_sets_low_reasoning() -> None:
     claude = build_model("anthropic:claude-haiku-5-5")
     assert claude.id == "claude-haiku-5-5"
     assert claude.thinking is None
+
+
+def test_build_model_sets_a_timeout() -> None:
+    assert {build_model(m.id).timeout for m in MODELS} == {TIMEOUT}
 
 
 def test_build_model_rejects_unknown_provider() -> None:

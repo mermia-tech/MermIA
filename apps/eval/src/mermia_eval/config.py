@@ -37,6 +37,9 @@ PAUSED: Final = (
     ModelSpec("anthropic:claude-sonnet-5-5", Price(2.00, 0.10, 10.00)),
 )
 
+# Seconds per HTTP call; without it one stuck Gemini request hung a whole run (MR-20).
+TIMEOUT: Final = 60.0
+
 SYSTEM_PROMPT: Final = (
     "Eres el asistente de un restaurante en México. Responde en español de México, breve y claro. "
     "Hoy es lunes 2026-10-12; los datos llegan hasta el 2026-10-11. "
@@ -52,9 +55,9 @@ def build_model(spec_id: str) -> Any:
     """The Agno model for "provider:model_id", with the same low reasoning for every provider."""
     provider, _, model_id = spec_id.partition(":")
     if provider == "openai":
-        return OpenAIResponses(id=model_id, reasoning_effort="low")
+        return OpenAIResponses(id=model_id, reasoning_effort="low", timeout=TIMEOUT)
     if provider == "google":
-        return Gemini(id=model_id, thinking_level="low")
+        return Gemini(id=model_id, thinking_level="low", timeout=TIMEOUT)
     if provider == "anthropic":
-        return Claude(id=model_id)
+        return Claude(id=model_id, timeout=TIMEOUT)
     raise ValueError(f"unknown provider in {spec_id!r}")
