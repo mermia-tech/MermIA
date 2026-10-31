@@ -41,6 +41,18 @@ No agent code is merged until we know which model answers which question. This t
 - **D4 `llm_route` enum.** Not changed here. If the winners are not Haiku / Sonnet, the memo says so and calls for a follow-up migration to role names (for example `primary`, `escalation`).
 - **D5 Budget: provisional now, final later (2026-10-30).** The human partner does not want to spend about US$20 yet. Sol and Sonnet move to a `PAUSED` tuple in `config.py` that `--models` rejects, so they cannot be run by accident; re-enabling one is moving its line back to `MODELS`. The preliminary run is 1 run per case. One run cannot show flakiness and makes the 100 % numeric gate weaker, so the memo is marked **provisional** and gives the exact command for the final run (all six models, `--runs 3`, Sonnet / Sol as judges). The final run is a follow-up ticket.
 
+## Amendments (2026-10-31)
+- **No model is chosen in MR-20 (product owner).** The deliverable is the tooling, ready for the final run, plus a provisional memo with the preliminary evidence. "Done when" items about a provisional primary no longer apply.
+- **D2 judge:** the judge is GPT-5.6 Luna and the cross judge is Gemini 3.5 Flash-Lite, because Gemini 3.8 Flash returned 503 on every call with the free-tier key.
+- **Scoring changes:** written down per the anti-goal, with tests, and the thresholds are unchanged:
+  - args scores only the first call to the expected tool;
+  - all locations listed equals none;
+  - the prompt's dates are not counted as numbers;
+  - model calls time out after 60 s;
+  - Gemini retries 429 / 503.
+
+  `docs/decisions/llm.md` explains why.
+
 ## Decision rule (to apply to the results)
 1. Eligible as primary: passes every threshold overall.
 2. Among eligible models, pick the cheapest; a tie goes to the lower p95.

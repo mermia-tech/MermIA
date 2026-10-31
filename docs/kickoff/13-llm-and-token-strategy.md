@@ -111,6 +111,8 @@ Run Haiku 5.5, Sonnet 5.5, GPT-6 Luna, Gemini 3.5 Flash-Lite, gpt-oss-120b, Qwen
 
 ### H4. Recommendation and routing
 
+> Status and the final-run steps: docs/decisions/llm.md (MR-20). The table below is the pre-eval hypothesis until the final run.
+
 | Role | Model | Why | Confirm by eval |
 |---|---|---|---|
 | Primary (80-90% of LLM calls) | Claude Haiku 5.5 | Lowest verified price among major closed models tied with GPT-6 Luna; cache read $0.01; Anthropic cache-aware ITPM; same vendor as escalation so prompts and tool schemas are portable | tool accuracy, Spanish, latency |
