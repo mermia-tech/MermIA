@@ -57,7 +57,15 @@ def build_model(spec_id: str) -> Any:
     if provider == "openai":
         return OpenAIResponses(id=model_id, reasoning_effort="low", timeout=TIMEOUT)
     if provider == "google":
-        return Gemini(id=model_id, thinking_level="low", timeout=TIMEOUT)
+        # Retry 429/503 with 10, 20, 40 s waits: the free-tier key allows 15 requests per minute.
+        return Gemini(
+            id=model_id,
+            thinking_level="low",
+            timeout=TIMEOUT,
+            retries=3,
+            delay_between_retries=10,
+            exponential_backoff=True,
+        )
     if provider == "anthropic":
         return Claude(id=model_id, timeout=TIMEOUT)
     raise ValueError(f"unknown provider in {spec_id!r}")

@@ -418,11 +418,11 @@ def test_judge_cross_only_for_judge_vendor(
     cli.main(["--judge", "--models", f"{LUNA},{flash},{HAIKU}", "--out", str(dump)])
     assert calls == [
         (JUDGE, f"{LUNA} $37.63"),
+        (CROSS_JUDGE, f"{LUNA} $37.63"),
         (JUDGE, f"{flash} $37.63"),
-        (CROSS_JUDGE, f"{flash} $37.63"),
     ]
     runs = json.loads(dump.read_text())["runs"]
-    assert [(r["tone"], r["tone_cross"]) for r in runs] == [(4, None), (4, 3), (None, None)]
+    assert [(r["tone"], r["tone_cross"]) for r in runs] == [(4, 3), (4, None), (None, None)]
 
 
 def test_tone_posted_to_langfuse(monkeypatch: pytest.MonkeyPatch, no_network: None) -> None:
@@ -431,7 +431,7 @@ def test_tone_posted_to_langfuse(monkeypatch: pytest.MonkeyPatch, no_network: No
     monkeypatch.setattr(cli, "post_scores", lambda env, tid, scores: posted.append(dict(scores)))
     monkeypatch.setattr(cli, "run_case", lambda model, case, tools, **kw: _ok(model))
     cli.main(["--judge", "--models", LUNA])
-    assert posted[0]["tone"] == 4
+    assert posted[0]["tone"] == 3  # Luna is the judge's vendor: the lower cross score counts
 
 
 def test_paused_model_rejected(no_network: None, capsys: pytest.CaptureFixture[str]) -> None:

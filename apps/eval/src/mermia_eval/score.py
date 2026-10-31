@@ -10,6 +10,7 @@ from typing import Any
 
 from mermia_contracts.agent_tools import tool_definitions
 from mermia_eval.cases import Case
+from mermia_eval.config import SYSTEM_PROMPT
 
 # A sign counts only when it is not glued to a word or digit ("2026-10-20" has no negatives),
 # but a currency code may touch the figure ("MXN70.00") and a sign may precede "$" ("-$37.63");
@@ -22,6 +23,7 @@ _NUMBER = re.compile(
 # Digits that are not figures: ids and dates inside the tool data.
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.IGNORECASE)
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+_PROMPT_DATES = set(_DATE.findall(SYSTEM_PROMPT))  # today and the data cutoff
 _DATETIME = re.compile(r"\d{4}-\d{2}-\d{2}(?:T[\d:.]+(?:[+-]\d{2}:\d{2}|Z)?)?")  # with UTC offset
 _MONTHS = [
     "enero",
@@ -178,12 +180,13 @@ def score_args(case: Case, calls: Sequence[ToolCall]) -> float:
 
 
 def score_numbers(case: Case, reply: str, tool_results: Sequence[str]) -> float:
-    """1.0 if every number in the reply comes from a tool result or the question, and every
+    """1.0 if every number in the reply comes from a tool result or the question (dates
+    from the tools or the prompt are not numbers), and every
     must_contain figure is in the reply (numbers compared as values, not as text), and no
     must_not_contain phrase is."""
     if any(_fold(p) in _fold(reply) for p in case.must_not_contain):
         return 0.0
-    reply = _strip_dates(reply, {d for r in tool_results for d in _DATE.findall(r)})
+    reply = _strip_dates(reply, _PROMPT_DATES | {d for r in tool_results for d in _DATE.findall(r)})
     shown = _numbers(_LIST_MARKER.sub("", reply))  # "7. " of a list is not a figure
     known = _numbers(case.question).union(*(_tool_numbers(r) for r in tool_results))
     required = set().union(*(_numbers(f) for f in case.must_contain))

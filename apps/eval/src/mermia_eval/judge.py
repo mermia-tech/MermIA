@@ -10,9 +10,10 @@ from agno.run.base import RunStatus
 
 from mermia_eval.config import build_model
 
-# Cheap judges for the preliminary run; the final run switches to Sonnet 5.5 / GPT-6.1 Sol.
-JUDGE: Final = "google:gemini-3.8-flash"
-CROSS_JUDGE: Final = "openai:gpt-5.6-luna"  # re-judges replies from the judge's own vendor
+# Cheap judges for the preliminary run (Gemini 3.8 Flash kept failing with 503 on the free-tier
+# key); the final run switches to Sonnet 5.5 / GPT-6.1 Sol.
+JUDGE: Final = "openai:gpt-5.6-luna"
+CROSS_JUDGE: Final = "google:gemini-3.5-flash-lite"  # re-judges replies from the judge's vendor
 
 JUDGE_PROMPT: Final = """\
 You grade the tone of a restaurant assistant's reply to a restaurant owner in Mexico, sent on \

@@ -59,6 +59,12 @@ def test_numbers_ok() -> None:
     assert score_numbers(CASE, REPLY, [ANSWER]) == 1.0
 
 
+def test_numbers_allow_the_prompt_dates_but_not_others() -> None:
+    assert score_numbers(CASE, REPLY + " Hoy, 12 de octubre de 2026.", [ANSWER]) == 1.0
+    assert score_numbers(CASE, REPLY + " Datos al 2026-10-11.", [ANSWER]) == 1.0
+    assert score_numbers(CASE, REPLY + " Llega el 15 de octubre.", [ANSWER]) == 0.0
+
+
 def test_numbers_zero_on_invented_figure() -> None:
     assert score_numbers(CASE, REPLY + " Unos $40 de utilidad.", [ANSWER]) == 0.0
 

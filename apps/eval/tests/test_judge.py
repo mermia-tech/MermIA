@@ -61,6 +61,6 @@ def test_rubric_names_the_criteria() -> None:
 
 
 def test_needs_cross() -> None:
-    assert needs_cross("google:gemini-3.5-flash-lite") is True
-    assert needs_cross("openai:gpt-5.6-luna") is False
+    assert needs_cross("openai:gpt-5.6-luna") is True
+    assert needs_cross("google:gemini-3.5-flash-lite") is False
     assert needs_cross("anthropic:claude-haiku-5-5") is False
