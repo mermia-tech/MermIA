@@ -11,6 +11,7 @@ from typing import Any
 from mermia_contracts.agent_tools import tool_definitions
 from mermia_eval.cases import Case
 from mermia_eval.config import SYSTEM_PROMPT
+from mermia_eval.figures import EXPECTED
 
 # A sign counts only when it is not glued to a word or digit ("2026-10-20" has no negatives),
 # but a currency code may touch the figure ("MXN70.00") and a sign may precede "$" ("-$37.63");
@@ -141,6 +142,11 @@ def _drop_nulls(value: Any) -> Any:
     return value
 
 
+# Naming every location is the same request as naming none (C3: no location = all of them).
+_ALL_LOCATIONS = sorted(
+    loc["id"] for loc in json.loads((EXPECTED.parent / "location.json").read_text())
+)
+
 _DEFAULTS = {
     t["name"]: {
         k: p["default"]
@@ -155,6 +161,8 @@ def _clean(tool: str, args: dict[str, Any]) -> dict[str, Any]:
     # null means omitted, a schema default means omitted, the free-text reason is not scored;
     # text is compared without case, numbers by value
     defaults = _DEFAULTS.get(tool, {})
+    if sorted(args.get("location_ids") or []) == _ALL_LOCATIONS:
+        args = {k: v for k, v in args.items() if k != "location_ids"}
     lowered = _norm(_drop_nulls(args))
     return {
         k: v
@@ -170,13 +178,14 @@ def score_tool(case: Case, calls: Sequence[ToolCall]) -> float:
 
 
 def score_args(case: Case, calls: Sequence[ToolCall]) -> float:
+    """Only the first call to the expected tool: the fixed mock answers every call the same, so
+    later calls react to data that does not match the request (MR-20). score_tool still checks
+    that every call uses the right tool."""
     if case.expected_tool is None:
         return score_tool(case, calls)
+    first = next((c for c in calls if c.name == case.expected_tool), None)
     accepted = [_clean(case.expected_tool, a) for a in [case.expected_args, *case.accepted_args]]
-    return float(
-        bool(calls)
-        and all(c.name == case.expected_tool and _clean(c.name, c.args) in accepted for c in calls)
-    )
+    return float(first is not None and _clean(first.name, first.args) in accepted)
 
 
 def score_numbers(case: Case, reply: str, tool_results: Sequence[str]) -> float:

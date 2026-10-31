@@ -55,6 +55,23 @@ def test_args_accepts_alternative() -> None:
     assert score_args(case, [call]) == 1.0
 
 
+def test_args_scores_only_the_first_call_of_the_expected_tool() -> None:
+    good = ToolCall("get_dish_margin", CASE.expected_args)
+    retry = ToolCall("get_dish_margin", {**CASE.expected_args, "dish": "pastor"})
+    assert score_args(CASE, [good, retry]) == 1.0
+    assert score_args(CASE, [retry, good]) == 0.0
+    assert score_args(CASE, [ToolCall("get_top_dishes", {}), good]) == 1.0
+
+
+def test_args_all_locations_equal_omitted() -> None:
+    case = next(c for c in load_cases() if c.id == "locations_this_month_sales")
+    both = ["fdda5e3b-6bcd-5c48-a6de-f524be37463e", "705e8e51-376b-5785-adbb-405eff4e2a22"]
+    call = ToolCall("compare_locations", {**case.expected_args, "location_ids": both})
+    assert score_args(case, [call]) == 1.0
+    one = ToolCall("compare_locations", {**case.expected_args, "location_ids": both[:1]})
+    assert score_args(case, [one]) == 0.0
+
+
 def test_numbers_ok() -> None:
     assert score_numbers(CASE, REPLY, [ANSWER]) == 1.0
 
@@ -257,9 +274,9 @@ def test_args_non_default_wrong_value_is_zero() -> None:
     assert score_args(TOP, _top(order="asc")) == 0.0
 
 
-def test_args_every_call_must_match() -> None:
-    assert score_args(TOP, _top() + _top(limit=3)) == 0.0
-    assert score_args(TOP, _top() + _top()) == 1.0
+def test_args_later_calls_do_not_count() -> None:
+    assert score_args(TOP, _top() + _top(limit=3)) == 1.0
+    assert score_args(TOP, _top(limit=3) + _top()) == 0.0
 
 
 def test_args_numeric_string_equals_number() -> None:
