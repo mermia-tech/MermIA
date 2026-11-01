@@ -109,6 +109,6 @@ Unchanged (D4). If the final primary is not Haiku / Sonnet, migrate the enum to 
 
 ## Follow-ups
 
-- **Final LLM eval run:** the steps above. It needs paid keys for all three vendors.
-- **Mock RPC that answers from the args:** this fixes the args and numbers blind spots above. It is a follow-up from MR-19 D1.
-- **Numbers scorer false positives:** quoted words from the question, times, dash ranges, abbreviated months. Fix before the final run, or hand-check as in step 7.
+- **Final LLM eval run (MR-68):** the steps above. It needs paid keys for all three vendors.
+- **Mock RPC that answers from the args (MR-67):** this fixes the args and numbers blind spots above. It is a follow-up from MR-19 D1.
+- **Numbers scorer false positives (MR-67):** quoted words from the question, times, dash ranges, abbreviated months. Fix before the final run, or hand-check as in step 7.
