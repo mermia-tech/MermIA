@@ -394,6 +394,33 @@ def _judged(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
     return calls
 
 
+def test_failed_cross_judge_leaves_tone_unmeasured(
+    monkeypatch: pytest.MonkeyPatch, no_network: None, tmp_path: Path
+) -> None:
+    def fake_judge(judge: str, question: str, reply: str) -> tuple[int | None, str]:
+        return (5, "ok") if judge == JUDGE else (None, "timeout")
+
+    monkeypatch.setattr(cli, "judge_tone", fake_judge)
+    monkeypatch.setattr(cli, "run_case", lambda model, case, tools, **kw: _ok(model))
+    dump = tmp_path / "d.json"
+    cli.main(["--judge", "--models", LUNA, "--out", str(dump)])
+    run = json.loads(dump.read_text())["runs"][0]
+    assert (run["tone"], run["tone_cross"]) == (None, None)
+    assert "cross: timeout" in run["tone_reason"]
+
+
+def test_existing_out_is_not_overwritten(
+    no_network: None, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    dump = tmp_path / "paid.json"
+    dump.write_text("keep")
+    with pytest.raises(SystemExit) as stop:
+        cli.main(["--models", LUNA, "--out", str(dump)])
+    assert stop.value.code == 2
+    assert dump.read_text() == "keep"
+    assert "exists" in capsys.readouterr().err
+
+
 def test_judge_off_by_default(
     monkeypatch: pytest.MonkeyPatch, no_network: None, tmp_path: Path
 ) -> None:

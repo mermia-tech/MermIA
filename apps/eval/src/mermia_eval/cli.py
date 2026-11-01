@@ -150,6 +150,8 @@ def _scored(case: Case, r: RunResult, price: Price | None, judge: bool) -> Score
         if needs_cross(r.model):
             run.tone_cross, cross_reason = judge_tone(CROSS_JUDGE, case.question, r.text)
             run.tone_reason += f" | cross: {cross_reason}"
+            if run.tone_cross is None:  # never let a vendor's judge grade its own reply alone
+                run.tone = None
     return run
 
 
@@ -168,6 +170,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--judge", action="store_true", help=f"score tone with {JUDGE} (paid)")
     parser.add_argument("--out", type=Path, help="run dump (default: apps/eval/out/<time>.json)")
     args = parser.parse_args(argv)
+    if args.out is not None and args.out.exists():
+        parser.error(f"--out {args.out} exists; pick a new name so a paid run is not overwritten")
 
     known = {m.id for m in MODELS}
     models = [m.id for m in MODELS]

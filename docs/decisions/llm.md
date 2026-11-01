@@ -12,6 +12,7 @@ Status: **provisional, 2026-10-31.** This ticket built the gate and ran a cheap 
    - Move `openai:gpt-6.1-sol` and `anthropic:claude-sonnet-5-5` from `PAUSED` back to `MODELS` in `apps/eval/src/mermia_eval/config.py`.
    - Add a price for Sol, or its cost shows `n/a`.
    - In `apps/eval/src/mermia_eval/judge.py`, set `JUDGE` and `CROSS_JUDGE` to the stronger judges, for example `anthropic:claude-sonnet-5-5` and `openai:gpt-6.1-sol`.
+   - Commit these edits before running: the dump records only the git commit, not the judges or models.
 3. **Smoke Anthropic:** run Haiku alone once (about US$0.02) and check that it has no errors:
    `uv run --env-file .env mermia-eval --models anthropic:claude-haiku-5-5 --out apps/eval/out/smoke.json`
 4. **Run:**
@@ -25,7 +26,10 @@ Status: **provisional, 2026-10-31.** This ticket built the gate and ran a cheap 
 6. **Human tone check:**
    `uv run python -m mermia_eval.sample apps/eval/out/final.json`
    A person scores the 10 replies from 1 to 5, and we record the agreement with the judge.
-7. **Decide:** apply the decision rule in `docs/superpowers/specs/2026-10-30-mr-20-eval-gate-design.md`:
+7. **Hand-check every numbers failure.** The numbers scorer has false positives (see Limitations), so at 120 runs per model it will likely fail every model on noise. List the failures:
+   `uv run python -c "import json,sys; [print(r['model'], r['case_id'], '\n', r['reply'], '\n') for r in json.load(open(sys.argv[1]))['runs'] if (r['scores'] or {}).get('numbers') == 0]" apps/eval/out/final.json`
+   Write down in this memo each failure you judge a false positive and why. Never pass a model on numbers without that written list.
+8. **Decide:** apply the decision rule in `docs/superpowers/specs/2026-10-30-mr-20-eval-gate-design.md`:
    - **Primary:** the cheapest model that passes every threshold; a tie goes to the lower p95.
    - **Escalation:** the best model on the primary's failing categories.
    - **Fallback:** the best eligible model from another vendor.
@@ -52,11 +56,15 @@ Status: **provisional, 2026-10-31.** This ticket built the gate and ran a cheap 
 **Neither model passes.** What each run showed:
 
 - **Luna:**
-  - **Numbers:** it computes money itself ("$15,679.50 abajo", "+$12,415.50"), which §H3 forbids.
+  - **Numbers:** 6 failures, and only 2 are real.
+    - **Real:** it computed money itself, which §H3 forbids: the gap between locations "$23,399.70" (`locations_this_month_sales`) and a rounding to "$184 mil" (`adversarial_round_sales`).
+    - **Scorer false positives:** "30" quoted from "últimos 30 días", the time "9:00" from the tool's `as_of`, a dash range "5–11 de octubre", and a date it worked out ("jueves 15 de octubre").
+    - **Missing figure:** one reply left out a `must_contain` figure ($18.40, `tacos_al_pastor`).
   - **Speed:** it is slow (p50 4.3 s).
   - **Ambiguity:** it asks back on all 3 ambiguous questions, and it says when tool data does not match the request.
   - **Cost:** about 7 times cheaper per question.
 - **Flash-Lite:**
+  - **Numbers:** its only failure (0.97) is a scorer false positive: tool dates written as "28 de sep - 4 de oct".
   - **Ambiguity:** it answers all 3 ambiguous questions instead of asking (tool 0 / 3).
   - **Cost:** it goes over the cost threshold on sales and top-dishes questions.
 
@@ -73,7 +81,7 @@ Status: **provisional, 2026-10-31.** This ticket built the gate and ran a cheap 
 
 The §H3 thresholds were not changed. Four grading and robustness changes were made after reading the failures; each has a test.
 
-- **Args, first call only:** only the first call to the expected tool is scored. The Mock RPC answers every call with the same fixture, so a model that checks the data and calls again with other args was failing for reacting to wrong data. 11 of the 17 args failures were this, or the next item. `score_tool` still checks every call.
+- **Args, first call only:** only the first call to the expected tool is scored. The Mock RPC answers every call with the same fixture, so a model that checks the data and calls again with other args was failing for reacting to wrong data. 10 of the 17 args failures were this, or the next item; the other 7 were real. `score_tool` still checks every call.
 - **Args, all locations:** naming every location in `location_ids` scores the same as naming none (C3: no location means all).
 - **Numbers, prompt dates:** the dates in the prompt (today 2026-10-12, data until 2026-10-11) are not counted as invented numbers. Other dates the model works out ("jueves 15 de octubre") still count.
 - **Robustness:**
@@ -83,7 +91,11 @@ The §H3 thresholds were not changed. Four grading and robustness changes were m
 ## Limitations
 
 - **Fixed mock:** the mock ignores args, so replies can quote figures for the wrong period, location or dish, and the numbers score cannot see it. The fix is the follow-up below.
+- **First-call args rule:** later calls are no longer scored, even when wrong. In this run Flash-Lite asked for the wrong week in a third call (`sales_avg_ticket`) and narrowed to one location in a second call (`ops_sales_by_waiter`), and both still score args 1.0. Go back to scoring every call once the mock answers from its args.
+- **Numbers false positives:** the scorer flags figures quoted from the question in words, times, dash ranges and abbreviated months ("sep"). Hence the hand-check in step 7.
 - **Figure checks:** only 11 of 40 cases have `must_contain` figures.
+- **Dump contents:** the dump keeps the calls, the reply and the scores, not the tool results or tokens. A numbers-scorer fix after the final run can be regraded only by replaying the fixed mock.
+- **Judge cost:** the judge calls are not priced in the report.
 - **Latency:** it includes the in-process mock, not the real database or WhatsApp.
 - **One run:** a single run hides flaky models.
 
@@ -99,3 +111,4 @@ Unchanged (D4). If the final primary is not Haiku / Sonnet, migrate the enum to 
 
 - **Final LLM eval run:** the steps above. It needs paid keys for all three vendors.
 - **Mock RPC that answers from the args:** this fixes the args and numbers blind spots above. It is a follow-up from MR-19 D1.
+- **Numbers scorer false positives:** quoted words from the question, times, dash ranges, abbreviated months. Fix before the final run, or hand-check as in step 7.
