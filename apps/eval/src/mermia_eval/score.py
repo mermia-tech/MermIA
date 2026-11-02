@@ -10,6 +10,8 @@ from typing import Any
 
 from mermia_contracts.agent_tools import tool_definitions
 from mermia_eval.cases import Case
+from mermia_eval.config import SYSTEM_PROMPT
+from mermia_eval.figures import EXPECTED
 
 # A sign counts only when it is not glued to a word or digit ("2026-10-20" has no negatives),
 # but a currency code may touch the figure ("MXN70.00") and a sign may precede "$" ("-$37.63");
@@ -22,6 +24,7 @@ _NUMBER = re.compile(
 # Digits that are not figures: ids and dates inside the tool data.
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.IGNORECASE)
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+_PROMPT_DATES = set(_DATE.findall(SYSTEM_PROMPT))  # today and the data cutoff
 _DATETIME = re.compile(r"\d{4}-\d{2}-\d{2}(?:T[\d:.]+(?:[+-]\d{2}:\d{2}|Z)?)?")  # with UTC offset
 _MONTHS = [
     "enero",
@@ -139,6 +142,11 @@ def _drop_nulls(value: Any) -> Any:
     return value
 
 
+# Naming every location is the same request as naming none (C3: no location = all of them).
+_ALL_LOCATIONS = sorted(
+    loc["id"] for loc in json.loads((EXPECTED.parent / "location.json").read_text())
+)
+
 _DEFAULTS = {
     t["name"]: {
         k: p["default"]
@@ -153,6 +161,8 @@ def _clean(tool: str, args: dict[str, Any]) -> dict[str, Any]:
     # null means omitted, a schema default means omitted, the free-text reason is not scored;
     # text is compared without case, numbers by value
     defaults = _DEFAULTS.get(tool, {})
+    if sorted(args.get("location_ids") or []) == _ALL_LOCATIONS:
+        args = {k: v for k, v in args.items() if k != "location_ids"}
     lowered = _norm(_drop_nulls(args))
     return {
         k: v
@@ -168,22 +178,24 @@ def score_tool(case: Case, calls: Sequence[ToolCall]) -> float:
 
 
 def score_args(case: Case, calls: Sequence[ToolCall]) -> float:
+    """Only the first call to the expected tool: the fixed mock answers every call the same, so
+    later calls react to data that does not match the request (MR-20). score_tool still checks
+    that every call uses the right tool."""
     if case.expected_tool is None:
         return score_tool(case, calls)
+    first = next((c for c in calls if c.name == case.expected_tool), None)
     accepted = [_clean(case.expected_tool, a) for a in [case.expected_args, *case.accepted_args]]
-    return float(
-        bool(calls)
-        and all(c.name == case.expected_tool and _clean(c.name, c.args) in accepted for c in calls)
-    )
+    return float(first is not None and _clean(first.name, first.args) in accepted)
 
 
 def score_numbers(case: Case, reply: str, tool_results: Sequence[str]) -> float:
-    """1.0 if every number in the reply comes from a tool result or the question, and every
+    """1.0 if every number in the reply comes from a tool result or the question (dates
+    from the tools or the prompt are not numbers), and every
     must_contain figure is in the reply (numbers compared as values, not as text), and no
     must_not_contain phrase is."""
     if any(_fold(p) in _fold(reply) for p in case.must_not_contain):
         return 0.0
-    reply = _strip_dates(reply, {d for r in tool_results for d in _DATE.findall(r)})
+    reply = _strip_dates(reply, _PROMPT_DATES | {d for r in tool_results for d in _DATE.findall(r)})
     shown = _numbers(_LIST_MARKER.sub("", reply))  # "7. " of a list is not a figure
     known = _numbers(case.question).union(*(_tool_numbers(r) for r in tool_results))
     required = set().union(*(_numbers(f) for f in case.must_contain))

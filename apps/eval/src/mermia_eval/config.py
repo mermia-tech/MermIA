@@ -26,12 +26,19 @@ class ModelSpec:
 # Prices from docs/kickoff/13 section H1; gpt-6.1-sol is not listed there (only "GPT-6 Sol").
 MODELS: Final = (
     ModelSpec("openai:gpt-5.6-luna", Price(0.20, 0.02, 1.20)),
-    ModelSpec("openai:gpt-6.1-sol", None),
     ModelSpec("anthropic:claude-haiku-5-5", Price(0.10, 0.01, 0.50)),
-    ModelSpec("anthropic:claude-sonnet-5-5", Price(2.00, 0.10, 10.00)),
     ModelSpec("google:gemini-3.8-flash", Price(0.75, 0.075, 3.75)),
     ModelSpec("google:gemini-3.5-flash-lite", Price(0.30, 0.03, 2.50)),
 )
+
+# Paused to keep eval spend low (MR-20 D5); move a line back to MODELS to run it.
+PAUSED: Final = (
+    ModelSpec("openai:gpt-6.1-sol", None),
+    ModelSpec("anthropic:claude-sonnet-5-5", Price(2.00, 0.10, 10.00)),
+)
+
+# Seconds per HTTP call; without it one stuck Gemini request hung a whole run (MR-20).
+TIMEOUT: Final = 60.0
 
 SYSTEM_PROMPT: Final = (
     "Eres el asistente de un restaurante en México. Responde en español de México, breve y claro. "
@@ -48,9 +55,17 @@ def build_model(spec_id: str) -> Any:
     """The Agno model for "provider:model_id", with the same low reasoning for every provider."""
     provider, _, model_id = spec_id.partition(":")
     if provider == "openai":
-        return OpenAIResponses(id=model_id, reasoning_effort="low")
+        return OpenAIResponses(id=model_id, reasoning_effort="low", timeout=TIMEOUT)
     if provider == "google":
-        return Gemini(id=model_id, thinking_level="low")
+        # Retry 429/503 with 10, 20, 40 s waits: the free-tier key allows 15 requests per minute.
+        return Gemini(
+            id=model_id,
+            thinking_level="low",
+            timeout=TIMEOUT,
+            retries=3,
+            delay_between_retries=10,
+            exponential_backoff=True,
+        )
     if provider == "anthropic":
-        return Claude(id=model_id)
+        return Claude(id=model_id, timeout=TIMEOUT)
     raise ValueError(f"unknown provider in {spec_id!r}")

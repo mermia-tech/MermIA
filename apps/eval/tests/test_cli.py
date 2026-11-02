@@ -1,14 +1,17 @@
 import dataclasses
 import json
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 import agno.utils.log as agno_log
 import pytest
 
+from mermia_contracts.agent_tools import tools_sha256
 from mermia_eval import cli
 from mermia_eval.cases import load_cases
 from mermia_eval.config import Price
+from mermia_eval.judge import CROSS_JUDGE, JUDGE
 from mermia_eval.run import RunResult, run_case
 from mermia_eval.score import ToolCall
 from mermia_mock_rpc import rpcs
@@ -50,6 +53,11 @@ def test_format_table_shows_na_cost_and_dash_scores() -> None:
     rows = cli.summarize([_err()], CASE, {LUNA: None}) + cli.summarize([_ok()], CASE, {LUNA: None})
     table = cli.format_table(rows)
     assert "n/a" in table and "-" in table and LUNA in table
+
+
+@pytest.fixture(autouse=True)
+def dumps_in_tmp(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(cli, "OUT_DIR", tmp_path)  # run dumps stay out of the repo
 
 
 @pytest.fixture
@@ -329,3 +337,132 @@ def test_traces_are_flushed_before_their_scores_are_posted(
     monkeypatch.setattr(cli, "run_case", lambda model, case, tools, **kw: _ok(model))
     cli.main(["--models", LUNA])
     assert events[:2] == ["flush", "scores"]
+
+
+def test_gate_report_printed_after_table(
+    monkeypatch: pytest.MonkeyPatch, no_network: None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(cli, "run_case", lambda model, case, tools, **kw: _ok(model))
+    cli.main(["--models", LUNA])
+    out = capsys.readouterr().out
+    assert out.index("tacos_al_pastor") < out.index("category")
+    assert f"{LUNA:<32}all" in out
+
+
+def test_dump_written(monkeypatch: pytest.MonkeyPatch, no_network: None, tmp_path: Path) -> None:
+    monkeypatch.setattr(cli, "run_case", lambda model, case, tools, **kw: _ok(model))
+    dump = tmp_path / "run.json"
+    cli.main(["--runs", "2", "--models", f"{LUNA},{HAIKU}", "--out", str(dump)])
+    data = json.loads(dump.read_text())
+    assert data["meta"]["tools_sha256"] == tools_sha256()
+    assert len(data["meta"]["git_commit"]) == 40
+    assert [r["model"] for r in data["runs"]] == [LUNA, LUNA, HAIKU, HAIKU]
+    assert data["runs"][0]["scores"] == {"tool": 1.0, "args": 1.0, "numbers": 1.0}
+
+
+def test_default_dump_goes_to_out_dir(
+    monkeypatch: pytest.MonkeyPatch, no_network: None, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(cli, "run_case", lambda model, case, tools, **kw: _ok(model))
+    cli.main(["--models", LUNA])
+    assert len(list(tmp_path.glob("*.json"))) == 1
+
+
+def test_dump_written_when_interrupted(
+    monkeypatch: pytest.MonkeyPatch, no_network: None, tmp_path: Path
+) -> None:
+    def fake(model: str, case: Any, tools: Any, **kw: Any) -> RunResult:
+        if model == HAIKU:
+            raise KeyboardInterrupt
+        return _ok(model)
+
+    monkeypatch.setattr(cli, "run_case", fake)
+    dump = tmp_path / "run.json"
+    with pytest.raises(KeyboardInterrupt):
+        cli.main(["--models", f"{LUNA},{HAIKU}", "--out", str(dump)])
+    assert [r["model"] for r in json.loads(dump.read_text())["runs"]] == [LUNA]
+
+
+def _judged(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
+    calls: list[tuple[str, str]] = []
+
+    def fake_judge(judge: str, question: str, reply: str) -> tuple[int, str]:
+        calls.append((judge, reply))
+        return (4 if judge == JUDGE else 3), "ok"
+
+    monkeypatch.setattr(cli, "judge_tone", fake_judge)
+    return calls
+
+
+def test_failed_cross_judge_leaves_tone_unmeasured(
+    monkeypatch: pytest.MonkeyPatch, no_network: None, tmp_path: Path
+) -> None:
+    def fake_judge(judge: str, question: str, reply: str) -> tuple[int | None, str]:
+        return (5, "ok") if judge == JUDGE else (None, "timeout")
+
+    monkeypatch.setattr(cli, "judge_tone", fake_judge)
+    monkeypatch.setattr(cli, "run_case", lambda model, case, tools, **kw: _ok(model))
+    dump = tmp_path / "d.json"
+    cli.main(["--judge", "--models", LUNA, "--out", str(dump)])
+    run = json.loads(dump.read_text())["runs"][0]
+    assert (run["tone"], run["tone_cross"]) == (None, None)
+    assert "cross: timeout" in run["tone_reason"]
+
+
+def test_existing_out_is_not_overwritten(
+    no_network: None, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    dump = tmp_path / "paid.json"
+    dump.write_text("keep")
+    with pytest.raises(SystemExit) as stop:
+        cli.main(["--models", LUNA, "--out", str(dump)])
+    assert stop.value.code == 2
+    assert dump.read_text() == "keep"
+    assert "exists" in capsys.readouterr().err
+
+
+def test_judge_off_by_default(
+    monkeypatch: pytest.MonkeyPatch, no_network: None, tmp_path: Path
+) -> None:
+    calls = _judged(monkeypatch)
+    monkeypatch.setattr(cli, "run_case", lambda model, case, tools, **kw: _ok(model))
+    cli.main(["--models", LUNA, "--out", str(tmp_path / "d.json")])
+    assert calls == []
+    assert json.loads((tmp_path / "d.json").read_text())["runs"][0]["tone"] is None
+
+
+def test_judge_cross_only_for_judge_vendor(
+    monkeypatch: pytest.MonkeyPatch, no_network: None, tmp_path: Path
+) -> None:
+    calls = _judged(monkeypatch)
+    flash = "google:gemini-3.8-flash"
+
+    def fake(model: str, case: Any, tools: Any, **kw: Any) -> RunResult:
+        return _err(model) if model == HAIKU else _ok(model, reply=f"{model} $37.63")
+
+    monkeypatch.setattr(cli, "run_case", fake)
+    dump = tmp_path / "d.json"
+    cli.main(["--judge", "--models", f"{LUNA},{flash},{HAIKU}", "--out", str(dump)])
+    assert calls == [
+        (JUDGE, f"{LUNA} $37.63"),
+        (CROSS_JUDGE, f"{LUNA} $37.63"),
+        (JUDGE, f"{flash} $37.63"),
+    ]
+    runs = json.loads(dump.read_text())["runs"]
+    assert [(r["tone"], r["tone_cross"]) for r in runs] == [(4, 3), (4, None), (None, None)]
+
+
+def test_tone_posted_to_langfuse(monkeypatch: pytest.MonkeyPatch, no_network: None) -> None:
+    _judged(monkeypatch)
+    posted: list[dict[str, float]] = []
+    monkeypatch.setattr(cli, "post_scores", lambda env, tid, scores: posted.append(dict(scores)))
+    monkeypatch.setattr(cli, "run_case", lambda model, case, tools, **kw: _ok(model))
+    cli.main(["--judge", "--models", LUNA])
+    assert posted[0]["tone"] == 3  # Luna is the judge's vendor: the lower cross score counts
+
+
+def test_paused_model_rejected(no_network: None, capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as stop:
+        cli.main(["--models", "anthropic:claude-sonnet-5-5"])
+    assert stop.value.code == 2
+    assert "paused" in capsys.readouterr().err
