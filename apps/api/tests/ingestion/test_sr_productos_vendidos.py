@@ -146,10 +146,16 @@ def test_old_xls_is_named() -> None:
 
 
 def test_another_sr_report_is_not_recognized() -> None:
-    other = next(SR.glob("*/ventas_por_dia_*.xlsx"))
+    other = xlsx(
+        ["Taquería El Güero - Centro"],
+        ["Ventas por mesero"],
+        ["Del 11/10/2026 al 11/10/2026"],
+        ["Mesero", "Cuentas", "Venta"],
+        ["Lupita", 12, 2400],
+    )
     with pytest.raises(UnknownReport) as e:
-        parse_file(other.read_bytes())
-    assert "Productos vendidos" in e.value.message_es
+        parse_file(other)
+    assert "«Productos vendidos», «Ventas por día»" in e.value.message_es
 
 
 def test_a_spreadsheet_without_the_header_is_not_recognized() -> None:
