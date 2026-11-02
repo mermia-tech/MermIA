@@ -1,15 +1,12 @@
 """MR-15: the "Productos vendidos" parser and the registry that picks it.
 
-Golden test: the synthetic SR export (fixtures/sr/synthetic, MR-12) must parse to its golden
-NormalizedBatch. When the pilot's real export arrives (MR-5), add it under fixtures/sr/<version>/
-with its golden file and it joins GOLDEN below. Wrong files must raise a ReportError with a Spanish
-message, never crash.
+The golden file test for every SR sample is in test_golden.py. Wrong files must raise a
+ReportError with a Spanish message, never crash.
 """
 
 import io
 import zipfile
 from decimal import Decimal
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -22,10 +19,6 @@ from mermia_api.ingestion.errors import (
     UnreadableFile,
 )
 from mermia_api.ingestion.registry import parse_file
-from mermia_contracts.batch import NormalizedBatch
-
-SR = Path(__file__).parents[4] / "fixtures" / "sr"
-GOLDEN = sorted(SR.glob("*/productos_vendidos_*.xlsx"))
 
 HEADER = ["Clave", "Descripción", "Grupo", "Cantidad", "Precio", "Importe", "Descuento", "Total"]
 
@@ -57,17 +50,6 @@ def report(*lines: list[Any], total: list[Any] | None = None, header: list[str] 
 PASTOR = ["P001", "Tacos al pastor (orden de 3)", "Tacos", 2, 65, 130, 5, 125]
 COCA = ["P043", "Coca-Cola", "Bebidas", 1, 30, 30, 0, 30]
 AGUA = ["P040", "Agua de horchata", "Bebidas", 1, 35, 35, 0, 35]
-
-
-@pytest.mark.parametrize("path", GOLDEN, ids=lambda p: f"{p.parent.name}/{p.name}")
-def test_golden(path: Path) -> None:
-    golden = path.with_name(path.stem + ".golden.json")
-    expected = NormalizedBatch.model_validate_json(golden.read_text())
-    assert parse_file(path.read_bytes()) == expected
-
-
-def test_there_is_a_golden_file() -> None:
-    assert GOLDEN, "no Productos vendidos sample under fixtures/sr"
 
 
 def test_a_small_report() -> None:
