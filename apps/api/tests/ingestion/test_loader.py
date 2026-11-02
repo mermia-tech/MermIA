@@ -7,7 +7,9 @@ Each test runs in one transaction that is rolled back, as a service-role-like co
 import datetime as dt
 import io
 import os
+import threading
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -280,3 +282,51 @@ def test_negative_quantities_wait_for_review(conn: psycopg.Connection[Any]) -> N
     refund = ["P043", "Coca-Cola", "Bebidas", -1, 30, -30, 0, -30]  # one row per item (MR-15)
     r = load(conn, report("12/10/2026", PASTOR, refund), source_id=CENTRO_ITEMS)
     assert (r.status, [i.code for i in r.issues]) == ("needs_review", ["rows.negative"])
+
+
+def test_the_same_file_twice_at_once_applies_one_batch() -> None:
+    """Two connections load the same file at the same moment (email and WhatsApp): the advisory
+    lock in load() serializes them, so the second meets the duplicate check instead of the unique
+    index on applied slices. Commits for real, so it undoes its batch at the end."""
+    url = os.environ.get("MERMIA_DB_URL")
+    if not url:
+        pytest.skip("MERMIA_DB_URL is not set")
+    batch = report("13/10/2026", PASTOR, COCA)
+    gate = threading.Barrier(2)
+
+    def upload() -> tuple[UUID, str, bool]:
+        # lock_timeout: a deadlock or a stuck lock fails the test instead of hanging it
+        with psycopg.connect(url, options="-c lock_timeout=10s") as c:
+            gate.wait(timeout=10)
+            r = load(c, batch, source_id=CENTRO_ITEMS, expected_day=DAY(2026, 10, 13))
+            return r.batch_id, r.status, r.duplicate
+
+    try:
+        with ThreadPoolExecutor(2) as pool:
+            results = [f.result(timeout=30) for f in [pool.submit(upload) for _ in range(2)]]
+        with psycopg.connect(url) as c:
+            assert item_net(c, "2026-10-13") == 77000
+            applied = c.execute(
+                "select id from public.import_batch where source_id = %s and status = 'applied' "
+                "and slice_key like %s",
+                (CENTRO_ITEMS, "%:2026-10-13:2026-10-13"),
+            ).fetchall()
+        assert len(applied) == 1
+        assert sorted(results, key=lambda r: r[2]) == [
+            (applied[0][0], "applied", False),
+            (applied[0][0], "applied", True),
+        ]
+    finally:
+        with psycopg.connect(url) as c:
+            for (batch_id,) in c.execute(
+                "select id from public.import_batch where source_id = %s and status = 'applied' "
+                "and slice_key like %s",
+                (CENTRO_ITEMS, "%:2026-10-13:2026-10-13"),
+            ).fetchall():
+                rollback(c, batch_id, LUPITA)
+            # the audit log keeps the batches; their rows go so the seed counts (60_seed) hold
+            c.execute(
+                "delete from public.item_sales_agg where batch_id in (select id from "
+                "public.import_batch where source_id = %s and slice_key like %s)",
+                (CENTRO_ITEMS, "%:2026-10-13:2026-10-13"),
+            )
