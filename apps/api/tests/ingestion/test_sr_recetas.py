@@ -102,24 +102,24 @@ def test_units_become_base_units(qty: Any, unit: str, base_qty: str, base_unit: 
     assert (line.qty_base, line.unit) == (Decimal(base_qty), base_unit)
 
 
-def test_an_unknown_unit_is_an_error_for_review() -> None:
+def test_an_unknown_unit_holds_the_recipe() -> None:
     batch = parse_file(report(TORTILLA, with_(with_(MEAT, "Unidad", "taza"), "Cantidad", 2)))
-    (issue,) = batch.issues
+    issue, held = batch.issues
     assert (issue.severity, issue.code, issue.row_ref) == (
         IssueSeverity.error,
         "sr.unknown_unit",
         "7",
     )
     assert "«taza»" in issue.message_es
-    # the line is kept as written, so the reviewer sees it; it is not converted
-    meat = batch.recipes[0].lines[1]
-    assert (meat.qty_base, meat.unit) == (Decimal(2), "taza")
+    assert (held.code, held.row_ref) == ("sr.recipe_held", "7")
+    assert (batch.recipes, batch.totals.lines) == ([], 0)
 
 
 @pytest.mark.parametrize("qty", [0, -0.05, "0"])
-def test_a_quantity_of_zero_or_less_drops_the_line_and_is_an_error_for_review(qty: Any) -> None:
-    batch = parse_file(report(TORTILLA, with_(MEAT, "Cantidad", qty), SALSA))
-    (issue,) = batch.issues
+def test_a_quantity_of_zero_or_less_holds_the_recipe(qty: Any) -> None:
+    # proposing the recipe without the line would understate its cost
+    batch = parse_file(report(TORTILLA, with_(MEAT, "Cantidad", qty), SALSA, HORCHATA))
+    issue, held = batch.issues
     assert (issue.severity, issue.code, issue.row_ref) == (
         IssueSeverity.error,
         "sr.qty_not_positive",
@@ -127,14 +127,14 @@ def test_a_quantity_of_zero_or_less_drops_the_line_and_is_an_error_for_review(qt
     )
     for part in ("fila 7", PASTOR, "Carne al pastor (adobada)"):
         assert part in issue.message_es
-    (pastor,) = batch.recipes
-    assert [x.ingredient_external_id for x in pastor.lines] == ["I038", "E001"]
+    assert held.code == "sr.recipe_held"
+    assert [r.menu_item_name for r in batch.recipes] == ["Agua de horchata"]
 
 
 def test_a_recipe_whose_every_line_is_dropped_is_not_emitted() -> None:
     batch = parse_file(report(with_(TORTILLA, "Cantidad", 0), HORCHATA))
     assert [r.menu_item_name for r in batch.recipes] == ["Agua de horchata"]
-    assert [i.code for i in batch.issues] == ["sr.qty_not_positive"]
+    assert [i.code for i in batch.issues] == ["sr.qty_not_positive", "sr.recipe_held"]
 
 
 @pytest.mark.parametrize("qty", [None, "un poco"])
@@ -234,11 +234,11 @@ def test_a_bad_yield_is_refused(value: Any) -> None:
 
 
 @pytest.mark.parametrize("value", [0.92, 1])
-def test_a_yield_that_looks_like_a_fraction_is_an_error_for_review(value: Any) -> None:
+def test_a_yield_that_looks_like_a_fraction_holds_the_recipe(value: Any) -> None:
     batch = parse_file(report(with_(MEAT, "Rendimiento %", value)))
-    (issue,) = batch.issues
+    issue, held = batch.issues
     assert (issue.severity, issue.code) == (IssueSeverity.error, "sr.yield_implausible")
-    assert batch.recipes[0].lines[0].yield_override_pct == Decimal(str(value))
+    assert (held.code, batch.recipes) == ("sr.recipe_held", [])
 
 
 @pytest.mark.parametrize(
@@ -506,15 +506,16 @@ def test_a_repeated_ingredient_in_a_codeless_row_of_a_coded_recipe_is_refused() 
     ("qty", "unit"),
     [("1,500", "KG"), (1000, "LT"), (1000000, "GR"), (1000, "PZA")],
 )
-def test_an_implausible_quantity_is_an_error_for_review(qty: Any, unit: str) -> None:
+def test_an_implausible_quantity_holds_the_recipe(qty: Any, unit: str) -> None:
     batch = parse_file(report(TORTILLA, with_(with_(MEAT, "Cantidad", qty), "Unidad", unit)))
-    (issue,) = batch.issues
+    issue, held = batch.issues
     assert (issue.severity, issue.code, issue.row_ref) == (
         IssueSeverity.error,
         "sr.qty_implausible",
         "7",
     )
     assert f"{qty} {unit}" in issue.message_es
+    assert (held.code, batch.recipes) == ("sr.recipe_held", [])
 
 
 @pytest.mark.parametrize(
@@ -543,3 +544,31 @@ def test_a_product_header_row_before_its_ingredients_is_not_a_warning() -> None:
     batch = parse_file(report(header_line, TORTILLA, MEAT))
     assert batch.issues == []
     assert len(batch.recipes[0].lines) == 2
+
+
+# --- MR-25: a recipe with an error is held, not the whole file ------------------------------
+
+
+def test_a_held_recipe_leaves_the_others_in_the_batch() -> None:
+    taza = with_(with_(MEAT, "Unidad", "taza"), "Cantidad", 2)
+    zero = with_(SALSA, "Cantidad", 0)
+    batch = parse_file(report(TORTILLA, taza, HORCHATA, zero))
+    assert [r.menu_item_name for r in batch.recipes] == ["Agua de horchata"]
+    assert batch.totals.lines == 1
+    held = [i for i in batch.issues if i.code == "sr.recipe_held"]
+    assert len(held) == 1, "one issue per held recipe, however many rows are wrong"
+    assert (held[0].severity, held[0].row_ref) == (IssueSeverity.warning, "7")
+    for part in (f"«{PASTOR}»", "7 y 9"):
+        assert part in held[0].message_es
+    assert {i.code for i in batch.issues} == {
+        "sr.unknown_unit",
+        "sr.qty_not_positive",
+        "sr.recipe_held",
+    }
+
+
+def test_a_warning_does_not_hold_a_recipe() -> None:
+    bare = ["P077", "Café de olla", None, None, None, None, None, None]
+    batch = parse_file(report(TORTILLA, bare))
+    assert [i.code for i in batch.issues] == ["sr.recipe_empty"]
+    assert [r.menu_item_name for r in batch.recipes] == [PASTOR]

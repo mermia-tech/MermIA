@@ -8,8 +8,11 @@ header row Clave | Producto | Clave insumo | Insumo | Cantidad | Unidad | Rendim
 Output: one catalog batch, one RecipeIn per product (in order of first appearance) with
 yield_qty 1, a portion. The MR-25 costing engine does no unit conversion, so quantities leave
 here in base units: kg -> g and l -> ml; g, ml and pza pass through (abbreviated or spelled out,
-"kilos", "piezas"). An unknown unit is kept as written with an error-level issue, which sends the
-batch to needs_review. Quantities and yields finer than the contract are rounded half-up.
+"kilos", "piezas"). Quantities and yields finer than the contract are rounded half-up.
+A recipe with an error-level line (an unknown unit, a quantity of zero or less, an implausible
+quantity or yield) is held: it is left out of the batch, its row issues stay, and one
+sr.recipe_held warning names it. Proposing it without the bad line would understate its cost;
+the other recipes of the file still load.
 Rendimiento % (or "Rendimiento", "% Rendimiento"...) becomes the line's yield override; another
 header that mentions rendimiento is a warning, since its yields would be dropped. Costo, like any
 other unknown column, is ignored: the contract has no field for it, and costs come from purchase
@@ -407,11 +410,14 @@ class _Recipes:
     codes: dict[str, str | None] = field(default_factory=dict)  # recipe key -> its clave
     lines: dict[str, list[RecipeLineIn]] = field(default_factory=dict)
     seen: dict[tuple[str, str], int] = field(default_factory=dict)  # (recipe, ingredient) -> row
+    errors: dict[str, list[int]] = field(default_factory=dict)  # held recipe -> its error rows
 
     def add(self, row: _Row, n: int, code: str | None) -> None:
         key = f"code:{code}" if code is not None else f"name:{norm(row.product)}"
         self.names.setdefault(key, row.product)
         self.codes.setdefault(key, code)
+        if any(i.severity == IssueSeverity.error for i in row.issues):
+            self.errors.setdefault(key, []).append(n)
         if row.line is None:  # dropped: the recipe exists, but this line is not in it
             return
         ingredient = row.line.ingredient_external_id
@@ -438,8 +444,25 @@ class _Recipes:
                 lines=self.lines[key],
             )
             for key, name in self.names.items()
-            if key in self.lines  # a recipe whose every line was dropped is explained by issues
+            if key in self.lines and key not in self.errors
         ]
+
+    def held(self) -> list[IssueIn]:
+        """One warning per held recipe, at its first row with an error."""
+        found = []
+        for key, rows_ in self.errors.items():
+            listed = _listed([str(n) for n in rows_])
+            where = f"la fila {listed}" if len(rows_) == 1 else f"las filas {listed}"
+            found.append(
+                _warning(
+                    "sr.recipe_held",
+                    f"No tomé la receta de «{self.names[key]}» porque tiene errores en {where}. "
+                    "Corrígela en Soft Restaurant y vuelve a enviarme el reporte; las demás "
+                    "recetas sí las tomé.",
+                    rows_[0],
+                )
+            )
+        return found
 
 
 def parse(wb: Workbook) -> NormalizedBatch:
@@ -470,6 +493,7 @@ def parse(wb: Workbook) -> NormalizedBatch:
     grouped = _Recipes()
     for n, row in read:
         grouped.add(row, n, _clave(row, n, by_name))
+    issues.extend(grouped.held())
     issues.extend(_empty_recipes(bare, by_name, grouped))
     recipes = grouped.recipes()
     if not grouped.names:
