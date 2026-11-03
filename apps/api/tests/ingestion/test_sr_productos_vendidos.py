@@ -344,3 +344,25 @@ def test_a_sheet_with_too_many_rows_is_refused(monkeypatch: pytest.MonkeyPatch) 
     with pytest.raises(MalformedReport) as e:
         parse_file(report(PASTOR, COCA, AGUA))
     assert "renglones" in e.value.message_es
+
+
+def test_the_en_general_title_is_recognized() -> None:
+    assert parse_file(report(PASTOR)).parser.startswith("sr.productos_vendidos")
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["Reporte de productos vendidos", "Productos vendidos del 11/10/2026 al 11/10/2026"],
+)
+def test_a_longer_report_name_is_not_recognized(name: str) -> None:
+    data = xlsx(
+        ["Taquería El Güero - Centro"],
+        [name],
+        ["Del 11/10/2026 al 11/10/2026"],
+        [],
+        HEADER,
+        PASTOR,
+        [None, "Total", None, 2, None, 130, 5, 125],
+    )
+    with pytest.raises(UnknownReport):
+        parse_file(data)

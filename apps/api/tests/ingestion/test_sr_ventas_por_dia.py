@@ -278,3 +278,16 @@ def test_a_sheet_with_too_many_rows_is_refused(monkeypatch: pytest.MonkeyPatch) 
     with pytest.raises(MalformedReport) as e:
         parse_file(report(MON, TUE))
     assert "renglones" in e.value.message_es
+
+
+@pytest.mark.parametrize("label", ["Total:", "TOTAL:", "Totales:", "Total general :"])
+def test_a_total_label_with_a_trailing_colon_is_a_total(label: str) -> None:
+    batch = parse_file(report(MON, TUE, [label, 131, 290, 2942.5, 865.5, 40.95, 3767.05]))
+    assert (batch.totals.net_sales, batch.totals.lines) == (376705, 2)
+
+
+def test_a_dated_row_with_a_blank_net_after_total_is_refused() -> None:
+    blank_net = [*TUE[:6], None, *TUE[7:]]
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report(MON, ["Total", *MON[1:]], blank_net))
+    assert "después de la fila" in e.value.message_es

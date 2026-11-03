@@ -169,6 +169,15 @@ def _business_date(line: _Line) -> dt.date:
     return sr_date(s, f"de la fila {line.n}")
 
 
+def _has_day_date(line: _Line) -> bool:
+    """Whether the Fecha cell is a day (a text footer such as "Impreso el ..." is not)."""
+    try:
+        _business_date(line)
+    except MalformedReport:
+        return False
+    return True
+
+
 def _warning(code: str, message_es: str, n: int) -> IssueIn:
     return IssueIn(severity=IssueSeverity.warning, code=code, message_es=message_es, row_ref=str(n))
 
@@ -261,16 +270,16 @@ def parse(wb: Workbook) -> NormalizedBatch:
             continue
         line = _Line(cells, n, cols)
         if total_net is not None:
-            # After Total only a text footer may follow ("Impreso el ..."). A Venta neta there
-            # means more days or another section, which would be loaded silently short.
-            if text(line.raw(NET)) is not None:
+            # After Total only a text footer may follow ("Impreso el ..."). A Venta neta or a day
+            # date there means more days or another section, which would be loaded silently short.
+            if text(line.raw(NET)) is not None or _has_day_date(line):
                 raise MalformedReport(
                     f"Encontré más datos después de la fila «Total» (en la fila {n}). Envíame "
                     "el reporte con una sola tabla de días.",
                     f"Venta neta after Total at row {n}",
                 )
             continue
-        if norm(line.raw(DATE)) in TOTAL_LABELS:
+        if norm(line.raw(DATE)).rstrip(" :") in TOTAL_LABELS:
             total_net = centavos(line.raw(NET), f"la fila Total ({n})")
             continue
         day = _day(line)
