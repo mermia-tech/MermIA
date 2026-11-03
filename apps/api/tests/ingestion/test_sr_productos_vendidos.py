@@ -137,7 +137,7 @@ def test_another_sr_report_is_not_recognized() -> None:
     )
     with pytest.raises(UnknownReport) as e:
         parse_file(other)
-    assert "«Productos vendidos», «Ventas por día»" in e.value.message_es
+    assert "«Productos vendidos», «Ventas por día», «Recetas»" in e.value.message_es
 
 
 def test_a_spreadsheet_without_the_header_is_not_recognized() -> None:

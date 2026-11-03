@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from openpyxl.workbook.workbook import Workbook
 
 from mermia_api.ingestion.errors import ReportError, UnknownReport, UnreadableFile
-from mermia_api.ingestion.parsers import sr_productos_vendidos, sr_ventas_por_dia
+from mermia_api.ingestion.parsers import sr_productos_vendidos, sr_recetas, sr_ventas_por_dia
 from mermia_api.ingestion.xlsx import open_workbook
 from mermia_contracts.batch import NormalizedBatch
 
@@ -42,6 +42,7 @@ XLSX_PARSERS: tuple[XlsxParser, ...] = (
         sr_ventas_por_dia.matches,
         sr_ventas_por_dia.parse,
     ),
+    XlsxParser(sr_recetas.PARSER, "Recetas", sr_recetas.matches, sr_recetas.parse),
 )
 
 
