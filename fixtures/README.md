@@ -71,6 +71,7 @@ Calibration: to land exactly on the two pinned weeks, calibration adds units acr
 
 - `productos_vendidos_L1_2026-10-11.xlsx`: one day at Centro.
 - `ventas_por_dia_L1_2026-10-05.xlsx`: Centro's last week.
+- `recetas_L1_2026-10-12.xlsx`: the 15 dish recipes, one row per line ("Recetas - Productos"). Quantities are in the purchase unit (KG, LT, PZA; the prepared salsa verde in GR), so the parser converts them to base units. Salsa verde's own recipe is not in it (that is "Recetas - Insumos elaborados"). The insumo codes (Clave insumo) are made up: the seed's ingredients have none.
 
 Each file has a `.golden.json` beside it: the `NormalizedBatch` a parser must produce from it.
 
