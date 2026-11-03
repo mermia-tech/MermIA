@@ -291,3 +291,34 @@ def test_a_dated_row_with_a_blank_net_after_total_is_refused() -> None:
     with pytest.raises(MalformedReport) as e:
         parse_file(report(MON, ["Total", *MON[1:]], blank_net))
     assert "después de la fila" in e.value.message_es
+
+
+# --- review on #72: footers without a Total row, a Total row without a number ---------------
+
+
+@pytest.mark.parametrize(
+    "footer",
+    [["Impreso el 12/10/2026 09:00"], ["Página 1 de 1", None, None, None, None, None, "  "]],
+    ids=["printed-on", "page-number"],
+)
+def test_a_text_footer_without_a_total_row_is_skipped(footer: list[Any]) -> None:
+    batch = parse_file(report(MON, TUE, footer))
+    assert (batch.totals.net_sales, batch.totals.lines) == (376705, 2)
+    assert batch.issues == []
+
+
+def test_a_dated_row_with_a_blank_net_before_total_is_still_refused() -> None:
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report(MON, [*TUE[:6], None, *TUE[7:]]))
+    assert "Venta neta" in e.value.message_es
+
+
+def test_a_total_row_with_a_blank_net_counts_as_no_total_row() -> None:
+    batch = parse_file(report(MON, TUE, ["Total", 131, 290, 2942.5, 865.5, 40.95, None]))
+    assert (batch.totals.net_sales, batch.totals.lines) == (376705, 2)
+
+
+def test_days_after_a_total_row_with_a_blank_net_are_not_dropped_silently() -> None:
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report(MON, ["Total", *MON[1:6], None], TUE))
+    assert "después de la fila" in e.value.message_es
