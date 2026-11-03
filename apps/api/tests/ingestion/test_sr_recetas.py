@@ -117,11 +117,24 @@ def test_an_unknown_unit_is_an_error_for_review() -> None:
 
 
 @pytest.mark.parametrize("qty", [0, -0.05, "0"])
-def test_a_quantity_of_zero_or_less_is_refused(qty: Any) -> None:
-    with pytest.raises(MalformedReport) as e:
-        parse_file(report(TORTILLA, with_(MEAT, "Cantidad", qty)))
-    assert "fila 7" in e.value.message_es
-    assert "mayor que cero" in e.value.message_es
+def test_a_quantity_of_zero_or_less_drops_the_line_and_is_an_error_for_review(qty: Any) -> None:
+    batch = parse_file(report(TORTILLA, with_(MEAT, "Cantidad", qty), SALSA))
+    (issue,) = batch.issues
+    assert (issue.severity, issue.code, issue.row_ref) == (
+        IssueSeverity.error,
+        "sr.qty_not_positive",
+        "7",
+    )
+    for part in ("fila 7", PASTOR, "Carne al pastor (adobada)"):
+        assert part in issue.message_es
+    (pastor,) = batch.recipes
+    assert [x.ingredient_external_id for x in pastor.lines] == ["I038", "E001"]
+
+
+def test_a_recipe_whose_every_line_is_dropped_is_not_emitted() -> None:
+    batch = parse_file(report(with_(TORTILLA, "Cantidad", 0), HORCHATA))
+    assert [r.menu_item_name for r in batch.recipes] == ["Agua de horchata"]
+    assert [i.code for i in batch.issues] == ["sr.qty_not_positive"]
 
 
 @pytest.mark.parametrize("qty", [None, "un poco"])
@@ -510,3 +523,23 @@ def test_an_implausible_quantity_is_an_error_for_review(qty: Any, unit: str) -> 
 def test_a_large_but_plausible_quantity_is_not_flagged(qty: Any, unit: str) -> None:
     batch = parse_file(report(TORTILLA, with_(with_(MEAT, "Cantidad", qty), "Unidad", unit)))
     assert batch.issues == []
+
+
+def test_a_product_row_with_no_recipe_lines_is_a_warning() -> None:
+    bare = ["P077", "Café de olla", None, None, None, None, None, None]
+    batch = parse_file(report(TORTILLA, bare))
+    (issue,) = batch.issues
+    assert (issue.severity, issue.code, issue.row_ref) == (
+        IssueSeverity.warning,
+        "sr.recipe_empty",
+        "7",
+    )
+    assert "Café de olla" in issue.message_es
+    assert [r.menu_item_name for r in batch.recipes] == [PASTOR]
+
+
+def test_a_product_header_row_before_its_ingredients_is_not_a_warning() -> None:
+    header_line = ["P001", PASTOR, None, None, None, None, None, None]
+    batch = parse_file(report(header_line, TORTILLA, MEAT))
+    assert batch.issues == []
+    assert len(batch.recipes[0].lines) == 2

@@ -184,16 +184,6 @@ def _as_of(title: list[Row]) -> Period:
     )
 
 
-def _qty(value: Any, where: str) -> Decimal:
-    qty = number(value, where)
-    if qty <= 0:
-        raise MalformedReport(
-            f"La cantidad {value} en {where} debe ser mayor que cero.",
-            f"quantity <= 0 at {where}",
-        )
-    return qty
-
-
 def _base_qty(qty: Decimal, factor: Decimal, where: str) -> Decimal:
     """The quantity in base units, rounded half-up to the contract's six decimals (1/3 kg)."""
     base = (qty * factor).quantize(QTY_PLACES, rounding=ROUND_HALF_UP)
@@ -240,20 +230,31 @@ class _Row:
 
     product_code: str | None
     product: str
-    line: RecipeLineIn
+    line: RecipeLineIn | None  # None when the line is dropped (its quantity is not positive)
     issues: tuple[IssueIn, ...]
 
 
 def _read(line: Line) -> _Row:
     product = _required_text(line, PRODUCT, "el producto")
     ingredient = _required_text(line, INGREDIENT, "el insumo")
-    qty = line.read(QTY, _qty)
+    qty = line.read(QTY, number)
     if qty is None:
         raise MalformedReport(
             f"Falta la cantidad en la fila {line.n}.", f"no quantity at row {line.n}"
         )
     unit = _required_text(line, UNIT, "la unidad")
     issues: list[IssueIn] = []
+    if qty <= 0:
+        issues.append(
+            _error(
+                "sr.qty_not_positive",
+                f"En la fila {line.n}, la cantidad de {ingredient} en la receta de {product} es "
+                f"{text(line.raw(QTY))}; debe ser mayor que cero. No usé ese insumo: corrígelo "
+                "antes de usar la receta.",
+                line.n,
+            )
+        )
+        return _Row(text(line.raw(CODE)), product, None, tuple(issues))
     known = UNITS.get(norm(unit).rstrip("."))
     if known is None:
         issues.append(
@@ -309,6 +310,33 @@ def _is_footer(line: Line) -> bool:
 
 def _warning(code: str, message_es: str, n: int) -> IssueIn:
     return IssueIn(severity=IssueSeverity.warning, code=code, message_es=message_es, row_ref=str(n))
+
+
+def _empty_recipes(
+    bare: list[tuple[int, str | None, str]], by_name: dict[str, list[str]], grouped: _Recipes
+) -> list[IssueIn]:
+    """A warning per product row with no ingredient whose product has no rows at all."""
+    found: list[IssueIn] = []
+    warned: set[str] = set()
+    for n, code, name in bare:
+        keys = (
+            [f"code:{code}"]
+            if code is not None
+            else [f"code:{c}" for c in by_name.get(norm(name), [])] or [f"name:{norm(name)}"]
+        )
+        label = name or code or ""
+        if any(k in grouped.names for k in keys) or keys[0] in warned:
+            continue
+        warned.add(keys[0])
+        found.append(
+            _warning(
+                "sr.recipe_empty",
+                f"En la fila {n}, «{label}» no trae ningún insumo, así que no tiene receta. "
+                "Revisa si falta capturarla en Soft Restaurant.",
+                n,
+            )
+        )
+    return found
 
 
 def _unknown_yield_columns(header: Row, cols: Columns, n: int) -> list[IssueIn]:
@@ -384,6 +412,8 @@ class _Recipes:
         key = f"code:{code}" if code is not None else f"name:{norm(row.product)}"
         self.names.setdefault(key, row.product)
         self.codes.setdefault(key, code)
+        if row.line is None:  # dropped: the recipe exists, but this line is not in it
+            return
         ingredient = row.line.ingredient_external_id
         pairs = [(key, f"name:{norm(row.line.ingredient_name)}")]
         if ingredient is not None:
@@ -408,6 +438,7 @@ class _Recipes:
                 lines=self.lines[key],
             )
             for key, name in self.names.items()
+            if key in self.lines  # a recipe whose every line was dropped is explained by issues
         ]
 
 
@@ -424,9 +455,13 @@ def parse(wb: Workbook) -> NormalizedBatch:
 
     issues = _unknown_yield_columns(sheet_rows[h], cols, h + 1)
     read: list[tuple[int, _Row]] = []
+    bare: list[tuple[int, str | None, str]] = []  # product rows with no ingredient: n, clave, name
     for n, cells in enumerate(sheet_rows[h + 1 :], start=h + 2):
         line = Line(cells, n, cols)
         if _is_footer(line):
+            product = text(line.raw(PRODUCT))
+            if product is not None or text(line.raw(CODE)) is not None:
+                bare.append((n, text(line.raw(CODE)), product or ""))
             continue
         row = _read(line)
         read.append((n, row))
@@ -435,8 +470,9 @@ def parse(wb: Workbook) -> NormalizedBatch:
     grouped = _Recipes()
     for n, row in read:
         grouped.add(row, n, _clave(row, n, by_name))
+    issues.extend(_empty_recipes(bare, by_name, grouped))
     recipes = grouped.recipes()
-    if not recipes:
+    if not grouped.names:
         raise MalformedReport(
             "El reporte no tiene ninguna receta; revisa que exportaste «Recetas - Productos».",
             "no recipe rows",
