@@ -52,7 +52,8 @@ BASE_UNITS = ("g", "ml", "pza")
 REQUIRED_ROLE = "manager"  # MR-32 keeps it; only the owner can approve recipe.upsert in the seed
 TTL = dt.timedelta(hours=24)
 SUPERSEDED = "superseded"  # resolved_via of a pending change a newer proposal replaced
-PARSER_HELD = "sr.recipe_held"  # the parser's issue for a recipe it did not pass on
+# the parsers' issue for a recipe they did not pass on (SR Recetas, MermIA template)
+PARSER_HELD = ("sr.recipe_held", "plantilla.recipe_held")
 QTY_PLACES = Decimal("0.000001")
 YIELD_PLACES = Decimal("0.0001")
 
@@ -213,7 +214,7 @@ def propose_recipes(
             chain.append(d.name)
     if chain:
         issues.append(_chain_warning(chain))
-    parser_held = sum(1 for i in batch.issues if i.code == PARSER_HELD)
+    parser_held = sum(1 for i in batch.issues if i.code in PARSER_HELD)
     return Proposals(
         pending_change_ids=tuple(ids),
         proposed=counts["proposed"],
@@ -423,7 +424,9 @@ class _Current:
         }
 
 
-def _current(conn: psycopg.Connection[Any], menu_item_id: UUID, day: dt.date) -> _Current | None:
+def current_recipe(
+    conn: psycopg.Connection[Any], menu_item_id: UUID, day: dt.date
+) -> _Current | None:
     """The dish's recipe of record today, with its lines."""
     row = conn.execute(
         """select r.id, r.recipe_version, coalesce(r.yield_qty, 1) from public.recipe r
@@ -540,7 +543,7 @@ def _propose(
     day: dt.date,
     proposed_by: UUID | None,
 ) -> _Filed:
-    before = _current(conn, d.menu_item_id, day)
+    before = current_recipe(conn, d.menu_item_id, day)
     if (
         before is not None
         and before.yield_qty == d.recipe.yield_qty
