@@ -131,11 +131,26 @@ def test_a_missing_or_bad_quantity_is_refused(qty: Any) -> None:
     assert "fila 7" in e.value.message_es
 
 
-def test_a_quantity_finer_than_the_contract_is_refused() -> None:
-    # 0.0000001 kg is 0.0001 g, fine; 0.0000000001 kg is 0.0000001 g, beyond six decimals
+def test_a_quantity_that_rounds_to_zero_is_refused() -> None:
+    # 0.0000000001 kg is 0.0000001 g: zero at the contract's six decimals
     with pytest.raises(MalformedReport) as e:
         parse_file(report(with_(TORTILLA, "Cantidad", "0.0000000001")))
-    assert "decimales" in e.value.message_es
+    assert "demasiado pequeña" in e.value.message_es
+
+
+@pytest.mark.parametrize(
+    ("qty", "unit", "base_qty"),
+    [
+        ("0.3333333333", "KG", "333.333333"),
+        ("0.12345675", "g", "0.123457"),  # half-up, not half-even
+        ("0.0000005", "g", "0.000001"),
+    ],
+    ids=["third-of-a-kilo", "half-up", "smallest"],
+)
+def test_a_quantity_finer_than_the_contract_is_rounded(qty: str, unit: str, base_qty: str) -> None:
+    row = with_(with_(TORTILLA, "Cantidad", qty), "Unidad", unit)
+    (line,) = parse_file(report(row)).recipes[0].lines
+    assert line.qty_base == Decimal(base_qty)
 
 
 def test_a_missing_unit_is_refused() -> None:
@@ -198,7 +213,7 @@ def test_columns_are_found_by_name_in_any_order() -> None:
     assert batch == parse_file(report(TORTILLA))
 
 
-@pytest.mark.parametrize("value", [0, -5, 1000, "92.12345", "mucho"])
+@pytest.mark.parametrize("value", [0, -5, 1000, "0.00001", "999.99995", "mucho"])
 def test_a_bad_yield_is_refused(value: Any) -> None:
     with pytest.raises(MalformedReport) as e:
         parse_file(report(with_(MEAT, "Rendimiento %", value)))
@@ -288,3 +303,153 @@ def test_a_sheet_with_too_many_rows_is_refused(monkeypatch: pytest.MonkeyPatch) 
     with pytest.raises(MalformedReport) as e:
         parse_file(report(TORTILLA, MEAT))
     assert "renglones" in e.value.message_es
+
+
+# --- review on #73 ---------------------------------------------------------------------------
+
+
+def test_a_product_with_and_without_a_code_is_one_recipe() -> None:
+    batch = parse_file(report(with_(TORTILLA, "Clave", None), MEAT, with_(SALSA, "Clave", None)))
+    (recipe,) = batch.recipes
+    assert (recipe.menu_item_external_id, recipe.menu_item_name) == ("P001", PASTOR)
+    assert len(recipe.lines) == 3
+
+
+def test_a_product_name_in_another_case_is_the_same_recipe() -> None:
+    upper = with_(with_(MEAT, "Producto", PASTOR.upper()), "Clave", None)
+    (recipe,) = parse_file(report(TORTILLA, upper)).recipes
+    assert (recipe.menu_item_name, len(recipe.lines)) == (PASTOR, 2)
+
+
+def test_one_product_name_with_two_codes_is_refused() -> None:
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report(TORTILLA, with_(MEAT, "Clave", "P002")))
+    assert "P001" in e.value.message_es
+    assert "P002" in e.value.message_es
+
+
+def test_one_code_with_two_names_is_refused_when_a_codeless_row_comes_between() -> None:
+    renamed = with_(SALSA, "Producto", "Tacos de pastor")
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report(TORTILLA, with_(MEAT, "Clave", None), renamed))
+    assert "P001" in e.value.message_es
+
+
+@pytest.mark.parametrize(
+    "header", ["Rendimiento", "Rendimiento (%)", "% Rendimiento", "Rendimiento%", "RENDIMIENTO"]
+)
+def test_yield_header_variants_are_read(header: str) -> None:
+    headers = [header if h == "Rendimiento %" else h for h in HEADER]
+    batch = parse_file(report(TORTILLA, MEAT, header=headers))
+    assert [x.yield_override_pct for x in batch.recipes[0].lines] == [Decimal(100), Decimal(92)]
+    assert batch.issues == []
+
+
+@pytest.mark.parametrize("header", ["Clave del insumo", "Clave de insumo"])
+def test_ingredient_code_header_variants_are_read(header: str) -> None:
+    headers = [header if h == "Clave insumo" else h for h in HEADER]
+    batch = parse_file(report(TORTILLA, header=headers))
+    assert batch.recipes[0].lines[0].ingredient_external_id == "I038"
+
+
+def test_an_unknown_yield_header_is_a_warning() -> None:
+    headers = ["Rendimiento neto" if h == "Rendimiento %" else h for h in HEADER]
+    batch = parse_file(report(TORTILLA, header=headers))
+    (issue,) = batch.issues
+    assert (issue.severity, issue.code, issue.row_ref) == (
+        IssueSeverity.warning,
+        "sr.unknown_yield_column",
+        "5",
+    )
+    assert "«Rendimiento neto»" in issue.message_es
+    assert batch.recipes[0].lines[0].yield_override_pct is None
+
+
+def test_two_yield_columns_are_refused() -> None:
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report([*TORTILLA, 100], header=[*HEADER, "Rendimiento"]))
+    assert "repite la columna" in e.value.message_es
+
+
+@pytest.mark.parametrize(
+    ("second", "rows"),
+    [
+        (with_(with_(MEAT, "Insumo", "Tortilla de maíz"), "Clave insumo", None), "6 y 7"),
+        (with_(with_(MEAT, "Insumo", "TORTILLA DE MAIZ"), "Clave insumo", "I099"), "6 y 7"),
+        (with_(with_(MEAT, "Insumo", "Tortilla"), "Clave insumo", "I038"), "6 y 7"),
+    ],
+    ids=["with-and-without-code", "case-and-accents", "same-code-other-name"],
+)
+def test_a_repeated_ingredient_is_found_by_code_or_name(second: list[Any], rows: str) -> None:
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report(TORTILLA, second))
+    assert rows in e.value.message_es
+
+
+@pytest.mark.parametrize(
+    ("unit", "base_qty", "base_unit"),
+    [
+        ("kilo", "2000", "g"),
+        ("Kilos", "2000", "g"),
+        ("kilogramo", "2000", "g"),
+        ("KILOGRAMOS.", "2000", "g"),
+        ("gramo", "2", "g"),
+        ("Gramos", "2", "g"),
+        ("litro", "2000", "ml"),
+        ("Litros.", "2000", "ml"),
+        ("mililitro", "2", "ml"),
+        ("Mililitros", "2", "ml"),
+        ("pieza", "2", "pza"),
+        ("Piezas", "2", "pza"),
+    ],
+)
+def test_spelled_out_units_become_base_units(unit: str, base_qty: str, base_unit: str) -> None:
+    row = with_(with_(TORTILLA, "Cantidad", 2), "Unidad", unit)
+    (line,) = parse_file(report(row)).recipes[0].lines
+    assert (line.qty_base, line.unit) == (Decimal(base_qty), base_unit)
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [("92.592592592", "92.5926"), ("92.12345", "92.1235"), ("99.99995", "100.0000")],
+)
+def test_a_yield_finer_than_the_contract_is_rounded_half_up(value: str, expected: str) -> None:
+    (line,) = parse_file(report(with_(MEAT, "Rendimiento %", value))).recipes[0].lines
+    assert line.yield_override_pct == Decimal(expected)
+
+
+def test_a_printed_on_line_does_not_set_the_report_date() -> None:
+    data = xlsx(
+        ["Taquería El Güero - Centro"],
+        ["Impreso el 30/10/2026 09:15"],
+        ["Recetas - Productos"],
+        ["Al 12/10/2026"],
+        [],
+        HEADER,
+        TORTILLA,
+    )
+    batch = parse_file(data)
+    assert (batch.period.from_, batch.period.to) == (dt.date(2026, 10, 12), dt.date(2026, 10, 12))
+
+
+@pytest.mark.parametrize("printed", ["Impresión: 30/10/2026", "Fecha de impresión 30/10/2026"])
+def test_a_title_block_with_only_a_printed_on_date_is_refused(printed: str) -> None:
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report(TORTILLA, date=printed))
+    assert "fecha" in e.value.message_es
+
+
+def test_a_dated_line_is_preferred_over_a_bare_date() -> None:
+    data = xlsx(
+        ["Taquería El Güero - Centro", dt.datetime(2026, 10, 30, 9, 15)],
+        ["Recetas - Productos"],
+        ["Fecha: 12/10/2026"],
+        HEADER,
+        TORTILLA,
+    )
+    assert parse_file(data).period.from_ == dt.date(2026, 10, 12)
+
+
+def test_a_repeated_costo_column_is_read_past() -> None:
+    batch = parse_file(report([*TORTILLA, 1.65], header=[*HEADER, "Costo"]))
+    assert batch == parse_file(report(TORTILLA))

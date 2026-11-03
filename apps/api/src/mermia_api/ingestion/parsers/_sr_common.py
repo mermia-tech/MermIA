@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
-from collections.abc import Callable, Collection
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
@@ -91,11 +91,15 @@ def read_table(wb: Workbook, sheet: str, header_at: int, max_rows: int) -> list[
     return sheet_rows
 
 
-def columns(header: Row, known: Collection[str]) -> Columns:
-    """The header's known columns by normalized name; a known column given twice is refused."""
+def columns(
+    header: Row, known: Collection[str], aliases: Mapping[str, str] | None = None
+) -> Columns:
+    """The header's known columns by normalized name; a known column given twice (under any of
+    its `aliases`, normalized name -> known name) is refused."""
     cols: Columns = {}
     for i, cell in enumerate(header):
         name = norm(cell)
+        name = (aliases or {}).get(name, name)
         if name not in known:
             continue
         if name in cols:
