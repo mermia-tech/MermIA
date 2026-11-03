@@ -2,8 +2,8 @@
 
 PROVISIONAL layout (01 section 3, SR 8 manual; the pilot's real export decides, MR-5): the SR
 title block (_sr_common), a header row with Fecha and Venta neta plus any of the columns below in
-any order, one row per business day, and an optional closing Total row. Text rows with no day
-date and no Venta neta (a footer such as "Impreso el ...") are skipped.
+any order, one row per business day, and an optional closing Total row. Rows with text only in
+Fecha and no day date there (a footer such as "Impreso el ...") are skipped.
 
 Output: one daily batch. Money is centavos. Columns are found by name; a column the report does
 not have stays None (an empty payment mix), since "not reported" is not zero. 01 section 3 also
@@ -119,6 +119,13 @@ def _business_date(line: Line) -> dt.date:
     if s is None:
         raise MalformedReport(f"Falta la fecha en la fila {line.n}.", f"no date at row {line.n}")
     return sr_date(s, f"de la fila {line.n}")
+
+
+def _is_text_footer(line: Line) -> bool:
+    """A row with text only in Fecha ("Impreso el ...", "Página 1 de 1"). A row with any other
+    cell filled is a day row, refused when it cannot be read, never dropped."""
+    i = line.cols[DATE][0]
+    return all(text(c) is None for j, c in enumerate(line.cells) if j != i)
 
 
 def _has_day_date(line: Line) -> bool:
@@ -237,7 +244,7 @@ def parse(wb: Workbook) -> NormalizedBatch:
             raw_net = line.raw(NET)
             total_net = None if text(raw_net) is None else centavos(raw_net, f"la fila Total ({n})")
             continue
-        if text(line.raw(NET)) is None and not _has_day_date(line):
+        if _is_text_footer(line) and not _has_day_date(line):
             continue  # a text footer ("Impreso el ...", "Página 1 de 1") without a Total row
         day = _day(line)
         _in_period(day, n, batch_period, seen)
