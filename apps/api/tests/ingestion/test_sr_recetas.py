@@ -321,13 +321,6 @@ def test_a_product_name_in_another_case_is_the_same_recipe() -> None:
     assert (recipe.menu_item_name, len(recipe.lines)) == (PASTOR, 2)
 
 
-def test_one_product_name_with_two_codes_is_refused() -> None:
-    with pytest.raises(MalformedReport) as e:
-        parse_file(report(TORTILLA, with_(MEAT, "Clave", "P002")))
-    assert "P001" in e.value.message_es
-    assert "P002" in e.value.message_es
-
-
 def test_one_code_with_two_names_is_refused_when_a_codeless_row_comes_between() -> None:
     renamed = with_(SALSA, "Producto", "Tacos de pastor")
     with pytest.raises(MalformedReport) as e:
@@ -453,3 +446,67 @@ def test_a_dated_line_is_preferred_over_a_bare_date() -> None:
 def test_a_repeated_costo_column_is_read_past() -> None:
     batch = parse_file(report([*TORTILLA, 1.65], header=[*HEADER, "Costo"]))
     assert batch == parse_file(report(TORTILLA))
+
+
+# --- skeptic pass on #73: one name under two claves, implausible quantities -----------------
+
+LARGE = ["P051", "Agua de horchata", "I039", "Leche entera", 0.2, "LT", 100, 5.2]
+RICE = ["P050", "Agua de horchata", "I040", "Arroz", 0.03, "KG", 100, 0.9]
+
+
+def test_one_product_name_with_two_codes_is_two_recipes() -> None:
+    batch = parse_file(report(HORCHATA, LARGE, RICE))
+    assert [(r.menu_item_external_id, len(r.lines)) for r in batch.recipes] == [
+        ("P050", 2),
+        ("P051", 1),
+    ]
+    assert batch.issues == []
+
+
+def test_a_codeless_row_joins_the_one_code_its_name_has_wherever_it_comes() -> None:
+    codeless = with_(RICE, "Clave", None)
+    batch = parse_file(report(codeless, HORCHATA))
+    (recipe,) = batch.recipes
+    assert (recipe.menu_item_external_id, len(recipe.lines)) == ("P050", 2)
+
+
+def test_a_codeless_row_whose_name_has_two_codes_is_refused() -> None:
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report(HORCHATA, LARGE, with_(RICE, "Clave", None)))
+    message = e.value.message_es
+    assert all(s in message for s in ("fila 8", "«Agua de horchata»", "P050", "P051"))
+
+
+def test_a_repeated_ingredient_under_two_codes_of_one_name_is_fine() -> None:
+    # LARGE repeats HORCHATA's ingredient, in another recipe (P051)
+    assert len(parse_file(report(HORCHATA, LARGE)).recipes) == 2
+
+
+def test_a_repeated_ingredient_in_a_codeless_row_of_a_coded_recipe_is_refused() -> None:
+    again = with_(with_(HORCHATA, "Clave", None), "Cantidad", 0.2)
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report(HORCHATA, again))
+    assert "6 y 7" in e.value.message_es
+
+
+@pytest.mark.parametrize(
+    ("qty", "unit"),
+    [("1,500", "KG"), (1000, "LT"), (1000000, "GR"), (1000, "PZA")],
+)
+def test_an_implausible_quantity_is_an_error_for_review(qty: Any, unit: str) -> None:
+    batch = parse_file(report(TORTILLA, with_(with_(MEAT, "Cantidad", qty), "Unidad", unit)))
+    (issue,) = batch.issues
+    assert (issue.severity, issue.code, issue.row_ref) == (
+        IssueSeverity.error,
+        "sr.qty_implausible",
+        "7",
+    )
+    assert f"{qty} {unit}" in issue.message_es
+
+
+@pytest.mark.parametrize(
+    ("qty", "unit"), [(999.999999, "KG"), (999, "LT"), (999999, "ML"), (999, "PZA")]
+)
+def test_a_large_but_plausible_quantity_is_not_flagged(qty: Any, unit: str) -> None:
+    batch = parse_file(report(TORTILLA, with_(with_(MEAT, "Cantidad", qty), "Unidad", unit)))
+    assert batch.issues == []

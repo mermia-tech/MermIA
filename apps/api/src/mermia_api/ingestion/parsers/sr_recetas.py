@@ -16,9 +16,13 @@ other unknown column, is ignored: the contract has no field for it, and costs co
 prices. A catalog has no period, so the date line ("Al dd/mm/yyyy", "Fecha: ...") gives a
 one-day period; a printed-on line ("Impreso el ...") is never the report date.
 
-Rows are grouped into one recipe per product name (case and accents aside), so a dish whose
-Clave is missing on some rows is still one recipe; a name with two claves, or a clave with two
-names, is refused. An ingredient repeated in one recipe (by clave or by name) is refused.
+Rows are grouped into one recipe per Clave, so one name under two claves (two sizes of an agua)
+is two recipes. A row without a Clave joins the recipe of its product name (case and accents
+aside) when that name has one clave in the file, so a dish whose Clave is missing on some rows is
+still one recipe; when the name has several claves the row is refused, and when it has none the
+name alone is the recipe. A clave with two names is refused, and so is an ingredient repeated in
+one recipe (by clave or by name). A quantity of 1000 kg, l or pza or more per portion is an
+error-level issue (a decimal comma read as thousands, "1,500" kg).
 "Recetas - Insumos elaborados" (sub-recipes such as salsa verde) is another report, not read yet.
 """
 
@@ -117,6 +121,9 @@ QTY_PLACES = Decimal("0.000001")  # the contract's Quantity: 6 decimals, 12 inte
 MAX_QTY = Decimal(10) ** 12
 YIELD_PLACES = Decimal("0.0001")  # the contract's PercentPoints: 4 decimals, up to 999.9999
 MAX_YIELD = Decimal("999.9999")
+# Per portion, a base quantity this large is a slip (a decimal comma read as thousands,
+# "1,500" kg): 1000 kg or l (in g or ml), or 1000 pieces, goes to a person.
+IMPLAUSIBLE_QTY = {"g": Decimal(10) ** 6, "ml": Decimal(10) ** 6, "pza": Decimal(1000)}
 # A yield this low is a fraction (0.92 for 92 %) read as percent points: it would cost the
 # line about a hundred times too much, so a person checks it.
 MAX_FRACTION_YIELD = Decimal(1)
@@ -260,6 +267,16 @@ def _read(line: Line) -> _Row:
         base_unit, base = unit, _base_qty(qty, Decimal(1), line.where(QTY))
     else:
         base_unit, base = known[0], _base_qty(qty, known[1], line.where(QTY))
+        if base >= IMPLAUSIBLE_QTY[base_unit]:
+            issues.append(
+                _error(
+                    "sr.qty_implausible",
+                    f"En la fila {line.n}, la cantidad de {ingredient} es "
+                    f"{text(line.raw(QTY))} {unit} por porción; parece demasiado (¿una coma "
+                    "decimal?). Revísala antes de usar la receta.",
+                    line.n,
+                )
+            )
     pct = line.read(YIELD, _yield)
     if pct is not None and pct <= MAX_FRACTION_YIELD:
         issues.append(
@@ -311,40 +328,62 @@ def _unknown_yield_columns(header: Row, cols: Columns, n: int) -> list[IssueIn]:
     ]
 
 
-@dataclass
-class _Recipes:
-    """Recipe rows grouped by product name (normalized), in order of first appearance."""
+def _listed(claves: list[str]) -> str:
+    return claves[0] if len(claves) == 1 else f"{', '.join(claves[:-1])} y {claves[-1]}"
 
-    names: dict[str, str] = field(default_factory=dict)  # product key -> name as first given
-    codes: dict[str, str] = field(default_factory=dict)  # product key -> its clave
-    keys: dict[str, str] = field(default_factory=dict)  # clave -> product key
-    lines: dict[str, list[RecipeLineIn]] = field(default_factory=dict)
-    seen: dict[tuple[str, str], int] = field(default_factory=dict)  # (product, ingredient) -> row
 
-    def _product(self, row: _Row, n: int) -> str:
-        key = norm(row.product)
+def _claves_by_name(read: list[tuple[int, _Row]]) -> dict[str, list[str]]:
+    """Each product name (normalized) -> its claves in order. A clave with two names is
+    refused."""
+    first: dict[str, tuple[str, str]] = {}  # clave -> (name key, name as first given)
+    by_name: dict[str, list[str]] = {}
+    for n, row in read:
         code = row.product_code
-        name = self.names.setdefault(key, row.product)
         if code is None:
-            return key
-        other = self.keys.setdefault(code, key)
-        if other != key:
+            continue
+        key = norm(row.product)
+        other_key, other_name = first.setdefault(code, (key, row.product))
+        if other_key != key:
             raise MalformedReport(
-                f"La clave {code} aparece como «{self.names[other]}» y como «{row.product}» "
+                f"La clave {code} aparece como «{other_name}» y como «{row.product}» "
                 f"(fila {n}). Envíame el reporte con un nombre por producto.",
                 f"product {code!r} has two names, second at row {n}",
             )
-        known = self.codes.setdefault(key, code)
-        if known != code:
-            raise MalformedReport(
-                f"El producto «{name}» aparece con las claves {known} y {code} (fila {n}). "
-                "Envíame el reporte con una clave por producto.",
-                f"product {key!r} has two claves, second at row {n}",
-            )
-        return key
+        claves = by_name.setdefault(key, [])
+        if code not in claves:
+            claves.append(code)
+    return by_name
 
-    def add(self, row: _Row, n: int) -> None:
-        key = self._product(row, n)
+
+def _clave(row: _Row, n: int, by_name: dict[str, list[str]]) -> str | None:
+    """The row's clave, or the one clave its name has in the file; None when it has none."""
+    if row.product_code is not None:
+        return row.product_code
+    claves = by_name.get(norm(row.product), [])
+    if len(claves) > 1:
+        raise MalformedReport(
+            f"La fila {n} trae «{row.product}» sin clave, y ese producto aparece con las claves "
+            f"{_listed(claves)}; no sé a cuál receta pertenece. Envíame el reporte con la clave "
+            "en cada fila.",
+            f"codeless row {n} for {row.product!r}, which has claves {claves}",
+        )
+    return claves[0] if claves else None
+
+
+@dataclass
+class _Recipes:
+    """Recipe rows grouped by clave, or by product name for a name without one, in order of
+    first appearance."""
+
+    names: dict[str, str] = field(default_factory=dict)  # recipe key -> name as first given
+    codes: dict[str, str | None] = field(default_factory=dict)  # recipe key -> its clave
+    lines: dict[str, list[RecipeLineIn]] = field(default_factory=dict)
+    seen: dict[tuple[str, str], int] = field(default_factory=dict)  # (recipe, ingredient) -> row
+
+    def add(self, row: _Row, n: int, code: str | None) -> None:
+        key = f"code:{code}" if code is not None else f"name:{norm(row.product)}"
+        self.names.setdefault(key, row.product)
+        self.codes.setdefault(key, code)
         ingredient = row.line.ingredient_external_id
         pairs = [(key, f"name:{norm(row.line.ingredient_name)}")]
         if ingredient is not None:
@@ -363,7 +402,7 @@ class _Recipes:
     def recipes(self) -> list[RecipeIn]:
         return [
             RecipeIn(
-                menu_item_external_id=self.codes.get(key),
+                menu_item_external_id=self.codes[key],
                 menu_item_name=name,
                 yield_qty=Decimal(1).quantize(QTY_PLACES),
                 lines=self.lines[key],
@@ -383,15 +422,19 @@ def parse(wb: Workbook) -> NormalizedBatch:
     as_of = _as_of(title)
     cols = columns(sheet_rows[h], KNOWN, ALIASES)
 
-    grouped = _Recipes()
     issues = _unknown_yield_columns(sheet_rows[h], cols, h + 1)
+    read: list[tuple[int, _Row]] = []
     for n, cells in enumerate(sheet_rows[h + 1 :], start=h + 2):
         line = Line(cells, n, cols)
         if _is_footer(line):
             continue
         row = _read(line)
-        grouped.add(row, n)
+        read.append((n, row))
         issues.extend(row.issues)
+    by_name = _claves_by_name(read)  # all rows first: a codeless row may come before its clave
+    grouped = _Recipes()
+    for n, row in read:
+        grouped.add(row, n, _clave(row, n, by_name))
     recipes = grouped.recipes()
     if not recipes:
         raise MalformedReport(
