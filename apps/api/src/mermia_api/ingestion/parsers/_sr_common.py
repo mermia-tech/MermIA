@@ -69,9 +69,10 @@ def is_number(value: object) -> bool:
     return isinstance(value, int | float | Decimal) and not isinstance(value, bool)
 
 
-def has_title(top: list[Row], header_at: int, title: str) -> bool:
-    """Whether the report name appears in the rows above the header."""
-    return any(title in norm(c) for row in top[:header_at] for c in row)
+def has_title(top: list[Row], header_at: int, *titles: str) -> bool:
+    """Whether a cell above the header is exactly one of the report names (a longer name such as
+    "Ventas por día por mesero" is another report)."""
+    return any(norm(c) in titles for row in top[:header_at] for c in row)
 
 
 def read_table(wb: Workbook, sheet: str, header_at: int, max_rows: int) -> list[Row]:

@@ -153,6 +153,17 @@ def test_a_total_row_that_matches_becomes_totals() -> None:
     assert len(batch.daily_sales) == 2
 
 
+@pytest.mark.parametrize("label", ["Totales", "Total general", "TOTAL GENERAL"])
+def test_total_row_label_variants(label: str) -> None:
+    batch = parse_file(report(MON, TUE, [label, 131, 290, 2942.5, 865.5, 40.95, 3767.05]))
+    assert (batch.totals.net_sales, batch.totals.lines) == (376705, 2)
+
+
+def test_a_whitespace_cell_in_a_footer_after_total_is_fine() -> None:
+    batch = parse_file(report(MON, ["Total", *MON[1:]], ["Impreso el 12/10/2026", *["  "] * 6]))
+    assert batch.totals.lines == 1
+
+
 def test_a_total_row_that_does_not_match_is_kept_for_the_loader_to_reject() -> None:
     total = ["Total", None, None, None, None, None, 4000]
     batch = parse_file(report(MON, TUE, total))
@@ -251,6 +262,13 @@ def test_another_title_is_not_recognized() -> None:
     with pytest.raises(UnknownReport) as e:
         parse_file(data)
     assert "Ventas por día" in e.value.message_es
+
+
+@pytest.mark.parametrize("name", ["Ventas por día por mesero", "Ventas por día por forma de pago"])
+def test_a_longer_report_name_is_not_recognized(name: str) -> None:
+    data = xlsx(["X - Centro"], [name], ["Del 05/10/2026 al 11/10/2026"], HEADER, MON)
+    with pytest.raises(UnknownReport):
+        parse_file(data)
 
 
 def test_a_sheet_with_too_many_rows_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:

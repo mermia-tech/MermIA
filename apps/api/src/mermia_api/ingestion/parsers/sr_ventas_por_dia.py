@@ -46,6 +46,7 @@ from mermia_contracts.db.models import IssueSeverity, PaymentMethod, SourceKind
 PARSER = "sr.ventas_por_dia@v1"
 TITLE = "ventas por dia"
 MAX_ROWS = 1_000  # almost three years of days; a small zip cannot unpack into a huge sheet
+TOTAL_LABELS = frozenset({"total", "totales", "total general"})
 MAX_COUNT = 2**31 - 1  # the contract's Count (an int column)
 
 DATE = "fecha"
@@ -262,14 +263,14 @@ def parse(wb: Workbook) -> NormalizedBatch:
         if total_net is not None:
             # After Total only a text footer may follow ("Impreso el ..."). A Venta neta there
             # means more days or another section, which would be loaded silently short.
-            if line.raw(NET) is not None:
+            if text(line.raw(NET)) is not None:
                 raise MalformedReport(
                     f"Encontré más datos después de la fila «Total» (en la fila {n}). Envíame "
                     "el reporte con una sola tabla de días.",
                     f"Venta neta after Total at row {n}",
                 )
             continue
-        if norm(line.raw(DATE)) == "total":
+        if norm(line.raw(DATE)) in TOTAL_LABELS:
             total_net = centavos(line.raw(NET), f"la fila Total ({n})")
             continue
         day = _day(line)

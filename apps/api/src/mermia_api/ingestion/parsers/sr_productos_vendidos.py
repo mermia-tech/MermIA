@@ -56,7 +56,7 @@ def _sheet_name(wb: Workbook) -> str | None:
     for name in wb.sheetnames:
         top = rows(wb, name, max_row=SEARCH_ROWS)
         h = _header_at(top)
-        if h is not None and has_title(top, h, TITLE):
+        if h is not None and has_title(top, h, TITLE, f"{TITLE} en general"):
             return name
     return None
 
