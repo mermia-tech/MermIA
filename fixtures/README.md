@@ -75,4 +75,18 @@ Calibration: to land exactly on the two pinned weeks, calibration adds units acr
 
 Each file has a `.golden.json` beside it: the `NormalizedBatch` a parser must produce from it.
 
+## Recipe template sample (`templates/`)
+
+- `plantilla_recetas_v1_L1.xlsx`: the MermIA recipe template for Centro on 2026-10-12, prefilled from the seed (the 15 recipes, then the dishes without one), with its `.golden.json`.
+
+It is written by the template's CLI from the seeded database, not by `mermia_fixtures`. Regenerate it after changing the seed or the template:
+
+```bash
+MERMIA_DB_URL=... uv run python -m mermia_api.ingestion.templates.recetas \
+  --tenant 03299e41-28bd-5779-bcc6-0e5e76580fad --location 705e8e51-376b-5785-adbb-405eff4e2a22 \
+  --date 2026-10-12 --out fixtures/templates/plantilla_recetas_v1_L1.xlsx --golden
+```
+
+`test_the_committed_sample_is_what_the_cli_writes_from_the_seed` fails when it is stale.
+
 **These files are synthetic.** The column layout is a guess based on the SR 8 manual (`01` §3). The parsers (MR-15, MR-23) must be built against the pilot's real exports (MR-5). When those arrive, put them in `sr/<sr version>/` with their own golden files, and delete or keep these as extra cases.

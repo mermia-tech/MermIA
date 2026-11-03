@@ -1,7 +1,10 @@
-"""Every SR sample under fixtures/sr/<version>/ must parse to its golden NormalizedBatch.
+"""Every sample file must parse to its golden NormalizedBatch.
 
-The synthetic exports come from the fixture generator (MR-12). When a pilot's real export arrives
-(MR-5), drop it under fixtures/sr/<version>/ next to its .golden.json and it is picked up here.
+- fixtures/sr/<version>/: SR exports. The synthetic ones come from the fixture generator (MR-12).
+  When a pilot's real export arrives (MR-5), drop it under fixtures/sr/<version>/ next to its
+  .golden.json and it is picked up here.
+- fixtures/templates/: the MermIA recipe template, written from the seed by its CLI
+  (`uv run python -m mermia_api.ingestion.templates.recetas ... --golden`), never by hand.
 """
 
 from pathlib import Path
@@ -11,8 +14,8 @@ import pytest
 from mermia_api.ingestion.registry import XLSX_PARSERS, parse_file
 from mermia_contracts.batch import NormalizedBatch
 
-SR = Path(__file__).parents[4] / "fixtures" / "sr"
-SAMPLES = sorted(SR.glob("*/*.xlsx"))
+FIXTURES = Path(__file__).parents[4] / "fixtures"
+SAMPLES = sorted(FIXTURES.glob("sr/*/*.xlsx")) + sorted(FIXTURES.glob("templates/*.xlsx"))
 
 
 @pytest.mark.parametrize("path", SAMPLES, ids=lambda p: f"{p.parent.name}/{p.name}")
