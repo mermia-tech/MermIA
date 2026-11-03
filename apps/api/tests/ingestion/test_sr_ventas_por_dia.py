@@ -322,3 +322,20 @@ def test_days_after_a_total_row_with_a_blank_net_are_not_dropped_silently() -> N
     with pytest.raises(MalformedReport) as e:
         parse_file(report(MON, ["Total", *MON[1:6], None], TUE))
     assert "después de la fila" in e.value.message_es
+
+
+# --- skeptic pass on #72: only an all-blank row besides Fecha is a footer --------------------
+
+
+@pytest.mark.parametrize("date", ["2026-10-07", "Mié 07/10"])
+def test_a_day_row_with_an_odd_date_and_a_blank_net_is_refused_not_dropped(date: str) -> None:
+    probe = [date, 70, 150, None, None, None, None, None, 90, 700, 1200, None, None, None]
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report(MON, TUE, probe))
+    assert "fila 8" in e.value.message_es
+
+
+def test_a_printed_on_footer_in_the_fecha_column_is_still_skipped() -> None:
+    footer = ["Impreso el 12/10/2026 09:00", None, " ", None]
+    batch = parse_file(report(MON, TUE, footer))
+    assert (batch.totals.net_sales, batch.totals.lines) == (376705, 2)

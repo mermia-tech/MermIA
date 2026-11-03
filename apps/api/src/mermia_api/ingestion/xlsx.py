@@ -74,6 +74,12 @@ def _without_thousands(s: str, where: str) -> str:
         return s
     if THOUSANDS.fullmatch(s):
         return s.replace(",", "")
+    if any(c in s for c in "$()"):
+        raise MalformedReport(
+            f"El valor «{s}» en {where} tiene signo de pesos o paréntesis. Envíame el reporte "
+            "con números sin formato (por ejemplo 1250.50 o -1250).",
+            f"currency sign or parentheses in a number at {where}: {s!r}",
+        )
     raise MalformedReport(
         f"El valor «{s}» en {where} tiene una coma que no es separador de miles; no sé si es "
         "decimal. Envíame el reporte con punto decimal (por ejemplo 0.075).",

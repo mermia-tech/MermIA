@@ -402,3 +402,12 @@ def test_a_decimal_comma_quantity_refuses_the_report() -> None:
     with pytest.raises(MalformedReport) as e:
         parse_file(report(line, total=[None, "Total", None, 1.5, None, 284.85, 0, 284.85]))
     assert "coma" in e.value.message_es
+
+
+@pytest.mark.parametrize("value", ["$1,974.05", "(1,250)", "$ 1,250", "(1,250.00)"])
+def test_a_currency_sign_or_parentheses_is_named_not_blamed_on_the_comma(value: str) -> None:
+    with pytest.raises(MalformedReport) as e:
+        number(value, "la fila 6 (Importe)")
+    assert f"«{value}»" in e.value.message_es
+    assert "coma" not in e.value.message_es
+    assert "signo de pesos o paréntesis" in e.value.message_es
