@@ -666,20 +666,58 @@ def test_a_resend_after_its_proposal_was_rejected_proposes_again(
     assert statuses(conn, first, again) == [("rejected", None), ("pending", None)]
 
 
-def test_a_resend_after_its_proposal_was_superseded_proposes_again(
+def pastor_states(conn: psycopg.Connection[Any]) -> list[tuple[str, str | None]]:
+    return [
+        (r[0], r[1])
+        for r in conn.execute(
+            """select status::text, resolved_via from public.pending_change
+               where target_id = %s order by id""",
+            (PASTOR_ITEM,),
+        ).fetchall()
+    ]
+
+
+def test_an_older_report_does_not_replace_a_newer_pending_change(
     conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
 ) -> None:
-    batch = edited_pastor(sample)
-    first = load(conn, batch, source_id=source)
-    middle = load(conn, next_day(less_meat(sample)), source_id=source)
-    again = load(conn, batch, source_id=source)
-    assert (again.duplicate, len(again.pending_change_ids)) == (False, 1)
-    assert again.batch_id != first.batch_id
-    assert statuses(conn, first, middle, again) == [
-        ("expired", "superseded"),
-        ("expired", "superseded"),
-        ("pending", None),
-    ]
+    older = edited_pastor(sample)
+    load(conn, older, source_id=source)
+    load(conn, next_day(less_meat(sample)), source_id=source)
+    again = load(conn, older, source_id=source)
+    assert (again.duplicate, again.pending_change_ids) == (False, ())
+    assert pastor_states(conn) == [("expired", "superseded"), ("pending", None)]
+    (warning,) = [i for i in again.issues if i.code == "recipe.newer_pending"]
+    day = sample.period.to + dt.timedelta(days=1)
+    assert warning.severity.value == "warning"
+    assert PASTOR in warning.message_es and f"{day:%d/%m/%Y}" in warning.message_es
+
+
+def test_a_resend_with_the_same_report_date_replaces_the_pending_change(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
+) -> None:
+    first = load(conn, edited_pastor(sample), source_id=source)
+    again = load(conn, less_meat(sample), source_id=source)
+    assert len(again.pending_change_ids) == 1 and "recipe.newer_pending" not in codes(again)
+    assert statuses(conn, first, again) == [("expired", "superseded"), ("pending", None)]
+
+
+def test_a_lapsed_pending_change_is_ignored_by_a_newer_report_and_an_older_one(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
+) -> None:
+    first = load(conn, next_day(edited_pastor(sample)), source_id=source)
+    conn.execute(
+        "update public.pending_change set expires_at = now() - interval '1 minute' "
+        "where id = any(%s)",
+        (list(first.pending_change_ids),),
+    )
+    older = load(conn, less_meat(sample), source_id=source)
+    assert len(older.pending_change_ids) == 1
+    assert codes(older).isdisjoint({"recipe.newer_pending", "recipe.pending_replaced"})
+    assert "recipe.chain_location_differs" in codes(older)  # only for the seed, not the lapsed
+    assert pastor_states(conn) == [("pending", None), ("pending", None)]
+    assert conn.execute(
+        "select count(*) from public.audit_log where action = 'pending_change.supersede'"
+    ).fetchone() == (0,)
 
 
 def test_a_sales_file_twice_is_still_a_duplicate(conn: psycopg.Connection[Any]) -> None:

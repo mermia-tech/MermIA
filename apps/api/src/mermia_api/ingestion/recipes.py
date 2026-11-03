@@ -192,7 +192,10 @@ def propose_recipes(
                 ).issue
             )
             continue
-        filed = _propose(conn, tenant_id, batch_id, batch.parser, d, day, proposed_by)
+        filed = _propose(conn, tenant_id, batch_id, batch, d, day, proposed_by)
+        if filed.newer_pending is not None:
+            issues.append(_newer_pending_issue(d.name, filed.newer_pending))
+            continue
         counts[filed.outcome] += 1
         if filed.change_id is None:
             continue
@@ -218,6 +221,15 @@ def propose_recipes(
         already_pending=counts["already_pending"],
         held=len(batch.recipes) - sum(counts.values()) + parser_held,
         issues=tuple(issues),
+    )
+
+
+def _newer_pending_issue(name: str, report_date: dt.date) -> IssueIn:
+    return _issue(
+        IssueSeverity.warning,
+        "recipe.newer_pending",
+        f"Ya hay un cambio pendiente para «{name}» de un reporte más reciente "
+        f"({report_date:%d/%m/%Y}); no lo reemplacé.",
     )
 
 
@@ -509,6 +521,7 @@ class _Filed:
     replaced: tuple[UUID | None, ...] = ()  # the superseded proposals' file locations
     origin: UUID | None = None  # the file location of the recipe of record, if traceable
     has_recipe: bool = False
+    newer_pending: dt.date | None = None  # report date of a pending change that blocks this one
 
     def other_location(self, location_id: UUID, several: bool) -> bool:
         """Whether this change may undo another location's recipe (tenant-wide recipes)."""
@@ -522,7 +535,7 @@ def _propose(
     conn: psycopg.Connection[Any],
     tenant_id: UUID,
     batch_id: UUID,
-    parser: str,
+    batch: NormalizedBatch,
     d: _Dish,
     day: dt.date,
     proposed_by: UUID | None,
@@ -553,6 +566,9 @@ def _propose(
     )
     payload = proposal.model_dump(mode="json")
     base_version = before.recipe_version if before else None
+    newer = _newer_pending(conn, tenant_id, d.menu_item_id, batch.period.to)
+    if newer is not None:
+        return _Filed("newer_pending", newer_pending=newer)
     if conn.execute(
         """select 1 from public.pending_change
            where tenant_id = %s and kind = %s and target_id = %s and status = 'pending'
@@ -565,7 +581,7 @@ def _propose(
         "yield_qty": _qty(d.recipe.yield_qty),
         "lines": [x.as_json() for x in d.lines],
     }
-    diff = _diff(batch_id, parser, d, before, after)
+    diff = _diff(batch_id, batch.parser, d, before, after)
     row = conn.execute(
         """insert into public.pending_change
              (tenant_id, kind, target_type, target_id, base_version, payload, diff,
@@ -602,6 +618,25 @@ def _propose(
     return _Filed("proposed", change_id, replaced, origin, before is not None)
 
 
+def _newer_pending(
+    conn: psycopg.Connection[Any], tenant_id: UUID, menu_item_id: UUID, report_date: dt.date
+) -> dt.date | None:
+    """The report date of the latest live pending recipe.upsert of the dish that comes from a
+    later report than `report_date` (None when there is none). The date is the end of the
+    period in the batch's slice_key."""
+    row = conn.execute(
+        """select max(split_part(b.slice_key, ':', 4)::date)
+           from public.pending_change pc
+           join public.import_batch b
+             on b.tenant_id = pc.tenant_id and b.id::text = pc.diff ->> 'batch_id'
+           where pc.tenant_id = %s and pc.kind = %s and pc.target_id = %s
+             and pc.status = 'pending' and (pc.expires_at is null or pc.expires_at > now())
+             and split_part(b.slice_key, ':', 4)::date > %s""",
+        (tenant_id, KIND.value, menu_item_id, report_date),
+    ).fetchone()
+    return None if row is None else row[0]
+
+
 def _supersede(
     conn: psycopg.Connection[Any],
     tenant_id: UUID,
@@ -617,7 +652,7 @@ def _supersede(
         """update public.pending_change pc
            set status = 'expired', resolved_at = now(), resolved_via = %s
            where tenant_id = %s and kind = %s and target_id = %s and status = 'pending'
-             and id <> %s
+             and (expires_at is null or expires_at > now()) and id <> %s
            returning id, (select b.location_id from public.import_batch b
                           where b.tenant_id = pc.tenant_id
                             and b.id::text = pc.diff ->> 'batch_id')""",
