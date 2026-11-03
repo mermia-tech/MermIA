@@ -19,6 +19,7 @@ from mermia_api.ingestion.errors import (
     UnreadableFile,
 )
 from mermia_api.ingestion.registry import parse_file
+from mermia_api.ingestion.xlsx import number
 
 HEADER = ["Clave", "Descripción", "Grupo", "Cantidad", "Precio", "Importe", "Descuento", "Total"]
 
@@ -366,3 +367,38 @@ def test_a_longer_report_name_is_not_recognized(name: str) -> None:
     )
     with pytest.raises(UnknownReport):
         parse_file(data)
+
+
+# --- review on #72: commas in text numbers --------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("1,250", Decimal(1250)),
+        ("12,345.5", Decimal("12345.5")),
+        ("1,234,567.89", Decimal("1234567.89")),
+        ("-1,250", Decimal(-1250)),
+        (" 1,250.00 ", Decimal("1250.00")),
+        ("0.075", Decimal("0.075")),
+    ],
+)
+def test_a_text_number_with_thousands_commas_is_read(value: str, expected: Decimal) -> None:
+    assert number(value, "la fila 6 (Cantidad)") == expected
+
+
+@pytest.mark.parametrize(
+    "value", ["0,075", "1,5", "12,34", "1,2345", "01,250", "1,25,000", ",250", "1,250,", "1,,250"]
+)
+def test_a_comma_that_is_not_a_thousands_separator_is_refused(value: str) -> None:
+    with pytest.raises(MalformedReport) as e:
+        number(value, "la fila 6 (Cantidad)")
+    assert f"«{value}»" in e.value.message_es
+    assert "coma" in e.value.message_es
+
+
+def test_a_decimal_comma_quantity_refuses_the_report() -> None:
+    line = ["P099", "Carne por kilo", "Extras", "1,5", 189.9, 284.85, 0, 284.85]
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report(line, total=[None, "Total", None, 1.5, None, 284.85, 0, 284.85]))
+    assert "coma" in e.value.message_es
