@@ -4,7 +4,8 @@ Runs in the backend on a service-role connection (it writes facts, which clients
 tenant always comes from the source row, never from the caller. One call is one transaction:
 
 1. Duplicate: the same raw file, or the same content for the same slice, returns the earlier
-   batch and writes nothing ("ya lo había recibido", 09 section 2.6).
+   batch and writes nothing ("ya lo había recibido", 09 section 2.6). A catalog file counts as
+   one only while a proposal it filed is still pending.
 2. Checks the contract leaves to the loader (MR-10 spec 8.2, 03 B.5):
    - rejected: an unsupported grain, rows outside the period, totals that differ from the rows,
      no location, a value the database refuses;
@@ -130,14 +131,26 @@ def _load(
         "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
         (f"{tenant_id}:{key or digest}",),
     )
+    catalog = batch.grain == Grain.catalog
+    if catalog:  # recipes are tenant-wide: two locations must not file the same proposal at once
+        conn.execute(
+            "select pg_advisory_xact_lock(hashtextextended(%s, 0))", (f"{tenant_id}:recipes",)
+        )
 
+    # a catalog file is a duplicate only while a proposal it filed still waits for a decision:
+    # sent again after they were rejected, expired or superseded, it proposes again
     earlier = conn.execute(
-        """select id, status::text from public.import_batch
+        """select id, status::text from public.import_batch ib
            where tenant_id = %s and status::text = any(%s)
              and ((%s::uuid is not null and raw_file_id = %s)
                   or (slice_key = %s and stats ->> 'content_sha256' = %s))
+             and (not %s or exists (
+                   select 1 from public.pending_change pc
+                   where pc.tenant_id = ib.tenant_id and pc.diff ->> 'batch_id' = ib.id::text
+                     and pc.status = 'pending'
+                     and (pc.expires_at is null or pc.expires_at > now())))
            order by created_at limit 1""",
-        (tenant_id, list(OPEN), raw_file_id, raw_file_id, key, digest),
+        (tenant_id, list(OPEN), raw_file_id, raw_file_id, key, digest, catalog),
     ).fetchone()
     if earlier is not None:
         return LoadResult(earlier[0], earlier[1], True, ())
@@ -158,7 +171,7 @@ def _load(
     batch_id = _insert_batch(
         conn, tenant_id, source_id, raw_file_id, location_id, key, status, batch, digest
     )
-    if batch.grain == Grain.catalog:  # review issues (another location's name) only inform
+    if catalog:  # review issues (another location's name) only inform
         return _load_catalog(
             conn, tenant_id, location_id, batch_id, batch, issues, reject, review, proposed_by
         )

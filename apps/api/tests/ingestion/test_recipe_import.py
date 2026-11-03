@@ -18,7 +18,8 @@ import pytest
 
 from mermia_api.ingestion.loader import LoadResult, load
 from mermia_api.ingestion.registry import parse_file
-from mermia_contracts.batch import NormalizedBatch, RecipeIn, RecipeLineIn
+from mermia_contracts.batch import IssueIn, NormalizedBatch, RecipeIn, RecipeLineIn
+from mermia_contracts.db.models import IssueSeverity
 from mermia_contracts.pending import PendingKind, RecipeUpsertProposal
 
 pytestmark = pytest.mark.db
@@ -464,3 +465,259 @@ def test_load_never_writes_recipe_tables(
         (r.batch_id, "import_batch.apply"),
     ).fetchone()
     assert applied == (0,), "apply_batch is never called for a catalog batch"
+
+
+POLANCO = UUID("fdda5e3b-6bcd-5c48-a6de-f524be37463e")
+
+
+def next_day(batch: NormalizedBatch, days: int = 1) -> NormalizedBatch:
+    """The same recipes as a later report (another slice: not a duplicate by content)."""
+    day = batch.period.from_ + dt.timedelta(days=days)
+    return batch.model_copy(
+        update={"period": batch.period.model_copy(update={"from_": day, "to": day})}
+    )
+
+
+def source_at(conn: psycopg.Connection[Any], location_id: UUID) -> UUID:
+    row = conn.execute(
+        """insert into public.source (tenant_id, location_id, kind, config, status)
+           values (%s, %s, 'sr_report', '{"report": "recetas"}', 'active') returning id""",
+        (TENANT, location_id),
+    ).fetchone()
+    assert row is not None
+    return UUID(str(row[0]))
+
+
+def pastor_line(conn: psycopg.Connection[Any], name: str) -> tuple[UUID, UUID]:
+    """(recipe_line id, recipe id) of the pastor recipe of record's line for `name`."""
+    row = conn.execute(
+        """select rl.id, rl.recipe_id from public.recipe_line rl
+           join public.recipe r on r.id = rl.recipe_id
+           left join public.recipe sr on sr.id = rl.sub_recipe_id
+           join public.ingredient i on i.id = coalesce(rl.ingredient_id, sr.produces_ingredient_id)
+           where r.menu_item_id = %s and i.name = %s""",
+        (PASTOR_ITEM, name),
+    ).fetchone()
+    assert row is not None, name
+    return UUID(str(row[0])), UUID(str(row[1]))
+
+
+def statuses(conn: psycopg.Connection[Any], *loads: LoadResult) -> list[tuple[str, str | None]]:
+    """(status, resolved_via) of the pastor change each load filed, in the order given."""
+    found = []
+    for r in loads:
+        row = conn.execute(
+            """select status::text, resolved_via from public.pending_change
+               where id = any(%s) and target_id = %s""",
+            (list(r.pending_change_ids), PASTOR_ITEM),
+        ).fetchone()
+        assert row is not None
+        found.append((row[0], row[1]))
+    total = conn.execute(
+        "select count(*) from public.pending_change where target_id = %s", (PASTOR_ITEM,)
+    ).fetchone()
+    assert total == (len(loads),)
+    return found
+
+
+def less_meat(batch: NormalizedBatch) -> NormalizedBatch:
+    meat = set_line("Carne al pastor (adobada)", qty_base=Decimal("55.000000"))
+    return edit(batch, "P001", lambda r: lines(r, meat))
+
+
+def test_a_stored_recipe_with_a_repeated_ingredient_is_compared_without_crashing(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
+) -> None:
+    line_id, recipe_id = pastor_line(conn, "Cilantro")
+    conn.execute(
+        """insert into public.recipe_line
+             (tenant_id, recipe_id, ingredient_id, qty_base, yield_override_pct)
+           select tenant_id, recipe_id, ingredient_id, qty_base, 75 from public.recipe_line
+           where id = %s""",
+        (line_id,),
+    )
+    r = load(conn, sample, source_id=source)
+    assert stats(conn, r.batch_id) == {
+        "status": "parsed",
+        "proposed": 1,
+        "unchanged": 14,
+        "held": 0,
+    }
+    (change,) = pending(conn, r.batch_id)
+    diff = change["diff"]
+    assert (diff["added"], diff["removed"], diff["changed"]) == ([], ["Cilantro"], [])
+    assert len(diff["before"]["lines"]) == 8 and recipe_id == UUID(diff["before"]["recipe_id"])
+
+
+def test_a_stored_override_equal_to_the_default_is_not_a_change(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
+) -> None:
+    carne, _ = pastor_line(conn, "Carne al pastor (adobada)")
+    salsa, _ = pastor_line(conn, "Salsa verde (preparada)")
+    conn.execute("update public.recipe_line set yield_override_pct = 92 where id = %s", (carne,))
+    conn.execute("update public.recipe_line set yield_override_pct = 80 where id = %s", (salsa,))
+    r = load(conn, sample, source_id=source)
+    assert stats(conn, r.batch_id) == {
+        "status": "parsed",
+        "proposed": 0,
+        "unchanged": 15,
+        "held": 0,
+    }
+
+
+def test_a_catalog_load_holds_a_tenant_wide_recipe_lock(
+    conn: psycopg.Connection[Any], sample: NormalizedBatch
+) -> None:
+    # a Polanco and a Centro file at once would both file the same tenant-wide proposal
+    load(conn, sample, source_id=source_at(conn, POLANCO))
+    url = os.environ["MERMIA_DB_URL"]
+    with psycopg.connect(url, autocommit=True) as other:
+        row = other.execute(
+            "select pg_try_advisory_lock(hashtextextended(%s, 0))", (f"{TENANT}:recipes",)
+        ).fetchone()
+        assert row == (False,), "the other location's load waits for this one"
+
+
+def test_recipes_the_parser_held_count_as_held(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
+) -> None:
+    parser_held = IssueIn(
+        severity=IssueSeverity.warning,
+        code="sr.recipe_held",
+        message_es="No tomé la receta de «Pozole» porque tiene errores en la fila 9.",
+        row_ref="9",
+    )
+    r = load(conn, sample.model_copy(update={"issues": [parser_held]}), source_id=source)
+    assert stats(conn, r.batch_id) == {
+        "status": "parsed",
+        "proposed": 0,
+        "unchanged": 15,
+        "held": 1,
+    }
+
+
+def test_a_new_ingredient_in_two_units_holds_every_recipe_that_uses_it(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
+) -> None:
+    def epazote(unit: str) -> Callable[[RecipeIn], RecipeIn]:
+        line = RecipeLineIn(ingredient_name="Epazote", qty_base=Decimal(2), unit=unit)
+        return lambda r: lines(r, lambda ls: [*ls, line])
+
+    batch = edit(
+        edit(edit(sample, "P001", epazote("g")), "P002", epazote("pza")), "P003", epazote("g")
+    )
+    r = load(conn, batch, source_id=source)
+    assert stats(conn, r.batch_id) == {
+        "status": "parsed",
+        "proposed": 0,
+        "unchanged": 12,
+        "held": 3,
+    }
+    held = [i for i in r.issues if i.code == "recipe.new_ingredient_units"]
+    assert len(held) == 3 and all(i.severity.value == "error" for i in held)
+    assert "Epazote" in held[0].message_es
+    assert pending(conn, r.batch_id) == []
+
+
+def test_a_different_proposal_for_the_same_dish_supersedes_the_pending_one(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
+) -> None:
+    first = load(conn, edited_pastor(sample), source_id=source, proposed_by=LUPITA)
+    later = load(conn, next_day(less_meat(sample)), source_id=source, proposed_by=LUPITA)
+    (old,) = first.pending_change_ids
+    (new,) = later.pending_change_ids
+    assert statuses(conn, first, later) == [("expired", "superseded"), ("pending", None)]
+    resolved = conn.execute(
+        "select resolved_at is not null from public.pending_change where id = %s", (old,)
+    ).fetchone()
+    assert resolved == (True,)
+    audit = conn.execute(
+        """select actor_user_id, action, entity_type, entity_id, batch_id, before, after
+           from public.audit_log where pending_change_id = %s and action <> %s""",
+        (old, "pending_change.propose"),
+    ).fetchall()
+    assert audit == [
+        (
+            LUPITA,
+            "pending_change.supersede",
+            "pending_change",
+            old,
+            later.batch_id,
+            {"status": "pending"},
+            {"status": "expired", "resolved_via": "superseded", "superseded_by": str(new)},
+        )
+    ]
+    (note,) = [i for i in later.issues if i.code == "recipe.pending_replaced"]
+    assert PASTOR in note.message_es
+
+
+def test_a_resend_after_its_proposal_was_rejected_proposes_again(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
+) -> None:
+    batch = edited_pastor(sample)
+    first = load(conn, batch, source_id=source)
+    conn.execute(
+        "update public.pending_change set status = 'rejected' where id = any(%s)",
+        (list(first.pending_change_ids),),
+    )
+    again = load(conn, batch, source_id=source)
+    assert (again.duplicate, again.status) == (False, "parsed")
+    assert again.batch_id != first.batch_id and len(again.pending_change_ids) == 1
+    assert statuses(conn, first, again) == [("rejected", None), ("pending", None)]
+
+
+def test_a_resend_after_its_proposal_was_superseded_proposes_again(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
+) -> None:
+    batch = edited_pastor(sample)
+    first = load(conn, batch, source_id=source)
+    middle = load(conn, next_day(less_meat(sample)), source_id=source)
+    again = load(conn, batch, source_id=source)
+    assert (again.duplicate, len(again.pending_change_ids)) == (False, 1)
+    assert again.batch_id != first.batch_id
+    assert statuses(conn, first, middle, again) == [
+        ("expired", "superseded"),
+        ("expired", "superseded"),
+        ("pending", None),
+    ]
+
+
+def test_a_sales_file_twice_is_still_a_duplicate(conn: psycopg.Connection[Any]) -> None:
+    batch = parse_file((SR / "ventas_por_dia_L1_2026-10-05.xlsx").read_bytes())
+    row = conn.execute(
+        """insert into public.source (tenant_id, location_id, kind, config, status)
+           values (%s, %s, 'sr_report', '{"report": "ventas_por_dia"}', 'active') returning id""",
+        (TENANT, CENTRO),
+    ).fetchone()
+    assert row is not None
+    first = load(conn, batch, source_id=UUID(str(row[0])))
+    again = load(conn, batch, source_id=UUID(str(row[0])))
+    assert (again.duplicate, again.batch_id) == (True, first.batch_id)
+
+
+def test_a_recipe_change_in_a_chain_is_a_warning_not_a_hold(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
+) -> None:
+    # the seed recipe has no file behind it, and El Güero has two locations
+    r = load(conn, edited_pastor(sample), source_id=source)
+    (warning,) = [i for i in r.issues if i.code == "recipe.chain_location_differs"]
+    assert warning.severity.value == "warning"
+    assert PASTOR in warning.message_es and "todas tus sucursales" in warning.message_es
+    assert (r.status, len(r.pending_change_ids)) == ("parsed", 1)
+
+
+@pytest.mark.parametrize(("origin", "warned"), [(POLANCO, True), (CENTRO, False)])
+def test_the_chain_warning_follows_the_location_the_current_recipe_came_from(
+    conn: psycopg.Connection[Any],
+    source: UUID,
+    sample: NormalizedBatch,
+    origin: UUID,
+    warned: bool,
+) -> None:
+    first = load(conn, next_day(less_meat(sample), -1), source_id=source_at(conn, origin))
+    conn.execute(  # as MR-32 will leave it once the change is approved and applied
+        "update public.pending_change set status = 'applied' where id = any(%s)",
+        (list(first.pending_change_ids),),
+    )
+    r = load(conn, edited_pastor(sample), source_id=source)
+    assert ("recipe.chain_location_differs" in codes(r)) is warned

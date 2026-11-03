@@ -13,9 +13,14 @@ For every recipe of a catalog batch:
 - The unit must be g, ml or pza and equal the ingredient's base unit; otherwise the recipe is held,
   so a line is never costed in the wrong unit. A yield override equal to the ingredient's default
   is stored as null, so a later change to the default reaches the line.
+- An unknown ingredient that comes in two units in one file holds every recipe that uses it.
 - A recipe equal to the recipe of record (same lines and yield_qty) is not proposed, nor is one
   identical to a pending proposal. Otherwise a pending_change row and its audit_log row are
   written together. Matched ids live in `diff` (the payload contract has no field for them).
+- The newest proposal wins: filing one expires every other pending recipe.upsert of the dish
+  (resolved_via 'superseded', the schema has no such status yet) with an audit_log row.
+- Recipes are tenant-wide: a change to a recipe that came from another location's file (or, when
+  that cannot be traced, any change in a tenant with several locations) is a warning.
 """
 
 from __future__ import annotations
@@ -46,6 +51,8 @@ KIND = PendingKind.recipe_upsert
 BASE_UNITS = ("g", "ml", "pza")
 REQUIRED_ROLE = "manager"  # MR-32 keeps it; only the owner can approve recipe.upsert in the seed
 TTL = dt.timedelta(hours=24)
+SUPERSEDED = "superseded"  # resolved_via of a pending change a newer proposal replaced
+PARSER_HELD = "sr.recipe_held"  # the parser's issue for a recipe it did not pass on
 QTY_PLACES = Decimal("0.000001")
 YIELD_PLACES = Decimal("0.0001")
 
@@ -136,6 +143,16 @@ def _held(code: str, message_es: str) -> _Held:
     return _Held(_issue(IssueSeverity.error, code, message_es))
 
 
+def _override(pct: Decimal | None, default: Decimal, sub_recipe: bool) -> Decimal | None:
+    """A sub-recipe's yield is in its own recipe; the default needs no override."""
+    return None if sub_recipe or pct == default else pct
+
+
+def _listed(names: list[str]) -> str:
+    quoted = [f"«{n}»" for n in names]
+    return quoted[0] if len(quoted) == 1 else f"{', '.join(quoted[:-1])} y {quoted[-1]}"
+
+
 def propose_recipes(
     conn: psycopg.Connection[Any],
     tenant_id: UUID,
@@ -148,17 +165,20 @@ def propose_recipes(
     recipe of record. Runs inside the loader's transaction."""
     day = _today(conn, location_id)
     ingredients = _ingredients(conn, tenant_id, day)
+    clashes = _new_ingredient_units(batch.recipes, ingredients)
     issues = _code_name_warnings(batch.recipes)
     dishes: list[_Dish] = []
     for recipe in batch.recipes:
         try:
-            dishes.append(_resolve(conn, tenant_id, location_id, recipe, ingredients))
+            dishes.append(_resolve(conn, tenant_id, location_id, recipe, ingredients, clashes))
         except _Held as e:
             issues.append(e.issue)
     per_item = Counter(d.menu_item_id for d in dishes)
     counts: Counter[str] = Counter()
     ids: list[UUID] = []
     warned: set[UUID] = set()
+    chain: list[str] = []
+    several = _locations(conn, tenant_id) > 1
     for d in dishes:
         if per_item[d.menu_item_id] > 1:
             if d.menu_item_id in warned:
@@ -172,18 +192,51 @@ def propose_recipes(
                 ).issue
             )
             continue
-        outcome, change_id = _propose(conn, tenant_id, batch_id, batch.parser, d, day, proposed_by)
-        counts[outcome] += 1
-        if change_id is not None:
-            ids.append(change_id)
+        filed = _propose(conn, tenant_id, batch_id, batch.parser, d, day, proposed_by)
+        counts[filed.outcome] += 1
+        if filed.change_id is None:
+            continue
+        ids.append(filed.change_id)
+        if filed.replaced:
+            issues.append(
+                _issue(
+                    IssueSeverity.info,
+                    "recipe.pending_replaced",
+                    f"Ya había un cambio pendiente para la receta de «{d.name}»; lo reemplacé "
+                    "por el de este archivo.",
+                )
+            )
+        if filed.other_location(location_id, several):
+            chain.append(d.name)
+    if chain:
+        issues.append(_chain_warning(chain))
+    parser_held = sum(1 for i in batch.issues if i.code == PARSER_HELD)
     return Proposals(
         pending_change_ids=tuple(ids),
         proposed=counts["proposed"],
         unchanged=counts["unchanged"],
         already_pending=counts["already_pending"],
-        held=len(batch.recipes) - sum(counts.values()),
+        held=len(batch.recipes) - sum(counts.values()) + parser_held,
         issues=tuple(issues),
     )
+
+
+def _chain_warning(dishes: list[str]) -> IssueIn:
+    return _issue(
+        IssueSeverity.warning,
+        "recipe.chain_location_differs",
+        f"Las recetas son las mismas en todas tus sucursales: si apruebas el cambio de "
+        f"{_listed(dishes)}, también cambia en las demás. La receta actual puede venir de otra "
+        "sucursal; revisa que sirva para todas.",
+    )
+
+
+def _locations(conn: psycopg.Connection[Any], tenant_id: UUID) -> int:
+    row = conn.execute(
+        "select count(*) from public.location where tenant_id = %s", (tenant_id,)
+    ).fetchone()
+    assert row is not None
+    return int(row[0])
 
 
 def _today(conn: psycopg.Connection[Any], location_id: UUID) -> dt.date:
@@ -209,6 +262,19 @@ def _ingredients(
         ingredient = _Ingredient(row[0], row[1], row[2], row[3], row[4])
         found.setdefault(normalize_name(ingredient.name), []).append(ingredient)
     return found
+
+
+def _new_ingredient_units(
+    recipes: list[RecipeIn], ingredients: dict[str, list[_Ingredient]]
+) -> dict[str, list[str]]:
+    """Unknown ingredients (normalized name) that come in more than one base unit, with them."""
+    units: dict[str, dict[str, None]] = {}  # an ordered set
+    for recipe in recipes:
+        for line in recipe.lines:
+            key = normalize_name(line.ingredient_name)
+            if key not in ingredients and line.unit in BASE_UNITS:
+                units.setdefault(key, {})[line.unit] = None
+    return {key: list(found) for key, found in units.items() if len(found) > 1}
 
 
 def _code_name_warnings(recipes: list[RecipeIn]) -> list[IssueIn]:
@@ -237,6 +303,7 @@ def _resolve(
     location_id: UUID,
     recipe: RecipeIn,
     ingredients: dict[str, list[_Ingredient]],
+    clashes: dict[str, list[str]],
 ) -> _Dish:
     dish = recipe.menu_item_name
     item_id, how = find_item(conn, tenant_id, location_id, recipe.menu_item_external_id, dish)
@@ -256,7 +323,7 @@ def _resolve(
         "select name, external_id from public.menu_item where id = %s", (item_id,)
     ).fetchone()
     assert row is not None
-    lines = tuple(_resolve_line(dish, line, ingredients) for line in recipe.lines)
+    lines = tuple(_resolve_line(dish, line, ingredients, clashes) for line in recipe.lines)
     repeated = [k for k, n in Counter(x.key for x in lines).items() if n > 1]
     if repeated:
         name = next(x.name for x in lines if x.key == repeated[0])
@@ -269,7 +336,10 @@ def _resolve(
 
 
 def _resolve_line(
-    dish: str, line: RecipeLineIn, ingredients: dict[str, list[_Ingredient]]
+    dish: str,
+    line: RecipeLineIn,
+    ingredients: dict[str, list[_Ingredient]],
+    clashes: dict[str, list[str]],
 ) -> _Line:
     name, unit = line.ingredient_name, line.unit
     if unit not in BASE_UNITS:
@@ -284,6 +354,13 @@ def _resolve_line(
             "recipe.ingredient_ambiguous",
             f"En la receta de «{dish}», tu catálogo tiene {len(candidates)} insumos llamados "
             f"«{name}» y no sé cuál es; no tomé la receta.",
+        )
+    if normalize_name(name) in clashes:
+        units = " y ".join(clashes[normalize_name(name)])
+        raise _held(
+            "recipe.new_ingredient_units",
+            f"En la receta de «{dish}», {name} es un insumo nuevo y el archivo lo trae en {units}; "
+            "no tomé la receta. Usa la misma unidad en todas las recetas que lo llevan.",
         )
     if not candidates:  # decision 1: proposed as a new ingredient, created by MR-32 on approval
         return _Line(
@@ -303,9 +380,9 @@ def _resolve_line(
             f"En la receta de «{dish}», {found.name} viene en {unit}, pero en tu catálogo se mide "
             f"en {found.base_unit}; no tomé la receta. Corrige la unidad.",
         )
-    pct = line.yield_override_pct
-    if found.sub_recipe_id is not None or pct == found.default_yield_pct:
-        pct = None  # a sub-recipe's yield is in its own recipe; the default needs no override
+    pct = _override(
+        line.yield_override_pct, found.default_yield_pct, found.sub_recipe_id is not None
+    )
     return _Line(
         str(found.id),
         found.name,
@@ -345,7 +422,7 @@ def _current(conn: psycopg.Connection[Any], menu_item_id: UUID, day: dt.date) ->
         return None
     lines = conn.execute(
         """select coalesce(rl.ingredient_id, sr.produces_ingredient_id), i.name, i.base_unit::text,
-                  rl.sub_recipe_id, rl.qty_base, rl.yield_override_pct
+                  rl.sub_recipe_id, rl.qty_base, rl.yield_override_pct, i.default_yield_pct
            from public.recipe_line rl
            left join public.recipe sr on sr.id = rl.sub_recipe_id
            join public.ingredient i on i.id = coalesce(rl.ingredient_id, sr.produces_ingredient_id)
@@ -357,39 +434,88 @@ def _current(conn: psycopg.Connection[Any], menu_item_id: UUID, day: dt.date) ->
         row[0],
         row[1],
         row[2],
-        tuple(_Line(str(x[0]), x[1], None, x[0], x[3], x[2], x[4], x[5]) for x in lines),
+        tuple(
+            _Line(
+                str(x[0]),
+                x[1],
+                None,
+                x[0],
+                x[3],
+                x[2],
+                x[4],
+                _override(x[5], x[6], x[3] is not None),
+            )
+            for x in lines
+        ),
     )
+
+
+def _match(
+    before: tuple[_Line, ...], after: tuple[_Line, ...]
+) -> tuple[list[_Line], list[_Line], list[tuple[_Line, _Line]]]:
+    """(added, removed, changed as (before, after)), matching lines by ingredient. A stored
+    recipe may list one ingredient twice: an identical stored line is paired first, and the
+    other one is removed."""
+    used: set[int] = set()
+    added: list[_Line] = []
+    changed: list[tuple[_Line, _Line]] = []
+    for x in after:
+        free = [i for i, o in enumerate(before) if o.key == x.key and i not in used]
+        if not free:
+            added.append(x)
+            continue
+        i = next((i for i in free if before[i].same() == x.same()), free[0])
+        used.add(i)
+        if before[i].same() != x.same():
+            changed.append((before[i], x))
+    return added, [o for i, o in enumerate(before) if i not in used], changed
 
 
 def _diff(
     batch_id: UUID, parser: str, d: _Dish, before: _Current | None, after: dict[str, Any]
 ) -> dict[str, Any]:
-    old = {x.key: x for x in before.lines} if before else {}
-    new = {x.key: x for x in d.lines}
+    added, removed, changed = _match(before.lines if before else (), d.lines)
     return {
         "batch_id": str(batch_id),
         "parser": parser,
         "menu_item": {"id": str(d.menu_item_id), "name": d.name, "external_id": d.external_id},
         "before": before.as_json() if before else None,
         "after": after,
-        "added": [x.name for x in d.lines if x.key not in old],
-        "removed": [x.name for x in old.values() if x.key not in new],
+        "added": [x.name for x in added],
+        "removed": [x.name for x in removed],
         "changed": [
             {
                 "ingredient": x.name,
                 "before": {
-                    "qty_base": _qty(old[x.key].qty_base),
-                    "yield_override_pct": _pct(old[x.key].yield_override_pct),
+                    "qty_base": _qty(o.qty_base),
+                    "yield_override_pct": _pct(o.yield_override_pct),
                 },
                 "after": {
                     "qty_base": _qty(x.qty_base),
                     "yield_override_pct": _pct(x.yield_override_pct),
                 },
             }
-            for x in d.lines
-            if x.key in old and x.same() != old[x.key].same()
+            for o, x in changed
         ],
     }
+
+
+@dataclass(frozen=True)
+class _Filed:
+    """What _propose did with one dish."""
+
+    outcome: str  # "unchanged" | "already_pending" | "proposed"
+    change_id: UUID | None = None
+    replaced: tuple[UUID | None, ...] = ()  # the superseded proposals' file locations
+    origin: UUID | None = None  # the file location of the recipe of record, if traceable
+    has_recipe: bool = False
+
+    def other_location(self, location_id: UUID, several: bool) -> bool:
+        """Whether this change may undo another location's recipe (tenant-wide recipes)."""
+        traced = [x for x in (*self.replaced, self.origin) if x is not None]
+        if any(x != location_id for x in traced):
+            return True
+        return self.has_recipe and self.origin is None and several
 
 
 def _propose(
@@ -400,15 +526,14 @@ def _propose(
     d: _Dish,
     day: dt.date,
     proposed_by: UUID | None,
-) -> tuple[str, UUID | None]:
-    """("unchanged" | "already_pending" | "proposed", the new pending_change id)."""
+) -> _Filed:
     before = _current(conn, d.menu_item_id, day)
     if (
         before is not None
         and before.yield_qty == d.recipe.yield_qty
-        and sorted(x.same() for x in before.lines) == sorted(x.same() for x in d.lines)
+        and Counter(x.same() for x in before.lines) == Counter(x.same() for x in d.lines)
     ):
-        return "unchanged", None
+        return _Filed("unchanged")
     proposal = RecipeUpsertProposal(
         kind=PendingKind.recipe_upsert,
         target_id=d.menu_item_id,
@@ -435,7 +560,7 @@ def _propose(
              and base_version is not distinct from %s and payload = %s""",
         (tenant_id, KIND.value, d.menu_item_id, base_version, Jsonb(payload)),
     ).fetchone():
-        return "already_pending", None
+        return _Filed("already_pending")
     after = {
         "yield_qty": _qty(d.recipe.yield_qty),
         "lines": [x.as_json() for x in d.lines],
@@ -461,21 +586,98 @@ def _propose(
     ).fetchone()
     assert row is not None
     change_id = UUID(str(row[0]))
+    _audit(
+        conn,
+        tenant_id,
+        proposed_by,
+        "pending_change.propose",
+        (TARGET_TYPE[KIND], d.menu_item_id),
+        None if before is None else diff["before"],
+        after,
+        change_id,
+        batch_id,
+    )
+    replaced = _supersede(conn, tenant_id, batch_id, d.menu_item_id, change_id, proposed_by)
+    origin = _origin(conn, tenant_id, d.menu_item_id) if before is not None else None
+    return _Filed("proposed", change_id, replaced, origin, before is not None)
+
+
+def _supersede(
+    conn: psycopg.Connection[Any],
+    tenant_id: UUID,
+    batch_id: UUID,
+    menu_item_id: UUID,
+    change_id: UUID,
+    proposed_by: UUID | None,
+) -> tuple[UUID | None, ...]:
+    """The newest proposal wins: every other pending recipe.upsert of the dish expires (the
+    schema has no 'superseded' status yet; resolved_via says why). Gives the location of the
+    file each one came from (None when it came from no file)."""
+    rows = conn.execute(
+        """update public.pending_change pc
+           set status = 'expired', resolved_at = now(), resolved_via = %s
+           where tenant_id = %s and kind = %s and target_id = %s and status = 'pending'
+             and id <> %s
+           returning id, (select b.location_id from public.import_batch b
+                          where b.tenant_id = pc.tenant_id
+                            and b.id::text = pc.diff ->> 'batch_id')""",
+        (SUPERSEDED, tenant_id, KIND.value, menu_item_id, change_id),
+    ).fetchall()
+    for old_id, _ in rows:
+        _audit(
+            conn,
+            tenant_id,
+            proposed_by,
+            "pending_change.supersede",
+            ("pending_change", old_id),
+            {"status": "pending"},
+            {"status": "expired", "resolved_via": SUPERSEDED, "superseded_by": str(change_id)},
+            old_id,
+            batch_id,
+        )
+    return tuple(location for _, location in rows)
+
+
+def _origin(conn: psycopg.Connection[Any], tenant_id: UUID, menu_item_id: UUID) -> UUID | None:
+    """The location of the file the recipe of record came from: that of the last applied
+    recipe.upsert of the dish (None when there is none, or it came from no file)."""
+    row = conn.execute(
+        """select b.location_id from public.pending_change pc
+           left join public.import_batch b
+             on b.tenant_id = pc.tenant_id and b.id::text = pc.diff ->> 'batch_id'
+           where pc.tenant_id = %s and pc.kind = %s and pc.target_id = %s
+             and pc.status = 'applied'
+           order by pc.resolved_at desc nulls last, pc.created_at desc limit 1""",
+        (tenant_id, KIND.value, menu_item_id),
+    ).fetchone()
+    return None if row is None else row[0]
+
+
+def _audit(
+    conn: psycopg.Connection[Any],
+    tenant_id: UUID,
+    actor: UUID | None,
+    action: str,
+    entity: tuple[str, UUID],
+    before: dict[str, Any] | None,
+    after: dict[str, Any],
+    change_id: UUID,
+    batch_id: UUID,
+) -> None:
     conn.execute(
         """insert into public.audit_log
              (tenant_id, actor_user_id, actor_kind, action, entity_type, entity_id, before, after,
               pending_change_id, batch_id)
-           values (%s, %s, %s, 'pending_change.propose', %s, %s, %s, %s, %s, %s)""",
+           values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
         (
             tenant_id,
-            proposed_by,
-            "user" if proposed_by is not None else "system",
-            TARGET_TYPE[KIND],
-            d.menu_item_id,
-            None if before is None else Jsonb(diff["before"]),
+            actor,
+            "user" if actor is not None else "system",
+            action,
+            *entity,
+            None if before is None else Jsonb(before),
             Jsonb(after),
             change_id,
             batch_id,
         ),
     )
-    return "proposed", change_id
