@@ -83,3 +83,15 @@ def test_data_that_does_not_fit_the_rpc_model_is_rejected(
     envelope = example("get_sales_summary").model_copy(update={"data": {"net_sales": "lots"}})
     with pytest.raises(ValidationError):
         render("get_sales_summary", {"period": "last_week"}, envelope, el_guero)
+
+
+def test_one_ticket_reads_singular(example: Any, el_guero: dict[UUID, str]) -> None:
+    envelope = example("get_sales_summary")
+    data = {**envelope.data, "tickets": 1}
+    reply = render(
+        "get_sales_summary",
+        {"period": "yesterday", "location_id": CENTRO},
+        envelope.model_copy(update={"data": data}),
+        el_guero,
+    )
+    assert reply.text.splitlines()[1] == "1 ticket, ticket promedio $284.45."

@@ -196,3 +196,32 @@ def test_two_locations_with_the_same_name_are_not_told_apart() -> None:
     assert route("cuánto vendí ayer en Centro", locations) is None
     match = route("cuánto vendí ayer en Polanco", locations)
     assert match is not None and match.args["location_id"] == POLANCO
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # what / why questions are not "how much" (review on #78)
+        "qué vendimos ayer",
+        "qué se vendió ayer",
+        "por qué vendí ayer",
+        "qué entró ayer",
+        "¿por qué las ventas de ayer?",
+        # a per-location or partial-location question is not the combined total
+        "ventas de ayer por sucursales",
+        "en cuántas sucursales vendí ayer",
+        "en qué sucursales vendí ayer",
+        "ventas de ayer en centro y en todas las sucursales",
+    ],
+)
+def test_review_misroutes_fall_through(text: str, el_guero: dict[UUID, str]) -> None:
+    assert route(text, el_guero) is None
+
+
+@pytest.mark.parametrize("name", ["Baja", "Roma-Norte", "Sta. Fe"])
+def test_location_names_match_like_the_text(name: str) -> None:
+    # "Baja" is also a write verb and punctuation is dropped from the text
+    other = uuid4()
+    match = route(f"cuánto vendí ayer en {name}", {UUID(CENTRO): "Centro", other: name})
+    assert match is not None
+    assert match.args == {"period": "yesterday", "location_id": str(other)}
