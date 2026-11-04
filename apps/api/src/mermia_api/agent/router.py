@@ -9,6 +9,7 @@ no match. Not matching is never wrong: the message goes to the LLM broker.
 from __future__ import annotations
 
 import re
+from collections import Counter
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -128,7 +129,10 @@ def route(text: str, locations: Mapping[UUID, str]) -> Match | None:
     if WRITE_VERBS.intersection(words):
         return None
 
-    by_name = {normalize_name(name): location_id for location_id, name in locations.items()}
+    # a name two locations share cannot tell them apart: it stays unknown, the message falls through
+    names = {location_id: normalize_name(name) for location_id, name in locations.items()}
+    count = Counter(names.values())
+    by_name = {name: location_id for location_id, name in names.items() if count[name] == 1}
     named = {by_name[name] for name in _take(words, by_name)}
     periods = {PERIODS[phrase] for phrase in _take(words, PERIODS)}
 
@@ -333,6 +337,8 @@ def _take(words: list[str], phrases: Iterable[str]) -> list[str]:
     found = []
     for phrase in sorted(phrases, key=lambda p: -len(p.split())):
         target = phrase.split()
+        if not target:  # a location name with no letters ("🌮") would match forever
+            continue
         i = 0
         while i + len(target) <= len(words):
             if words[i : i + len(target)] == target:

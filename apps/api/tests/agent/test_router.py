@@ -1,9 +1,11 @@
 """MR-26: the router answers only what it fully understands (spec: Router rules)."""
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -419,3 +421,22 @@ def test_a_payment_method_on_a_sales_question_gets_the_breakdown(
     match = route("¿cuánto vendí ayer en efectivo?", el_guero)
     assert match is not None
     assert match.args == {"period": "yesterday", "by": "payment_method"}
+
+
+def test_a_location_name_without_letters_does_not_hang() -> None:
+    # "🌮" normalizes to "", which once made _take match an empty phrase forever
+    code = (
+        "from uuid import uuid4\n"
+        "from mermia_api.agent.router import route\n"
+        "m = route('cuánto vendí ayer', {uuid4(): '🌮', uuid4(): 'Polanco', uuid4(): ''})\n"
+        "assert m is not None and m.args == {'period': 'yesterday'}, m\n"
+    )
+    subprocess.run([sys.executable, "-c", code], check=True, timeout=10)
+
+
+def test_two_locations_with_the_same_name_are_not_told_apart() -> None:
+    a, b = uuid4(), uuid4()
+    locations = {a: "Centro", b: "Céntro", UUID(POLANCO): "Polanco"}
+    assert route("cuánto vendí ayer en Centro", locations) is None
+    match = route("cuánto vendí ayer en Polanco", locations)
+    assert match is not None and match.args["location_id"] == POLANCO
