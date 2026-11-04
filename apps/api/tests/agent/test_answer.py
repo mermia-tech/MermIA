@@ -176,3 +176,17 @@ def test_no_data_on_a_comparison_names_the_weeks(
     )
     assert response.route == "template"
     assert _reply_text(response) == "No tengo datos completos para comparar esas semanas."
+
+
+def test_no_data_without_a_period(
+    el_guero: dict[UUID, str], fake_rpc: Any, counting_broker: Any
+) -> None:
+    fake_rpc.answers["get_data_status"] = _error("no_data")
+    response = answer(
+        _text(el_guero, "¿ya están al día mis datos?"),
+        locations=el_guero,
+        rpc=fake_rpc,
+        broker=counting_broker,
+    )
+    assert response.route == "template"
+    assert _reply_text(response) == "Todavía no tengo datos."

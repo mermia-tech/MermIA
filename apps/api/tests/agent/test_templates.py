@@ -156,3 +156,56 @@ def test_uncosted_sales_flag_is_shown(example: Any, el_guero: dict[UUID, str]) -
     args = {"period": "this_month", "metric": "units", "order": "desc", "limit": 5}
     reply = render("get_top_dishes", args, envelope, el_guero)
     assert reply.text.splitlines()[-1] == message
+
+
+def test_food_cost(example: Any, el_guero: dict[UUID, str]) -> None:
+    args = {"period": "yesterday", "location_id": CENTRO}
+    reply = render("get_food_cost_pct", args, example("get_food_cost_pct"), el_guero)
+    assert reply.text == (
+        "Tu food cost de ayer en Centro fue 37.5% (meta: 32.0%).\n"
+        "Cobertura de costos: 71.4% de las ventas."
+    )
+
+
+def test_food_cost_without_target_shows_the_estimate_caveat(
+    example: Any, el_guero: dict[UUID, str]
+) -> None:
+    message = "Costos estimados: hay precios de más de 30 días o sin CFDI, o recetas sin confirmar."
+    envelope = example("get_food_cost_pct")
+    envelope = envelope.model_copy(
+        update={
+            "data": {**envelope.data, "target": None},
+            "flags": [Flag(code="cost_estimated", message=message)],
+        }
+    )
+    reply = render("get_food_cost_pct", {"period": "last_week"}, envelope, el_guero)
+    assert reply.text == (
+        "Tu food cost de la semana pasada en tus 2 sucursales fue 37.5%.\n"
+        "Cobertura de costos: 71.4% de las ventas.\n" + message
+    )
+
+
+def test_data_status(example: Any, el_guero: dict[UUID, str]) -> None:
+    reply = render("get_data_status", {}, example("get_data_status"), el_guero)
+    assert reply.text == (
+        "Último reporte cargado el 12 de octubre de 2026.\n"
+        "No falta ningún día.\n"
+        "29 ingredientes con precio desactualizado.\n"
+        "Cobertura de costos: 100.0%."
+    )
+
+
+def test_data_status_with_gaps_and_no_report(example: Any, el_guero: dict[UUID, str]) -> None:
+    envelope = example("get_data_status")
+    data = {
+        **envelope.data,
+        "sources": [{"source_kind": "sr_report", "last_batch_at": None}],
+        "missing_business_days": ["2026-10-05", "2026-10-06"],
+        "stale_costs": 0,
+    }
+    reply = render("get_data_status", {}, envelope.model_copy(update={"data": data}), el_guero)
+    assert reply.text == (
+        "Todavía no hay reportes cargados.\n"
+        "Faltan datos de: 5 de octubre, 6 de octubre.\n"
+        "Cobertura de costos: 100.0%."
+    )

@@ -7,9 +7,11 @@ Keyed by RPC name, not by router intent, so the MR-27 broker can render its own 
 
 from __future__ import annotations
 
+import datetime as dt
 from collections.abc import Callable, Mapping
 from typing import Any
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from pydantic import TypeAdapter
 
@@ -17,6 +19,8 @@ from mermia_contracts.agent import TextMsg
 from mermia_contracts.rpc import (
     RPCS,
     ComparePeriodsData,
+    DataStatusData,
+    FoodCostData,
     RpcEnvelope,
     SalesSummaryData,
     TopDishesData,
@@ -33,6 +37,23 @@ PERIOD_ES = {
     "last_7d": "los últimos 7 días",
     "last_30d": "los últimos 30 días",
 }
+
+# shortcut: one time zone for every pilot location; use location.timezone once a tenant spans zones
+MEXICO_CITY = ZoneInfo("America/Mexico_City")
+MONTHS = (
+    "enero",
+    "febrero",
+    "marzo",
+    "abril",
+    "mayo",
+    "junio",
+    "julio",
+    "agosto",
+    "septiembre",
+    "octubre",
+    "noviembre",
+    "diciembre",
+)
 
 _DATA = {name: TypeAdapter(spec.data) for name, spec in RPCS.items()}
 
@@ -51,6 +72,8 @@ def render(
 def no_data(rpc: str, args: dict[str, Any]) -> TextMsg:
     if rpc == "compare_periods":
         return TextMsg(kind="text", text="No tengo datos completos para comparar esas semanas.")
+    if "period" not in args:
+        return TextMsg(kind="text", text="Todavía no tengo datos.")
     return TextMsg(kind="text", text=f"No tengo datos de {PERIOD_ES[args['period']]} todavía.")
 
 
@@ -110,6 +133,40 @@ def _top_dishes(
     return [f"{head} {when}:"] + [f"{r.rank}. {r.name}: {r.value.text}" for r in data.rows]
 
 
+def _food_cost(
+    data: FoodCostData, args: dict[str, Any], locations: Mapping[UUID, str]
+) -> list[str]:
+    target = f" (meta: {data.target.text})" if data.target is not None else ""
+    return [
+        f"Tu food cost de {PERIOD_ES[args['period']]} {_where(args, locations)} fue "
+        f"{data.theoretical.text}{target}.",
+        f"Cobertura de costos: {data.coverage.text} de las ventas.",
+    ]
+
+
+def _data_status(
+    data: DataStatusData, args: dict[str, Any], locations: Mapping[UUID, str]
+) -> list[str]:
+    loaded = [s.last_batch_at for s in data.sources if s.last_batch_at is not None]
+    if loaded:
+        day = max(loaded).astimezone(MEXICO_CITY).date()
+        lines = [f"Último reporte cargado el {_day(day)} de {day.year}."]
+    else:
+        lines = ["Todavía no hay reportes cargados."]
+    if data.missing_business_days:
+        lines.append(f"Faltan datos de: {', '.join(map(_day, data.missing_business_days))}.")
+    else:
+        lines.append("No falta ningún día.")
+    if data.stale_costs:
+        lines.append(f"{data.stale_costs} ingredientes con precio desactualizado.")
+    lines.append(f"Cobertura de costos: {data.coverage.text}.")
+    return lines
+
+
+def _day(day: dt.date) -> str:
+    return f"{day.day} de {MONTHS[day.month - 1]}"
+
+
 def _where(args: dict[str, Any], locations: Mapping[UUID, str]) -> str:
     if "location_id" in args:
         return f"en {locations[UUID(args['location_id'])]}"
@@ -126,4 +183,6 @@ _RENDERERS: dict[str, Callable[[Any, dict[str, Any], Mapping[UUID, str]], list[s
     "get_sales_summary": _sales_summary,
     "compare_periods": _compare_periods,
     "get_top_dishes": _top_dishes,
+    "get_food_cost_pct": _food_cost,
+    "get_data_status": _data_status,
 }

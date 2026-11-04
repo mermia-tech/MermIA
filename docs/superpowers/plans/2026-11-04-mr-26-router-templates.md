@@ -237,7 +237,7 @@ This is the largest parser, so it gets its own task.
 **Files:** Modify `router.py`, `templates.py`; tests as above.
 
 **Steps:**
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
   - Add `cost_margin_food_cost_yesterday` and `out_of_scope_data_status` to `MUST_MATCH`.
   - **Food cost:**
     - `group_by` is left at its default.
@@ -250,8 +250,16 @@ This is the largest parser, so it gets its own task.
     - "food cost" with no period;
     - "¿cuántos empleados tengo?";
     - two intents ("ventas y food cost de ayer").
-- [ ] **Steps 2-4:** FAIL, implement, PASS + mypy.
-- [ ] **Step 5: Commit** `MR-26: food cost and data status intents`.
+- [x] **Steps 2-4:** FAIL, implement, PASS + mypy.
+- [x] **Step 5: Commit** `MR-26: food cost and data status intents`.
+
+**Result (2026-11-04):**
+- Red: 12 failed.
+- Green: `uv run pytest apps/api` gives 215 passed and 16 skipped; mypy and ruff are clean.
+- Eval matches: the 2 new MUST_MATCH cases match.
+- Data status needs the word "datos" plus a trigger, and takes no period.
+- `no_data` without a period answers "Todavía no tengo datos."
+- Dates use one helper in America/Mexico_City, with a `shortcut:` comment.
 
 **Acceptance:** the sweep is green, both MUST_MATCH cases match, the coverage is always in the food cost reply, and the two-intent message gives `None`.
 **Dependencies:** Task 2. **Scope:** S.

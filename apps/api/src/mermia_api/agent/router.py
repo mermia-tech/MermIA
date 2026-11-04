@@ -71,6 +71,8 @@ SALES_TRIGGERS = ("vendi", "vendio", "vendimos", "venta", "ventas", "entro")
 COMPARE_TRIGGERS = ("contra", "vs", "versus", "comparado con", "comparada con")
 PREVIOUS_WEEK = ("semana anterior", "anterior", "antepasada")  # "la pasada vs la anterior"
 DISH_TRIGGERS = ("platillo", "platillos")
+FOOD_COST_TRIGGERS = ("food cost", "foodcost", "costo de alimentos")
+DATA_STATUS_TRIGGERS = ("al dia", "actualizados", "actualizado", "ultimo reporte")
 DISH_MEASURES = {
     "vendido": "units",
     "vendidos": "units",
@@ -170,6 +172,24 @@ def _top_dishes(words: list[str], periods: set[PeriodName], named: set[UUID]) ->
     return Match("top_dishes", "get_top_dishes", {**args, **scope})
 
 
+def _food_cost(words: list[str], periods: set[PeriodName], named: set[UUID]) -> Match | None:
+    _take(words, FOOD_COST_TRIGGERS)
+    scope = _scope(named)
+    if len(periods) != 1 or scope is None:
+        return None
+    (period,) = periods
+    return Match("food_cost", "get_food_cost_pct", {"period": period, **scope})
+
+
+def _data_status(words: list[str], periods: set[PeriodName], named: set[UUID]) -> Match | None:
+    _take(words, DATA_STATUS_TRIGGERS)
+    _take(words, ("estan", "esta"))
+    scope = _scope(named)
+    if not _take(words, ("datos",)) or periods or scope is None:
+        return None
+    return Match("data_status", "get_data_status", scope)
+
+
 def _scope(named: set[UUID]) -> dict[str, Any] | None:
     """The location argument: none named means all the user's, two is not one location."""
     if len(named) > 1:
@@ -180,6 +200,8 @@ def _scope(named: set[UUID]) -> dict[str, Any] | None:
 _SPECIFIC: tuple[tuple[tuple[str, ...], Parser], ...] = (
     (COMPARE_TRIGGERS, _compare_periods),
     (DISH_TRIGGERS, _top_dishes),
+    (FOOD_COST_TRIGGERS, _food_cost),
+    (DATA_STATUS_TRIGGERS, _data_status),
 )
 
 

@@ -19,6 +19,8 @@ MUST_MATCH = {
     "sales_last_week",
     "top_dishes_top5_month_units",
     "top_dishes_top3_revenue_30d",
+    "cost_margin_food_cost_yesterday",
+    "out_of_scope_data_status",
 }
 
 MUST_NOT_MATCH = {
@@ -291,4 +293,45 @@ def test_top_dishes(text: str, args: dict[str, Any], el_guero: dict[UUID, str]) 
     ],
 )
 def test_top_dishes_not_sure_means_no_match(text: str, el_guero: dict[UUID, str]) -> None:
+    assert route(text, el_guero) is None
+
+
+@pytest.mark.parametrize(
+    ("text", "args"),
+    [
+        (
+            "¿cuánto fue mi food cost de ayer en Centro?",
+            {"period": "yesterday", "location_id": CENTRO},
+        ),
+        ("food cost de la semana pasada", {"period": "last_week"}),
+        ("¿cuál es mi costo de alimentos de este mes?", {"period": "this_month"}),
+    ],
+)
+def test_food_cost(text: str, args: dict[str, Any], el_guero: dict[UUID, str]) -> None:
+    match = route(text, el_guero)
+    assert match is not None
+    assert (match.intent, match.rpc, match.args) == ("food_cost", "get_food_cost_pct", args)
+
+
+@pytest.mark.parametrize("text", ["¿ya están al día mis datos?", "¿mis datos están actualizados?"])
+def test_data_status(text: str, el_guero: dict[UUID, str]) -> None:
+    match = route(text, el_guero)
+    assert match is not None
+    assert (match.intent, match.rpc, match.args) == ("data_status", "get_data_status", {})
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "food cost",  # no period
+        "food cost de ayer en Centro y Polanco",
+        "¿cuántos empleados tengo?",
+        "ventas y food cost de ayer",  # two intents
+        "¿mis datos de ayer están al día?",  # data status takes no period
+        "¿ya está al día?",  # about what?
+    ],
+)
+def test_food_cost_and_data_status_not_sure_means_no_match(
+    text: str, el_guero: dict[UUID, str]
+) -> None:
     assert route(text, el_guero) is None
