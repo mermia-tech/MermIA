@@ -163,6 +163,8 @@ def test_the_longest_location_name_wins() -> None:
         "cuánto vendí ayer en Centro y Polanco",  # two locations
         "cuánto vendí ayer en Satélite",  # a location it does not know
         "cuánto me vendieron mis meseros este mes",  # "mes" is not inside "meseros"
+        "ventas de ayer a las tres",  # an hour, not the whole day
+        "ventas de ayer de las dos a las cinco",
     ],
 )
 def test_not_sure_means_no_match(text: str, el_guero: dict[UUID, str]) -> None:
@@ -260,10 +262,6 @@ def test_compare_periods_not_sure_means_no_match(text: str, el_guero: dict[UUID,
             {"period": "this_month", "metric": "units", "order": "desc", "limit": 10},
         ),
         (
-            "dime en mis dos sucursales los platillos más vendidos este mes",
-            {"period": "this_month", "metric": "units", "order": "desc", "limit": 5},
-        ),
-        (
             "los 5 platillos más vendidos este mes en Centro",
             {
                 "period": "this_month",
@@ -293,6 +291,7 @@ def test_top_dishes(text: str, args: dict[str, Any], el_guero: dict[UUID, str]) 
         "los platillos que más venden este mes",  # units or money?
         "los 5 platillos más vendidos",  # no period
         "los platillos más vendidos este mes contra el mes pasado",  # two intents
+        "dime en mis dos sucursales los platillos más vendidos este mes",  # "dos" is not N
     ],
 )
 def test_top_dishes_not_sure_means_no_match(text: str, el_guero: dict[UUID, str]) -> None:

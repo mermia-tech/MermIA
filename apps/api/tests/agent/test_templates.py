@@ -6,7 +6,7 @@ from uuid import UUID
 import pytest
 from pydantic import ValidationError
 
-from mermia_api.agent.templates import render
+from mermia_api.agent.templates import no_data, render
 from mermia_contracts.rpc import Flag
 
 CENTRO = "705e8e51-376b-5785-adbb-405eff4e2a22"
@@ -286,3 +286,44 @@ def test_payment_methods_unknown_key_partial_detail_and_no_rows(
     assert render("get_sales_breakdown", args, empty, el_guero).text == (
         "No hay ventas registradas la semana pasada en tus 2 sucursales."
     )
+
+
+@pytest.mark.parametrize(
+    ("rpc", "args", "first_line"),
+    [
+        (
+            "get_food_cost_pct",
+            {"period": "last_month"},
+            "Tu food cost del mes pasado en tus 2 sucursales fue 37.5% (meta: 32.0%).",
+        ),
+        (
+            "compare_locations",
+            {"metric": "net_sales", "period": "last_month"},
+            "Ventas del mes pasado por sucursal:",
+        ),
+        (
+            "get_sales_breakdown",
+            {"period": "last_month", "by": "payment_method"},
+            "Ventas del mes pasado en tus 2 sucursales por forma de pago:",
+        ),
+    ],
+)
+def test_de_el_is_contracted(
+    rpc: str, args: dict[str, Any], first_line: str, example: Any, el_guero: dict[UUID, str]
+) -> None:
+    assert render(rpc, args, example(rpc), el_guero).text.splitlines()[0] == first_line
+
+
+@pytest.mark.parametrize(
+    ("rpc", "args", "text"),
+    [
+        ("get_sales_summary", {"period": "last_month"}, "No tengo datos del mes pasado todavía."),
+        (
+            "get_top_dishes",
+            {"period": "last_month", "metric": "margin_pct"},
+            "Todavía no tengo costos de tus platillos para calcular la ganancia del mes pasado.",
+        ),
+    ],
+)
+def test_no_data_contracts_de_el(rpc: str, args: dict[str, Any], text: str) -> None:
+    assert no_data(rpc, args).text == text

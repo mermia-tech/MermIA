@@ -390,3 +390,42 @@ Not covered, by design (out of scope in the spec): the LLM broker loop and valid
 
 - **Checkpoint 0:** the `Broker` and `render` signatures, with the owner of MR-27. This is the only coordination step before Task 2.
 - **Checkpoint A:** the word lists and the first exact reply, reviewed by the human.
+
+## Verification (2026-11-04, branch at `e173a5c`)
+
+### Commands and results
+
+| Check | Command | Result |
+|---|---|---|
+| Agent unit tests | `uv run pytest apps/api/tests/agent -q` | 210 passed |
+| Full regression (no services) | `uv run pytest -q` | 1545 passed, 71 skipped |
+| DB regression | `MERMIA_DB_URL=… uv run pytest -m db -q` | 42 passed, 26 skipped |
+| All checks | `.claude/skills/check/check.sh` | ruff, format, mypy, pytest, pgTAP PASS |
+| Integration, Mock RPC over HTTP | ad-hoc script, `TestClient(mermia_mock_rpc.app)` + `answer()` on the 40 eval questions and the 8 menu taps | 11 template, 29 fallback; every `must_contain` figure is in its template reply; all 8 taps answer `template` |
+| Integration, real SQL RPCs | ad-hoc script on local Supabase (main migrations: the 4 MR-17 RPCs), claims as in `70_rpcs.test.sql` | real shapes validate and render; a Polanco manager sees only Polanco, and "en Centro" falls through |
+| Mutation checks | 8 mutants on a scratch copy | 7 caught by at least one test, 1 not (D4) |
+| Router speed | `timeit` | about 41 µs per call |
+
+### Not run
+- **Browser tests:** not applicable; there is no UI in this ticket.
+- **Real SQL for `get_food_cost_pct`, `compare_locations` and `get_sales_breakdown`:** they are only in open PR #77, and the local DB has `main`'s migrations. They were checked against the mock and the C3 examples only.
+- **WhatsApp channel and LLM broker:** out of scope.
+
+### Defects found
+
+| # | Severity | Defect | Cause | Recommended next step |
+|---|---|---|---|---|
+| D3 | High | "ventas de ayer a las tres" and "ventas de ayer de las dos a las cinco" answer the whole day's total | Number words (uno…diez) are global filler words, so an hour vanishes like a filler | Remove the number words from `FILLER`. Keep them only as N before "platillo(s)" (already in `NUMBERS`) and inside the "cuál de mis dos locales/sucursales" triggers. Add both phrases as negatives; "dime en mis dos sucursales los platillos…" then gives None, and its test becomes a negative |
+| D2 | Medium | A margin ranking with no costed dishes answers "No tengo datos de este mes todavía." (real SQL: `no_data`, "No costed dish sales for the period"), which suggests a missing upload | `no_data()` has one generic text per RPC | For `get_top_dishes` with `margin` or `margin_pct`: "Todavía no tengo costos de tus platillos para calcular la ganancia {periodo}." Add a test |
+| D1 | Low | "No tengo datos de el mes pasado" and "Tu food cost de el mes pasado" | "de" + "el mes pasado" is not contracted | One helper that gives "del mes pasado"; tests for both replies |
+| D4 | Low | Removing the write-verb check fails no test | Every write verb is also outside the closed vocabulary, so the closed vocabulary already rejects it | Delete `WRITE_VERBS` and the rule (the spec rule is still met), or keep it as defense in depth and note why it has no test of its own |
+
+### Fixes applied (2026-11-04, not committed yet)
+- **D3:** number words are no longer filler.
+  - New negatives: "a las tres", "de las dos a las cinco".
+  - "dime en mis dos sucursales los platillos…" moved from the positives to the negatives.
+  - Eval matches are still 11 of 40.
+- **D2:** `no_data` from a margin ranking now answers "Todavía no tengo costos de tus platillos para calcular la ganancia {de periodo}." A units ranking keeps the generic reply. Confirmed against real SQL.
+- **D1:** one helper, `_of(period)`, used in all 5 places that wrote "de {periodo}": no_data, the margin no_data, food cost, compare locations and payments. Confirmed against real SQL.
+- **Tests:** `uv run pytest apps/api/tests/agent` gives 219 passed, and `check.sh` passes all five checks.
+- **D4:** kept as defense in depth (product owner's decision). A comment in `router.py` explains why no test fails without it.

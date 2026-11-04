@@ -254,3 +254,25 @@ def test_no_data_without_a_period(
     )
     assert response.route == "template"
     assert _reply_text(response) == "Todavía no tengo datos."
+
+
+@pytest.mark.parametrize(
+    ("text", "reply"),
+    [
+        (
+            "¿cuál es el platillo que más ganancia en pesos me deja este mes?",
+            "Todavía no tengo costos de tus platillos para calcular la ganancia de este mes.",
+        ),
+        ("los 5 platillos más vendidos este mes", "No tengo datos de este mes todavía."),
+    ],
+)
+def test_no_data_on_a_margin_ranking_means_no_costs(
+    text: str, reply: str, el_guero: dict[UUID, str], fake_rpc: Any, counting_broker: Any
+) -> None:
+    # real SQL: no_data "No costed dish sales for the period" when no dish has a cost yet
+    fake_rpc.answers["get_top_dishes"] = _error("no_data")
+    response = answer(
+        _text(el_guero, text), locations=el_guero, rpc=fake_rpc, broker=counting_broker
+    )
+    assert response.route == "template"
+    assert _reply_text(response) == reply

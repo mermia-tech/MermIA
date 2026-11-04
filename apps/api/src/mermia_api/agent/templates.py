@@ -76,7 +76,12 @@ def no_data(rpc: str, args: dict[str, Any]) -> TextMsg:
         return TextMsg(kind="text", text="No tengo datos completos para comparar esas semanas.")
     if "period" not in args:
         return TextMsg(kind="text", text="Todavía no tengo datos.")
-    return TextMsg(kind="text", text=f"No tengo datos de {PERIOD_ES[args['period']]} todavía.")
+    of_period = _of(args["period"])
+    if rpc == "get_top_dishes" and args.get("metric") in ("margin", "margin_pct"):
+        # the SQL says no_data when sales exist but no dish has a cost yet
+        text = f"Todavía no tengo costos de tus platillos para calcular la ganancia {of_period}."
+        return TextMsg(kind="text", text=text)
+    return TextMsg(kind="text", text=f"No tengo datos {of_period} todavía.")
 
 
 def _sales_summary(
@@ -140,7 +145,7 @@ def _food_cost(
 ) -> list[str]:
     target = f" (meta: {data.target.text})" if data.target is not None else ""
     return [
-        f"Tu food cost de {PERIOD_ES[args['period']]} {_where(args, locations)} fue "
+        f"Tu food cost {_of(args['period'])} {_where(args, locations)} fue "
         f"{data.theoretical.text}{target}.",
         f"Cobertura de costos: {data.coverage.text} de las ventas.",
     ]
@@ -180,7 +185,7 @@ def _compare_locations(
     if not data.rows:
         return [f"No hay ventas registradas {period}."]
     best = min(data.rows, key=lambda r: r.rank).name
-    lines = [f"{_METRIC_ES[data.metric]} de {period} por sucursal:"]
+    lines = [f"{_METRIC_ES[data.metric]} {_of(args['period'])} por sucursal:"]
     for r in sorted(data.rows, key=lambda r: r.rank):
         behind = f" ({r.diff_vs_best.text} vs. {best})" if r.name != best else ""
         lines.append(f"{r.rank}. {r.name}: {r.value.text}{behind}")
@@ -193,9 +198,15 @@ def _payment_methods(
     when = f"{PERIOD_ES[args['period']]} {_where(args, locations)}"
     if not data.rows:
         return [f"No hay ventas registradas {when}."]
-    return [f"Ventas de {when} por forma de pago:"] + [
+    return [f"Ventas {_of(args['period'])} {_where(args, locations)} por forma de pago:"] + [
         f"- {PAYMENT_ES.get(r.key, r.key)}: {r.net_sales.text} ({r.share.text})" for r in data.rows
     ]
+
+
+def _of(period: str) -> str:
+    """'de la semana pasada', but 'del mes pasado'."""
+    label = PERIOD_ES[period]
+    return f"del {label[3:]}" if label.startswith("el ") else f"de {label}"
 
 
 def _where(args: dict[str, Any], locations: Mapping[UUID, str]) -> str:

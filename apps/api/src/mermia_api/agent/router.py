@@ -53,7 +53,9 @@ PERIODS: dict[str, PeriodName] = {
     "ultimos 30 dias": "last_30d",
 }
 
-# Imperative and infinitive forms only: "subió" describes, "súbele" orders a change.
+# Imperative and infinitive forms only: "subió" describes, "súbele" orders a change. Defense in
+# depth: none of these is in the vocabulary today, so the closed vocabulary already rejects them;
+# this keeps a write from ever being read as a question if a word list grows to include one.
 WRITE_VERBS = _words(
     "cambia cambiala cambialo cambiale cambiar sube subele subelo subir baja bajale bajalo bajar "
     "pon ponle ponlo poner actualiza actualizala actualizalo actualizar redondea redondeame "
@@ -63,8 +65,7 @@ WRITE_VERBS = _words(
 FILLER = _words(
     "cuanto cuanta cuantos cuantas cual cuales que me mi mis tu tus de del la el las los lo en "
     "con y por fue es son se a al dime dame oye hola porfa favor ya total totales todas todos "
-    "sucursales locales "
-    "uno una dos tres cuatro cinco seis siete ocho nueve diez"
+    "sucursales locales"
 )
 
 SALES_TRIGGERS = ("vendi", "vendio", "vendimos", "venta", "ventas", "entro")
@@ -104,6 +105,8 @@ DISH_MEASURES = {
     "porcentaje de ganancia": "margin_pct",
 }
 DISH_ORDERS = {"mas": "desc", "mayor": "desc", "top": "desc", "menos": "asc", "menor": "asc"}
+# Number words are not filler ("ventas de ayer a las tres" asks for an hour): only N before
+# "platillo(s)", and "dos" inside the compare-locations triggers.
 NUMBERS = {
     "uno": 1,
     "una": 1,
