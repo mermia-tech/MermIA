@@ -79,13 +79,22 @@ def has_title(top: list[Row], header_at: int, *titles: str) -> bool:
     return any(norm(c) in titles for row in top[:header_at] for c in row)
 
 
-def read_table(wb: Workbook, sheet: str, header_at: int, max_rows: int) -> list[Row]:
+def read_table(
+    wb: Workbook,
+    sheet: str,
+    header_at: int,
+    max_rows: int,
+    *,
+    what: str = "El reporte",
+    fix: str = "envíame un periodo más corto",
+) -> list[Row]:
     """The sheet down to at most `max_rows` rows below the header (one more is read to know
-    there are too many), so a small zip cannot unpack into a huge sheet."""
+    there are too many), so a small zip cannot unpack into a huge sheet. `what` and `fix` word
+    the refusal for the file at hand (an SR report by default, or the recipe template)."""
     sheet_rows = rows(wb, sheet, max_row=header_at + 1 + max_rows + 1)
     if len(sheet_rows) > header_at + 1 + max_rows:
         raise MalformedReport(
-            f"El reporte tiene más de {max_rows:,} renglones; envíame un periodo más corto.",
+            f"{what} tiene más de {max_rows:,} renglones; {fix}.",
             f"more than {max_rows} rows below the header",
         )
     return sheet_rows
@@ -104,8 +113,8 @@ def columns(
             continue
         if name in cols:
             raise MalformedReport(
-                f"El encabezado repite la columna «{text(cell)}». Envíame el reporte con una "
-                "columna de cada tipo.",
+                f"El encabezado repite la columna «{text(cell)}». Deja una sola columna de "
+                "cada tipo y envíame el archivo de nuevo.",
                 f"column {name!r} repeated in the header",
             )
         cols[name] = (i, text(cell) or name)

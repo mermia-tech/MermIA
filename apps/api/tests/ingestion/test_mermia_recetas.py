@@ -285,3 +285,96 @@ def test_the_unknown_report_message_names_the_template() -> None:
         parse_file(xlsx({"Hoja1": [["nada"]]}))
     assert "la plantilla de recetas de MermIA" in e.value.message_es
     assert "«Recetas»" in e.value.message_es
+
+
+@pytest.mark.parametrize(
+    ("code", "porciones", "what"),
+    [("P099", None, "Clave"), (None, 2, "Porciones"), ("P099", 2, "Clave y Porciones")],
+)
+def test_a_row_with_clave_or_porciones_but_no_platillo_is_held_not_joined(
+    code: str | None, porciones: Any, what: str
+) -> None:
+    batch = parse_file(
+        template(
+            *PASTOR_ROWS,
+            [code, None, porciones, "Cebolla blanca", 10, "g"],
+            line("Cilantro", 3, "g"),
+            *HORCHATA_ROWS,
+        )
+    )
+    pastor, horchata = batch.recipes
+    assert (pastor.menu_item_name, horchata.menu_item_name) == (PASTOR, HORCHATA)
+    assert [x.ingredient_name for x in pastor.lines] == [
+        "Tortilla de maíz",
+        "Carne al pastor (adobada)",
+        "Salsa verde (preparada)",
+    ], "the nameless row and the rows below it do not join the dish above"
+    assert errors(batch) == [("plantilla.dish_name_missing", str(FIRST_ROW + 3))]
+    (issue,) = [i for i in batch.issues if i.code == "plantilla.dish_name_missing"]
+    assert f"La fila {FIRST_ROW + 3} tiene {what} pero no el nombre del platillo" in (
+        issue.message_es
+    )
+
+
+def test_ingredient_rows_under_a_dish_still_carry_down() -> None:
+    batch = parse_file(template(*PASTOR_ROWS, line("Cilantro", 3, "g")))
+    (pastor,) = batch.recipes
+    assert len(pastor.lines) == 4
+    assert batch.issues == []
+
+
+def test_lines_without_a_dish_and_no_recipe_point_at_the_first_such_row() -> None:
+    with pytest.raises(MalformedReport) as e:
+        parse_file(template(line("Cebolla blanca", 10, "g"), line("Cilantro", 3, "g")))
+    assert "no tiene ninguna receta" not in e.value.message_es, "not the generic refusal"
+    assert f"fila {FIRST_ROW}" in e.value.message_es
+    assert "ningún platillo" in e.value.message_es
+
+
+def test_only_a_nameless_dish_points_at_its_row() -> None:
+    with pytest.raises(MalformedReport) as e:
+        parse_file(template(["P099", None, 1, "Cebolla blanca", 10, "g"]))
+    assert f"fila {FIRST_ROW}" in e.value.message_es
+    assert "nombre del platillo" in e.value.message_es
+
+
+def test_too_many_rows_in_a_template_speaks_of_the_template(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from mermia_api.ingestion.parsers import mermia_recetas
+
+    monkeypatch.setattr(mermia_recetas, "MAX_ROWS", 2)
+    with pytest.raises(MalformedReport) as e:
+        parse_file(template(*PASTOR_ROWS))
+    assert "renglones" in e.value.message_es
+    assert "plantilla" in e.value.message_es
+    assert "periodo" not in e.value.message_es
+
+
+def test_a_repeated_column_in_a_template_does_not_ask_for_a_report() -> None:
+    with pytest.raises(MalformedReport) as e:
+        parse_file(template(*PASTOR_ROWS, header=[*HEADER, "Cantidad"]))
+    assert "repite la columna" in e.value.message_es
+    assert "reporte" not in e.value.message_es
+
+
+def test_an_unreadable_file_message_fits_a_template_too() -> None:
+    from mermia_api.ingestion.errors import UnreadableFile
+
+    with pytest.raises(UnreadableFile) as e:
+        parse_file(b"PK\x03\x04 not really a zip")
+    assert "Envíame el reporte" not in e.value.message_es
+    assert "plantilla" in e.value.message_es
+
+
+@pytest.mark.parametrize(
+    ("title", "hint"),
+    [
+        ("Tacos - El Güero - Todas las sucursales", None),
+        ("Taquería El Güero - todas las sucursales", None),
+        ("Tacos - El Güero - Centro", "Centro"),
+    ],
+)
+def test_the_location_line_of_a_tenant_wide_template(title: str, hint: str | None) -> None:
+    batch = parse_file(template(*PASTOR_ROWS, title=[title, *TITLE[1:]]))
+    assert batch.location_hint == hint

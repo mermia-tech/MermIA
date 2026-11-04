@@ -1,12 +1,15 @@
 """The MermIA recipe template (plantilla de recetas), filled by the owner and sent back.
 
 Layout (written by ingestion/templates/recetas.py, which imports the names below): a sheet
-"Recetas" with a title block ("<restaurant> - <location>", "Plantilla de recetas MermIA",
-"Versión 1", "Fecha: dd/mm/aaaa"), then the header
+"Recetas" with a title block ("<restaurant> - <location>", or "<restaurant> - Todas las
+sucursales" for the whole tenant: no location hint; "Plantilla de recetas MermIA", "Versión 1",
+"Fecha: dd/mm/aaaa"), then the header
 Clave | Platillo | Porciones | Insumo | Cantidad | Unidad | Rendimiento % | Notas.
 The dish (Clave, Platillo, Porciones) is written once; the rows below it, blank ones included,
 belong to it until the next Platillo. A dish written again (on every row, as in the SR report)
-joins its recipe. A dish with no line has no recipe yet and is skipped.
+joins its recipe. A dish with no line has no recipe yet and is skipped. A row with Clave or
+Porciones but no Platillo is a dish without a name: it and the rows below it are held, never
+joined to the dish above.
 
 Output: one catalog batch (source_kind manual), one RecipeIn per dish with lines. Porciones is
 yield_qty (blank is one portion). Quantities leave in base units and yields as percent points,
@@ -40,6 +43,7 @@ from mermia_api.ingestion.parsers._recipe_units import (
 from mermia_api.ingestion.parsers._sr_common import (
     DATE,
     SEARCH_ROWS,
+    Columns,
     Line,
     columns,
     has_title,
@@ -62,6 +66,7 @@ from mermia_contracts.db.models import IssueSeverity, SourceKind
 PARSER = "mermia.plantilla_recetas@v1"
 VERSION = 1
 MAX_ROWS = 50_000  # far above a real recipe book; a small zip cannot unpack into a huge sheet
+TOO_MANY_ROWS = "borra las filas que no usas y envíamela de nuevo"
 
 # What the writer prints, in Mexican Spanish
 TITLE = "Plantilla de recetas MermIA"
@@ -70,6 +75,7 @@ DATE_LINE = "Fecha: {:%d/%m/%Y}"
 SHEET_INSTRUCTIONS = "Instrucciones"
 SHEET_RECIPES = "Recetas"
 SHEET_INGREDIENTS = "Insumos"
+ALL_LOCATIONS = "Todas las sucursales"  # the location line of a template for the whole tenant
 CODE, DISH, PORTIONS, INGREDIENT, QTY, UNIT, YIELD, NOTES = HEADER = (
     "Clave",
     "Platillo",
@@ -86,6 +92,8 @@ UNIT_CHOICES = ("g", "kg", "ml", "l", "pza")
 REQUIRED = {norm(c) for c in (DISH, INGREDIENT, QTY, UNIT)}
 KNOWN = {norm(c) for c in HEADER}
 HELD = "plantilla.recipe_held"
+LINE_WITHOUT_DISH = "plantilla.line_without_dish"
+DISH_NAME_MISSING = "plantilla.dish_name_missing"
 VERSION_RE = re.compile(r"^version\s+(\d+)$")
 DATE_RE = re.compile(rf"\bfecha\s*:?\s*{DATE}")
 
@@ -141,6 +149,12 @@ def _as_of(title: list[Row]) -> Period:
         "plantilla nueva.",
         "no date in the title block",
     )
+
+
+def _location_hint(title: list[Row]) -> str | None:
+    """The location the title names; None for a template of the whole tenant."""
+    hint = location_hint(title)
+    return None if hint is None or norm(hint) == norm(ALL_LOCATIONS) else hint
 
 
 def _number(line: Line, name: str, code: str) -> Decimal:
@@ -271,6 +285,11 @@ class _Dishes:
 
     found: dict[str, _Dish] = field(default_factory=dict)
     issues: list[IssueIn] = field(default_factory=list)
+    orphans: list[_Problem] = field(default_factory=list)  # rows held for want of a dish name
+
+    def orphan(self, problem: _Problem, n: int) -> None:
+        self.orphans.append(problem)
+        self.issues.append(_error(problem, n, "No tomé esa receta."))
 
     def hold(self, d: _Dish, problem: _Problem, n: int) -> None:
         d.errors.append(n)
@@ -359,46 +378,82 @@ def _has_line(line: Line) -> bool:
     return any(not _missing(line, c) for c in (INGREDIENT, QTY, UNIT, YIELD))
 
 
+def _nameless(line: Line) -> _Problem | None:
+    """A row that starts a dish (Clave or Porciones) without its Platillo."""
+    given = [c for c in (CODE, PORTIONS) if not _missing(line, c)]
+    if not given:
+        return None
+    return _Problem(
+        DISH_NAME_MISSING,
+        f"La fila {line.n} tiene {' y '.join(given)} pero no el nombre del platillo; escribe el "
+        "nombre en «Platillo».",
+    )
+
+
+def _read_dishes(sheet_rows: list[Row], h: int, cols: Columns) -> _Dishes:
+    """Every row below the header, by dish. A nameless dish (and its rows) joins none."""
+    dishes = _Dishes()
+    current: _Dish | None = None
+    skipping = False  # below a nameless dish: its rows are held with it
+    for n, cells in enumerate(sheet_rows[h + 1 :], start=h + 2):
+        line = Line(cells, n, cols)
+        name = _cell(line, DISH)
+        nameless = None if name is not None else _nameless(line)
+        if name is not None:
+            current, skipping = dishes.start(line, name), False
+        elif nameless is not None:
+            dishes.orphan(nameless, n)
+            current, skipping = None, True
+        if skipping or not _has_line(line):
+            continue
+        if current is None:
+            problem = _Problem(
+                LINE_WITHOUT_DISH,
+                f"La fila {n} trae un insumo pero ningún platillo arriba de ella.",
+            )
+            dishes.orphans.append(problem)
+            dishes.issues.append(_error(problem, n, "No la tomé."))
+            continue
+        dishes.add(current, line)
+    return dishes
+
+
+def _no_recipe(dishes: _Dishes) -> MalformedReport:
+    """The refusal of a template without any dish to take, naming the first stray row if any."""
+    if dishes.orphans:
+        first = dishes.orphans[0]
+        return MalformedReport(
+            f"No tomé ninguna receta de la plantilla. {first.message_es} Corrígela y envíamela "
+            "de nuevo.",
+            f"no dish, first stray row: {first.code}",
+        )
+    return MalformedReport(
+        "La plantilla no tiene ninguna receta: llena los insumos de al menos un platillo y "
+        "envíamela de nuevo.",
+        "no recipe lines",
+    )
+
+
 def parse(wb: Workbook) -> NormalizedBatch:
     sheet_name = _sheet_name(wb)
     if sheet_name is None:  # the registry calls parse only after matches
         raise MalformedReport("La plantilla no tiene el formato esperado.", "header not found")
     h = _header_at(rows(wb, sheet_name, max_row=SEARCH_ROWS))
     assert h is not None
-    sheet_rows = read_table(wb, sheet_name, h, MAX_ROWS)
+    sheet_rows = read_table(wb, sheet_name, h, MAX_ROWS, what="La plantilla", fix=TOO_MANY_ROWS)
     title = sheet_rows[:h]
     _check_version(title)
     as_of = _as_of(title)
     cols = columns(sheet_rows[h], KNOWN)
 
-    dishes = _Dishes()
-    current: _Dish | None = None
-    for n, cells in enumerate(sheet_rows[h + 1 :], start=h + 2):
-        line = Line(cells, n, cols)
-        name = _cell(line, DISH)
-        if name is not None:
-            current = dishes.start(line, name)
-        if not _has_line(line):
-            continue
-        if current is None:
-            problem = _Problem(
-                "plantilla.line_without_dish",
-                f"La fila {n} trae un insumo pero ningún platillo arriba de ella.",
-            )
-            dishes.issues.append(_error(problem, n, "No la tomé."))
-            continue
-        dishes.add(current, line)
+    dishes = _read_dishes(sheet_rows, h, cols)
     recipes = dishes.recipes()
     if not any(d.lines or d.errors for d in dishes.found.values()):
-        raise MalformedReport(
-            "La plantilla no tiene ninguna receta: llena los insumos de al menos un platillo y "
-            "envíamela de nuevo.",
-            "no recipe lines",
-        )
+        raise _no_recipe(dishes)
     return NormalizedBatch(
         parser=PARSER,
         source_kind=SourceKind.manual,
-        location_hint=location_hint(title),
+        location_hint=_location_hint(title),
         period=as_of,
         grain=Grain.catalog,
         totals=Totals(lines=len(recipes)),
