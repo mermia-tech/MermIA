@@ -153,17 +153,21 @@ begin
   end if;
 
   select * into s from app.sales_totals(locs, r[1], r[2]);
-  if "by" in ('staff', 'hour', 'channel', 'payment_method') then
+  if "by" = 'category' then
+    select count(*) into detail_days from (
+      select distinct v.location_id, v.business_date from app.v_item_sales_daily v
+      where v.location_id = any (locs) and v.business_date between r[1] and r[2]) d;
+  elsif "by" in ('staff', 'hour', 'channel', 'payment_method') then
     select count(*) into detail_days from (
       select v.location_id, v.business_date from app.v_daily_sales v
       where v.location_id = any (locs) and v.business_date between r[1] and r[2]
         and (v.grain = 'ticket' or ("by" = 'payment_method' and exists (
           select 1 from app.v_daily_payment_mix x
           where x.location_id = v.location_id and x.business_date = v.business_date and x.payment_mix <> '{}')))) d;
-    if detail_days < s.covered_days then
-      flags := flags || app.flag('partial_data',
-        format('Solo %s de %s días con ventas tienen este detalle.', detail_days, s.covered_days));
-    end if;
+  end if;
+  if "by" <> 'weekday' and detail_days < s.covered_days then
+    flags := flags || app.flag('partial_data',
+      format('Solo %s de %s días con ventas tienen este detalle.', detail_days, s.covered_days));
   end if;
   if s.expected_covered < s.expected_days then
     flags := flags || app.flag('missing_days',
@@ -183,8 +187,9 @@ $$;
 -- staff (a cancelled ticket counts once for its waiter, a voided line of a paid ticket once for
 -- whoever voided it; most first) come from ticket records.
 -- Discounts: the amount follows the day's grain; the top items are the dishes sold with a
--- discount (units of those rows and the discount); staff are the paid tickets with a discount.
--- `count` is the discounted units plus the tickets with a ticket-level discount.
+-- discount (discounted ticket lines; on aggregate days, once per dish and day, flagged
+-- `count_by_day`); staff are the paid tickets with a discount. `count` is the items' counts plus
+-- the tickets with a ticket-level discount.
 create function app.cancellation_detail(locs uuid[], f date, t date)
 returns table (part text, name text, n bigint, amount bigint)
 language sql stable set search_path = ''
@@ -218,10 +223,23 @@ create function app.discount_detail(locs uuid[], f date, t date)
 returns table (part text, name text, n bigint, amount bigint)
 language sql stable set search_path = ''
 as $$
-  select 'item', m.name, round(sum(v.units))::bigint, sum(v.discount)::bigint
-  from app.v_item_sales_daily v join public.menu_item m on m.id = v.menu_item_id
-  where v.location_id = any (locs) and v.business_date between f and t and v.discount > 0
+  -- a discounted ticket line counts once; an aggregate row has no line detail, so a dish counts
+  -- once per day it had a discount ('item_day' rows are also returned, to flag that)
+  with x as (
+    select l.menu_item_id, l.discount, false as by_day
+    from app.paid_tickets(locs, f, t) pt
+    join public.sale_line l on l.ticket_id = pt.id
+    where not l.is_void and l.discount > 0
+    union all
+    select v.menu_item_id, v.discount, true
+    from app.v_item_sales_daily v
+    where v.location_id = any (locs) and v.business_date between f and t and v.grain = 'aggregate' and v.discount > 0
+  )
+  select 'item', m.name, count(*), sum(x.discount)::bigint
+  from x join public.menu_item m on m.id = x.menu_item_id
   group by m.id, m.name
+  union all
+  select 'item_day', null, count(*), null from x where x.by_day having count(*) > 0
   union all
   select 'staff', app.first_name(x.staff_id), count(*), sum(x.discount)::bigint
   from (
@@ -265,7 +283,8 @@ begin
   -- totals of the days that report the figure; a day that does not is flagged, never a zero
   select sum(case when kind = 'cancellations' then v.cancellations_count end)::bigint as n,
          sum(case when kind = 'cancellations' then v.cancellations_amount else v.discounts end)::bigint as amount,
-         count(*) filter (where (case when kind = 'cancellations' then v.cancellations_amount else v.discounts end) is null)
+         count(*) filter (where (case when kind = 'cancellations' then v.cancellations_amount else v.discounts end) is null
+                            or (kind = 'cancellations' and v.cancellations_count is null))
            + s.item_only_days as unreported
   into tot
   from app.v_daily_sales v
@@ -294,6 +313,9 @@ begin
     flags := flags || app.flag('partial_data',
       format('%s de %s días no reportan %s.', tot.unreported, s.covered_days,
              case when kind = 'cancellations' then 'cancelaciones' else 'descuentos' end));
+  end if;
+  if kind = 'discounts' and exists (select 1 from app.discount_detail(locs, r[1], r[2]) d where d.part = 'item_day') then
+    flags := flags || app.flag('count_by_day', 'Sin detalle por ticket: cada platillo con descuento cuenta una vez por día.');
   end if;
   if tot.amount > 0 and top_items = '[]' and by_staff = '[]' then
     flags := flags || app.flag('no_detail', 'La fuente no detalla por platillo ni por mesero.');

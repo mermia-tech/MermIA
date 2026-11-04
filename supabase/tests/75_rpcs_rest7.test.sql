@@ -66,6 +66,14 @@ select is(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L, %L)', 'coca cola',
 select is(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L)', 'pizza')) #>> '{error,code}', 'not_found', 'no dish, not_found');
 select is(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L, %L)', 'sprite', :'CENTRO')) #>> '{error,code}', 'no_data',
           'a dish without a recipe has no margin');
+savepoint same_name;
+insert into public.menu_item (tenant_id, name, normalized_name, kind) values (:'TENANT', 'Coca Cola', 'coca cola', 'drink');
+select is(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L, %L)', 'coca cola', :'CENTRO')) #>> '{data,menu_item_id}', :'COCA',
+          'two items with the same name: the costed one');
+insert into public.menu_item (tenant_id, name, kind) values (:'TENANT', 'Pambazo', 'dish'), (:'TENANT', 'pambazo.', 'dish');
+select is(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L)', 'Pambazo')) #>> '{data,match}', 'ambiguous',
+          'and neither costed: ambiguous, never an arbitrary pick');
+rollback to savepoint same_name;
 select is(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L)', '  ')) #>> '{error,code}', 'invalid_args', 'a blank dish is invalid');
 select is(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L, %L)', 'tacos al pastor', :'CENTRO'), '2026-08-20') #>> '{error,code}', 'no_data',
           'no snapshot on or before today: no margin');
@@ -104,6 +112,12 @@ select is(pg_temp.rpc(:OWNER, format('api.get_sales_breakdown(%L, %L, %L)', '"ye
 select is(pg_temp.rpc(:OWNER, format('api.get_sales_breakdown(%L, %L, %L)', '"yesterday"', 'category', :'CENTRO')) #> '{data,rows,0}',
           '{"key": "Tacos", "net_sales": {"raw": 1523500, "text": "$15,235.00"}, "tickets": null, "share": {"raw": 48.838, "text": "48.8%"}}',
           'by category from item sales');
+savepoint no_items;
+update public.import_batch b set status = 'rolled_back'
+where b.id in (select a.batch_id from public.item_sales_agg a where a.location_id = :'CENTRO' and a.period_from = '2026-10-11');
+select is(pg_temp.rpc(:OWNER, format('api.get_sales_breakdown(%L, %L, %L)', '"last_week"', 'category', :'CENTRO')) #>> '{flags,0,code}', 'partial_data',
+          'a day with a daily total but no item report makes the category breakdown partial');
+rollback to savepoint no_items;
 select is((select sum((x #>> '{net_sales,raw}')::bigint) from jsonb_array_elements(
              pg_temp.rpc(:OWNER, format('api.get_sales_breakdown(%L, %L)', '"last_week"', 'weekday')) #> '{data,rows}') x),
           34524130::numeric, 'weekdays add up to last week''s net sales');
@@ -158,11 +172,20 @@ select is(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, %L, %L)', '{"fro
           'the cancellation Saturday: 17 tickets, $2,655.00, by item and by waiter (13 H3 example 7)');
 select is(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, location_id => %L)', '{"from":"2026-08-17","to":"2026-08-17"}', :'CENTRO')) #>> '{data,count}', '3',
           'an aggregate-only day still has its count and amount');
+savepoint null_count;
+update public.daily_sales_agg set cancellations_count = null where location_id = :'CENTRO' and business_date = '2026-10-09';
+select is(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, location_id => %L)', '"last_week"', :'CENTRO')) #>> '{flags,0,code}', 'partial_data',
+          'a day that reports the amount but not the count is flagged, not counted as zero');
+rollback to savepoint null_count;
 select is(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, location_id => %L)', '{"from":"2026-08-17","to":"2026-08-17"}', :'CENTRO')) #>> '{flags,0,code}', 'no_detail',
           'and says it has no detail by item or waiter');
 select is(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, %L)', '"last_week"', 'discounts')) #> '{data,top_items,0}',
-          '{"name": "Tacos al pastor (orden de 3)", "count": 137, "amount": {"raw": 83570, "text": "$835.70"}}',
-          'discounts: the Martes de pastor promotion');
+          (select format('{"name": "Tacos al pastor (orden de 3)", "count": %s, "amount": {"raw": 83570, "text": "$835.70"}}', count(*))::jsonb
+           from public.item_sales_agg a join public.menu_item m on m.id = a.menu_item_id
+           where m.external_id = 'P001' and a.discount > 0 and a.period_from between '2026-10-05' and '2026-10-11'),
+          'discounts: the Martes de pastor promotion, once per dish and day without tickets');
+select is((select jsonb_agg(f ->> 'code') from jsonb_array_elements(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, %L)', '"last_week"', 'discounts')) -> 'flags') f),
+          '["count_by_day"]', 'and says how it counted');
 select is(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, %L)', '"last_week"', 'discounts')) #>> '{data,amount,raw}',
           (select sum(d.discounts)::text from public.daily_sales_agg d where d.business_date between '2026-10-05' and '2026-10-11'),
           'the discount amount is the daily figure');
@@ -210,6 +233,13 @@ select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"'
             {"ingredient": "Aguacate Hass", "change": {"raw": 61.8182, "text": "+61.8%"},
              "new_unit_price": {"raw": 0.089, "base_unit": "g", "text": "$89.00/kg"}}]',
           'the two price jumps of the seed, $170 to $195/kg and $55 to $89/kg');
+savepoint zero_price;
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+select :'TENANT', i.id, 0, '2026-10-12', 'manual' from public.ingredient i where i.name = 'Aguacate Hass';
+select is((select jsonb_agg(m ->> 'ingredient') from jsonb_array_elements(
+             pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data,price_moves}') m),
+          '["Carne al pastor (adobada)"]', 'a zero price is not a move (the contract needs a price above zero)');
+rollback to savepoint zero_price;
 select is(pg_temp.rpc(:OWNER, 'api.get_cost_alerts()') #> '{data,price_moves}', '[]', 'neither is in the last 7 days');
 select is(pg_temp.rpc(:OWNER, 'api.get_cost_alerts()') #> '{meta,period_resolved}', '{"from": "2026-10-05", "to": "2026-10-12"}',
           'the window runs from the start of `since` through today');

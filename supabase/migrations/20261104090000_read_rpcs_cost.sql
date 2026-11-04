@@ -146,9 +146,24 @@ begin
     select m.id, m.name into item_id, item_name from public.menu_item m where m.id = btrim(dish)::uuid;
   end if;
   if item_id is null then
-    select m.id, m.name into item_id, item_name from public.menu_item m
-    where m.is_active and app.norm_name(m.name) = q
-    order by m.id limit 1;
+    -- an exact name; when several items share it ("Coca-Cola" and "Coca Cola"), the one costed
+    -- in these locations, else they are ambiguous
+    with e as (
+      select m.id, m.name, exists (select 1 from public.dish_cost_snapshot s
+                                   where s.menu_item_id = m.id and s.location_id = any (locs) and s.date <= today) as costed
+      from public.menu_item m where m.is_active and app.norm_name(m.name) = q
+    )
+    select case when count(*) = 1 then min(e.id::text)
+                when count(*) filter (where e.costed) = 1 then min(e.id::text) filter (where e.costed) end::uuid,
+           count(*)::int,
+           (select jsonb_agg(jsonb_build_object('menu_item_id', x.id, 'name', x.name) order by x.costed desc, x.name, x.id)
+            from (select * from e order by e.costed desc, e.name, e.id limit 5) x)
+    into item_id, matches, candidates
+    from e;
+    if item_id is null and matches > 1 then
+      return app.rpc_ok(jsonb_build_object('match', 'ambiguous', 'candidates', candidates), locs);
+    end if;
+    select m.name into item_name from public.menu_item m where m.id = item_id;
   end if;
   if item_id is null then
     with c as (
@@ -374,7 +389,8 @@ $$;
 -- `since` names where the window starts; it runs through today (a price that starts today is
 -- news), and meta.period_resolved says so.
 -- - Price moves: ingredients used by a recipe in effect whose price of record at the end of the
---   window differs by at least 8 % (03 alert table) from the one the day before the window, in
+--   window differs by at least 8 % (the lower threshold of the 03 alert table; its 30-day
+--   average and top-20-spend rules are not applied yet) from the one the day before the window, in
 --   the order the new prices started.
 -- - Breaches: dishes whose latest snapshot in the window is above target + 3 pts (03), the worst
 --   location when several are asked; highest food cost first.
@@ -423,7 +439,7 @@ begin
     from public.ingredient i
     cross join lateral app.price_of_record(i.id, r[1] - 1) o
     cross join lateral app.price_of_record(i.id, w_to) n
-    where o.unit_price_net > 0 and n.effective_from >= r[1]
+    where o.unit_price_net > 0 and n.unit_price_net > 0 and n.effective_from >= r[1]
       and abs(n.unit_price_net - o.unit_price_net) >= 0.08 * o.unit_price_net
       and exists (select 1 from public.recipe_line rl join public.recipe rc on rc.id = rl.recipe_id
                   where rl.ingredient_id = i.id
