@@ -198,7 +198,7 @@ This is the largest parser, so it gets its own task.
 **Files:** Modify `router.py`, `templates.py`; tests as above.
 
 **Steps:**
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
   - Add `top_dishes_top5_month_units` and `top_dishes_top3_revenue_30d` to `MUST_MATCH`.
   - **Matches:**
     - N as a number word ("los tres platillos") or as a digit, right before "platillo(s)".
@@ -216,8 +216,18 @@ This is the largest parser, so it gets its own task.
     - The ranked list of `name` and `value.text` from `get_top_dishes.json` equals the exact string.
     - Empty `rows` give "No hay ventas registradas en {periodo}."
     - `uncosted_sales` adds its message.
-- [ ] **Steps 2-4:** FAIL, implement, PASS + mypy.
-- [ ] **Step 5: Commit** `MR-26: top and bottom dishes intent`.
+- [x] **Steps 2-4:** FAIL, implement, PASS + mypy.
+- [x] **Step 5: Commit** `MR-26: top and bottom dishes intent`.
+
+**Result (2026-11-04):**
+- Red: 15 failed.
+- A first green attempt missed registering `_top_dishes` in `_SPECIFIC` (the formatter had reshaped the tuple). The positive tests caught it.
+- A test bug: the singular test took row 2, whose `rank` is 2 in the data; it now takes row 1.
+- Green: `uv run pytest apps/api` gives 197 passed and 16 skipped; mypy and ruff are clean.
+- Optional eval cases now matching, with their expected args: `top_dishes_top_margin`, `top_dishes_worst_seller`. `top_dishes_least_profitable` falls through (two measures).
+- "venden" alone is not a measure ("los platillos que más venden" could mean units or money), so it gives None.
+- The empty reply reads "No hay ventas registradas {periodo} {dónde}." instead of the spec's draft "en {periodo}", which reads badly with "ayer". The wording is approved in the PR.
+- `con`, `cual` and `cuales` were added to the filler words.
 
 **Acceptance:** the sweep is green, and the PR records which of the 3 optional `top_dishes_*` cases match.
 **Dependencies:** Task 2 (independent of Task 3). **Scope:** S.

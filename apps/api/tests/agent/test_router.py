@@ -14,7 +14,12 @@ CASES = sorted((Path(__file__).parents[4] / "apps" / "eval" / "cases").glob("*.j
 CENTRO = "705e8e51-376b-5785-adbb-405eff4e2a22"
 POLANCO = "fdda5e3b-6bcd-5c48-a6de-f524be37463e"
 
-MUST_MATCH = {"sales_yesterday", "sales_last_week"}
+MUST_MATCH = {
+    "sales_yesterday",
+    "sales_last_week",
+    "top_dishes_top5_month_units",
+    "top_dishes_top3_revenue_30d",
+}
 
 MUST_NOT_MATCH = {
     "adversarial_forecast_december",
@@ -215,4 +220,75 @@ def test_compare_periods_takes_a_location(el_guero: dict[UUID, str]) -> None:
     ],
 )
 def test_compare_periods_not_sure_means_no_match(text: str, el_guero: dict[UUID, str]) -> None:
+    assert route(text, el_guero) is None
+
+
+@pytest.mark.parametrize(
+    ("text", "args"),
+    [
+        (
+            "¿cuáles son los 5 platillos más vendidos este mes?",
+            {"period": "this_month", "metric": "units", "order": "desc", "limit": 5},
+        ),
+        (
+            "dime los tres platillos que más dinero me venden en los últimos 30 días",
+            {"period": "last_30d", "metric": "revenue", "order": "desc", "limit": 3},
+        ),
+        (
+            "¿cuál es el platillo menos vendido del mes pasado?",
+            {"period": "last_month", "metric": "units", "order": "asc", "limit": 1},
+        ),
+        (
+            "los platillos más vendidos de la semana pasada",
+            {"period": "last_week", "metric": "units", "order": "desc", "limit": 5},
+        ),
+        (
+            "¿cuál es el platillo que más ganancia en pesos me deja este mes?",
+            {"period": "this_month", "metric": "margin", "order": "desc", "limit": 1},
+        ),
+        (
+            "los 3 platillos con menor porcentaje de ganancia este mes",
+            {"period": "this_month", "metric": "margin_pct", "order": "asc", "limit": 3},
+        ),
+        (
+            "top 10 platillos más vendidos este mes",
+            {"period": "this_month", "metric": "units", "order": "desc", "limit": 10},
+        ),
+        (
+            "dime en mis dos sucursales los platillos más vendidos este mes",
+            {"period": "this_month", "metric": "units", "order": "desc", "limit": 5},
+        ),
+        (
+            "los 5 platillos más vendidos este mes en Centro",
+            {
+                "period": "this_month",
+                "metric": "units",
+                "order": "desc",
+                "limit": 5,
+                "location_id": CENTRO,
+            },
+        ),
+    ],
+)
+def test_top_dishes(text: str, args: dict[str, Any], el_guero: dict[UUID, str]) -> None:
+    match = route(text, el_guero)
+    assert match is not None
+    assert (match.intent, match.rpc, match.args) == ("top_dishes", "get_top_dishes", args)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "mis platillos estrella de este mes",  # menu engineering
+        "¿cuál es el platillo más rentable este mes?",  # no measure it knows
+        "los 15 platillos más vendidos este mes",  # more than 10
+        "los platillos de este mes",  # no measure
+        "¿qué platillo me deja el menor porcentaje de ganancia este mes?",  # two measures
+        "platillos más y menos vendidos este mes",  # two orders
+        "los platillos que más venden este mes",  # units or money?
+        "los 5 platillos más vendidos",  # no period
+        "los platillos más vendidos este mes contra el mes pasado",  # two intents
+    ],
+)
+def test_top_dishes_not_sure_means_no_match(text: str, el_guero: dict[UUID, str]) -> None:
     assert route(text, el_guero) is None

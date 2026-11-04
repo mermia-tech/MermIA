@@ -112,3 +112,47 @@ def test_compare_periods_average_ticket_and_no_percentage(
         "$171,905.00 la semana antepasada.\n"
         "Diferencia: +$12,415.50."
     )
+
+
+def test_top_dishes(example: Any, el_guero: dict[UUID, str]) -> None:
+    args = {"period": "this_month", "metric": "units", "order": "desc", "limit": 5}
+    reply = render("get_top_dishes", args, example("get_top_dishes"), el_guero)
+    assert reply.text == (
+        "Tus 2 platillos más vendidos este mes en tus 2 sucursales:\n"
+        "1. Tacos al pastor (orden de 3): 1,208\n"
+        "2. Coca-Cola: 816"
+    )
+
+
+def test_one_dish_reads_singular(example: Any, el_guero: dict[UUID, str]) -> None:
+    envelope = example("get_top_dishes")
+    data = {**envelope.data, "rows": envelope.data["rows"][:1]}
+    args = {
+        "period": "last_month",
+        "metric": "units",
+        "order": "asc",
+        "limit": 1,
+        "location_id": CENTRO,
+    }
+    reply = render("get_top_dishes", args, envelope.model_copy(update={"data": data}), el_guero)
+    assert reply.text == (
+        "Tu platillo menos vendido el mes pasado en Centro:\n1. Tacos al pastor (orden de 3): 1,208"
+    )
+
+
+def test_no_dishes_sold(example: Any, el_guero: dict[UUID, str]) -> None:
+    envelope = example("get_top_dishes")
+    data = {**envelope.data, "rows": []}
+    args = {"period": "yesterday", "metric": "units", "order": "desc", "limit": 5}
+    reply = render("get_top_dishes", args, envelope.model_copy(update={"data": data}), el_guero)
+    assert reply.text == "No hay ventas registradas ayer en tus 2 sucursales."
+
+
+def test_uncosted_sales_flag_is_shown(example: Any, el_guero: dict[UUID, str]) -> None:
+    message = "Algunos platillos vendidos no tienen costo y no entran en el ranking."
+    envelope = example("get_top_dishes").model_copy(
+        update={"flags": [Flag(code="uncosted_sales", message=message)]}
+    )
+    args = {"period": "this_month", "metric": "units", "order": "desc", "limit": 5}
+    reply = render("get_top_dishes", args, envelope, el_guero)
+    assert reply.text.splitlines()[-1] == message

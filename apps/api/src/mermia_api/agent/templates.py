@@ -14,7 +14,13 @@ from uuid import UUID
 from pydantic import TypeAdapter
 
 from mermia_contracts.agent import TextMsg
-from mermia_contracts.rpc import RPCS, ComparePeriodsData, RpcEnvelope, SalesSummaryData
+from mermia_contracts.rpc import (
+    RPCS,
+    ComparePeriodsData,
+    RpcEnvelope,
+    SalesSummaryData,
+    TopDishesData,
+)
 
 PERIOD_ES = {
     "today": "hoy",
@@ -79,6 +85,31 @@ def _compare_periods(
     ]
 
 
+# (singular, plural) by metric and order
+_DISH_PHRASES = {
+    ("units", "desc"): ("más vendido", "más vendidos"),
+    ("units", "asc"): ("menos vendido", "menos vendidos"),
+    ("revenue", "desc"): ("que más vende en dinero", "que más venden en dinero"),
+    ("revenue", "asc"): ("que menos vende en dinero", "que menos venden en dinero"),
+    ("margin", "desc"): ("que más ganancia deja", "que más ganancia dejan"),
+    ("margin", "asc"): ("que menos ganancia deja", "que menos ganancia dejan"),
+    ("margin_pct", "desc"): ("con mayor porcentaje de ganancia",) * 2,
+    ("margin_pct", "asc"): ("con menor porcentaje de ganancia",) * 2,
+}
+
+
+def _top_dishes(
+    data: TopDishesData, args: dict[str, Any], locations: Mapping[UUID, str]
+) -> list[str]:
+    when = f"{PERIOD_ES[args['period']]} {_where(args, locations)}"
+    if not data.rows:
+        return [f"No hay ventas registradas {when}."]
+    singular, plural = _DISH_PHRASES[data.metric, args.get("order", "desc")]
+    n = len(data.rows)
+    head = f"Tu platillo {singular}" if n == 1 else f"Tus {n} platillos {plural}"
+    return [f"{head} {when}:"] + [f"{r.rank}. {r.name}: {r.value.text}" for r in data.rows]
+
+
 def _where(args: dict[str, Any], locations: Mapping[UUID, str]) -> str:
     if "location_id" in args:
         return f"en {locations[UUID(args['location_id'])]}"
@@ -94,4 +125,5 @@ def _cap(text: str) -> str:
 _RENDERERS: dict[str, Callable[[Any, dict[str, Any], Mapping[UUID, str]], list[str]]] = {
     "get_sales_summary": _sales_summary,
     "compare_periods": _compare_periods,
+    "get_top_dishes": _top_dishes,
 }

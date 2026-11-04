@@ -61,14 +61,39 @@ WRITE_VERBS = _words(
 )
 
 FILLER = _words(
-    "cuanto cuanta cuantos cuantas que me mi mis tu tus de del la el las los lo en y por fue es "
-    "son se a al dime dame oye hola porfa favor ya total totales todas todos sucursales locales "
+    "cuanto cuanta cuantos cuantas cual cuales que me mi mis tu tus de del la el las los lo en "
+    "con y por fue es son se a al dime dame oye hola porfa favor ya total totales todas todos "
+    "sucursales locales "
     "uno una dos tres cuatro cinco seis siete ocho nueve diez"
 )
 
 SALES_TRIGGERS = ("vendi", "vendio", "vendimos", "venta", "ventas", "entro")
 COMPARE_TRIGGERS = ("contra", "vs", "versus", "comparado con", "comparada con")
 PREVIOUS_WEEK = ("semana anterior", "anterior", "antepasada")  # "la pasada vs la anterior"
+DISH_TRIGGERS = ("platillo", "platillos")
+DISH_MEASURES = {
+    "vendido": "units",
+    "vendidos": "units",
+    "vendio": "units",
+    "dinero": "revenue",
+    "ganancia en pesos": "margin",
+    "deja": "margin",
+    "porcentaje de ganancia": "margin_pct",
+}
+DISH_ORDERS = {"mas": "desc", "mayor": "desc", "top": "desc", "menos": "asc", "menor": "asc"}
+NUMBERS = {
+    "uno": 1,
+    "una": 1,
+    "dos": 2,
+    "tres": 3,
+    "cuatro": 4,
+    "cinco": 5,
+    "seis": 6,
+    "siete": 7,
+    "ocho": 8,
+    "nueve": 9,
+    "diez": 10,
+}
 
 
 def route(text: str, locations: Mapping[UUID, str]) -> Match | None:
@@ -120,6 +145,31 @@ def _compare_periods(words: list[str], periods: set[PeriodName], named: set[UUID
     return Match("compare_periods", "compare_periods", args)
 
 
+def _top_dishes(words: list[str], periods: set[PeriodName], named: set[UUID]) -> Match | None:
+    """Top or bottom N dishes by one measure. N is a digit or a number word right before
+    "platillo(s)"; without it a plural asks for 5 and a singular for 1."""
+    at = [i for i, word in enumerate(words) if word in DISH_TRIGGERS]
+    if len(at) != 1:
+        return None
+    (i,) = at
+    limit = 1 if words[i] == "platillo" else 5
+    if i > 0 and (words[i - 1].isdigit() or words[i - 1] in NUMBERS):
+        before = words.pop(i - 1)
+        limit = int(before) if before.isdigit() else NUMBERS[before]
+    _take(words, DISH_TRIGGERS)
+    _take(words, ("venden",))  # "que más dinero me venden": the measure is "dinero"
+    metrics = {DISH_MEASURES[m] for m in _take(words, DISH_MEASURES)}
+    orders = {DISH_ORDERS[o] for o in _take(words, DISH_ORDERS)}
+    scope = _scope(named)
+    if len(metrics) != 1 or len(orders) != 1 or len(periods) != 1 or scope is None:
+        return None
+    if not 1 <= limit <= 10:
+        return None
+    (period,) = periods
+    args = {"period": period, "metric": metrics.pop(), "order": orders.pop(), "limit": limit}
+    return Match("top_dishes", "get_top_dishes", {**args, **scope})
+
+
 def _scope(named: set[UUID]) -> dict[str, Any] | None:
     """The location argument: none named means all the user's, two is not one location."""
     if len(named) > 1:
@@ -127,7 +177,10 @@ def _scope(named: set[UUID]) -> dict[str, Any] | None:
     return {"location_id": str(next(iter(named)))} if named else {}
 
 
-_SPECIFIC: tuple[tuple[tuple[str, ...], Parser], ...] = ((COMPARE_TRIGGERS, _compare_periods),)
+_SPECIFIC: tuple[tuple[tuple[str, ...], Parser], ...] = (
+    (COMPARE_TRIGGERS, _compare_periods),
+    (DISH_TRIGGERS, _top_dishes),
+)
 
 
 def _take(words: list[str], phrases: Iterable[str]) -> list[str]:
