@@ -63,9 +63,10 @@ WRITE_VERBS = _words(
     "redondealo redondear manda mandale mandar registra registralo registrar"
 )
 
+# Not "total": "en total" next to a location or a breakdown asks for two answers.
 FILLER = _words(
     "cuanto cuanta cuantos cuantas cual cuales que me mi mis tu tus de del la el las los lo en "
-    "con y por fue es son se a al dime dame oye hola porfa favor ya total totales todas todos"
+    "con y por fue es son se a al dime dame oye hola porfa favor ya totales todas todos"
 )
 
 SALES_TRIGGERS = ("vendi", "vendio", "vendimos", "venta", "ventas", "entro")
@@ -79,7 +80,9 @@ LOCATIONS_TRIGGERS = (
     "cada local",
     "cada sucursal",
     "por local",
+    "por locales",
     "por sucursal",
+    "por sucursales",
     "cual de mis locales",
     "cual de mis sucursales",
     "cual de mis dos locales",

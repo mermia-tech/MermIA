@@ -339,3 +339,63 @@ def test_one_ticket_reads_singular(example: Any, el_guero: dict[UUID, str]) -> N
         el_guero,
     )
     assert reply.text.splitlines()[1] == "1 ticket, ticket promedio $284.45."
+
+
+def test_one_stale_ingredient_reads_singular(example: Any, el_guero: dict[UUID, str]) -> None:
+    envelope = example("get_data_status")
+    data = {**envelope.data, "stale_costs": 1}
+    reply = render("get_data_status", {}, envelope.model_copy(update={"data": data}), el_guero)
+    assert "1 ingrediente con precio desactualizado." in reply.text.splitlines()
+
+
+def test_data_status_names_the_location_it_was_asked_for(
+    example: Any, el_guero: dict[UUID, str]
+) -> None:
+    args = {"location_id": CENTRO}
+    reply = render("get_data_status", args, example("get_data_status"), el_guero)
+    assert (
+        reply.text.splitlines()[0] == "Último reporte cargado en Centro el 12 de octubre de 2026."
+    )
+
+
+def test_vouchers_and_other_payments_read_in_spanish(
+    example: Any, el_guero: dict[UUID, str]
+) -> None:
+    envelope = example("get_sales_breakdown")
+    first = envelope.data["rows"][0]
+    rows = [{**first, "key": "voucher"}, {**first, "key": "other"}]
+    envelope = envelope.model_copy(update={"data": {"by": "payment_method", "rows": rows}})
+    args = {"period": "yesterday", "by": "payment_method"}
+    lines = render("get_sales_breakdown", args, envelope, el_guero).text.splitlines()
+    assert lines[1:] == ["- Vales: $17,781.15 (57.0%)", "- Otros: $17,781.15 (57.0%)"]
+
+
+@pytest.mark.parametrize(
+    ("rpc", "args", "text"),
+    [
+        (
+            "get_food_cost_pct",
+            {"period": "yesterday"},
+            "Todavía no tengo costos de tus platillos para calcular el food cost de ayer.",
+        ),
+        (
+            "compare_locations",
+            {"metric": "food_cost_pct", "period": "last_month"},
+            "Todavía no tengo costos de tus platillos para calcular el food cost del mes pasado.",
+        ),
+        (
+            "compare_locations",
+            {"metric": "net_sales", "period": "yesterday"},
+            "No tengo datos de ayer todavía.",
+        ),
+        (
+            "get_sales_breakdown",
+            {"period": "yesterday", "by": "payment_method"},
+            "No tengo el detalle por forma de pago de ayer.",
+        ),
+    ],
+)
+def test_no_data_says_what_is_missing(rpc: str, args: dict[str, Any], text: str) -> None:
+    # SQL (#77): food cost answers no_data when no dish has a cost yet, the breakdown when the
+    # days have no per-payment detail
+    assert no_data(rpc, args).text == text

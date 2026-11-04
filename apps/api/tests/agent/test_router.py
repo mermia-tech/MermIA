@@ -452,7 +452,6 @@ def test_two_locations_with_the_same_name_are_not_told_apart() -> None:
         "qué entró ayer",
         "¿por qué las ventas de ayer?",
         # a per-location or partial-location question is not the combined total
-        "ventas de ayer por sucursales",
         "en cuántas sucursales vendí ayer",
         "en qué sucursales vendí ayer",
         "ventas de ayer en centro y en todas las sucursales",
@@ -469,3 +468,27 @@ def test_location_names_match_like_the_text(name: str) -> None:
     match = route(f"cuánto vendí ayer en {name}", {UUID(CENTRO): "Centro", other: name})
     assert match is not None
     assert match.args == {"period": "yesterday", "location_id": str(other)}
+
+
+@pytest.mark.parametrize(
+    "text", ["ventas de ayer por sucursales", "ventas de la semana pasada por locales"]
+)
+def test_per_location_plural_compares_locations(text: str, el_guero: dict[UUID, str]) -> None:
+    match = route(text, el_guero)
+    assert match is not None and match.intent == "compare_locations"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "cuánto vendí ayer en total y con tarjeta",  # a total and a breakdown
+        "cuánto vendí ayer en Centro y en total",  # one location and all of them
+    ],
+)
+def test_en_total_falls_through(text: str, el_guero: dict[UUID, str]) -> None:
+    assert route(text, el_guero) is None
+
+
+def test_ventas_totales_still_matches(el_guero: dict[UUID, str]) -> None:
+    match = route("dame las ventas totales del mes pasado", el_guero)
+    assert match is not None and match.args == {"period": "last_month"}

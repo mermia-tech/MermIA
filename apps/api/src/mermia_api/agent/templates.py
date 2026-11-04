@@ -77,10 +77,15 @@ def no_data(rpc: str, args: dict[str, Any]) -> TextMsg:
     if "period" not in args:
         return TextMsg(kind="text", text="Todavía no tengo datos.")
     of_period = _of(args["period"])
+    # the SQL says no_data when sales exist but no dish has a cost yet, or no day has the
+    # per-payment detail: "no data" would tell the owner something false
+    costs = "Todavía no tengo costos de tus platillos para calcular"
     if rpc == "get_top_dishes" and args.get("metric") in ("margin", "margin_pct"):
-        # the SQL says no_data when sales exist but no dish has a cost yet
-        text = f"Todavía no tengo costos de tus platillos para calcular la ganancia {of_period}."
-        return TextMsg(kind="text", text=text)
+        return TextMsg(kind="text", text=f"{costs} la ganancia {of_period}.")
+    if rpc == "get_food_cost_pct" or args.get("metric") == "food_cost_pct":
+        return TextMsg(kind="text", text=f"{costs} el food cost {of_period}.")
+    if rpc == "get_sales_breakdown":
+        return TextMsg(kind="text", text=f"No tengo el detalle por forma de pago {of_period}.")
     return TextMsg(kind="text", text=f"No tengo datos {of_period} todavía.")
 
 
@@ -157,7 +162,8 @@ def _data_status(
     loaded = [s.last_batch_at for s in data.sources if s.last_batch_at is not None]
     if loaded:
         day = max(loaded).astimezone(MEXICO_CITY).date()
-        lines = [f"Último reporte cargado el {_day(day)} de {day.year}."]
+        where = f" {_where(args, locations)}" if "location_id" in args else ""
+        lines = [f"Último reporte cargado{where} el {_day(day)} de {day.year}."]
     else:
         lines = ["Todavía no hay reportes cargados."]
     if data.missing_business_days:
@@ -165,7 +171,8 @@ def _data_status(
     else:
         lines.append("No falta ningún día.")
     if data.stale_costs:
-        lines.append(f"{data.stale_costs} ingredientes con precio desactualizado.")
+        noun = "ingrediente" if data.stale_costs == 1 else "ingredientes"
+        lines.append(f"{data.stale_costs} {noun} con precio desactualizado.")
     lines.append(f"Cobertura de costos: {data.coverage.text}.")
     return lines
 
@@ -175,7 +182,13 @@ def _day(day: dt.date) -> str:
 
 
 _METRIC_ES = {"net_sales": "Ventas", "food_cost_pct": "Food cost"}
-PAYMENT_ES = {"card": "Tarjeta", "cash": "Efectivo", "transfer": "Transferencia"}
+PAYMENT_ES = {
+    "card": "Tarjeta",
+    "cash": "Efectivo",
+    "transfer": "Transferencia",
+    "voucher": "Vales",
+    "other": "Otros",
+}
 
 
 def _compare_locations(
