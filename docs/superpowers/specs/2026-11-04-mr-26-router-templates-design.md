@@ -188,7 +188,7 @@ On `main`, 4 of the 8 RPCs exist in SQL: `get_sales_summary`, `compare_periods`,
   - `top_dishes_least_profitable`
   - `locations_worst_food_cost`
 - [ ] Each hand-written negative in the plan gives no match. At least:
-  - a dish, a staff name or a payment filter on a sales question;
+  - a dish or a staff name on a sales question;
   - a location the user cannot see;
   - two intents, two periods, two measures;
   - a leftover digit, a write verb;
@@ -313,7 +313,7 @@ Tests come first (TDD), with pytest, no network and no LLM. Helpers are pytest f
 - **D3 Explicit dates fall through to the LLM.**
 - **D4 Errors.** `no_data` gets a template reply; other errors and bad shapes get a fixed fallback reply and are not sent to the broker.
 - **D5 The stub shows the menu** on every unmatched message. Once MR-27 exists, the menu shows only when the LLM is unavailable or over its cap (09 §4.2).
-- **D6 Closed vocabulary.** Any word the router does not know means no match. This covers filters it cannot apply (dish, staff, payment method on a sales total) and locations the user cannot see.
+- **D6 Closed vocabulary.** Any word the router does not know means no match. This covers filters it cannot apply (dish, staff) and locations the user cannot see. A payment method on a sales question ("¿cuánto vendí ayer en efectivo?") is not one of them: it triggers the payment-methods intent, whose breakdown holds that exact figure (decided 2026-11-04, Checkpoint B).
 - **D7 Exact replies replace the digit-source check.** One golden reply per intent tests the rendering, and the number-source rule is enforced by code review.
 - **D8 `render` is keyed by RPC**, not by intent, so MR-27 can reuse it.
 

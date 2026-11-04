@@ -321,9 +321,12 @@ This is the largest parser, so it gets its own task.
 **Dependencies:** Tasks 3-6 (the menu needs every intent). **Scope:** S.
 
 ### Checkpoint B: after Tasks 3-7
-- [ ] `.claude/skills/check/check.sh` green.
-- [ ] Go through the spec's acceptance criteria one by one and tick them.
-- [ ] List which of the 6 optional eval cases match.
+- [x] `.claude/skills/check/check.sh` green (2026-11-04: ruff, format, mypy, pytest, pgTAP all PASS).
+- [x] Go through the spec's acceptance criteria one by one and tick them. All hold. One contradiction inside the spec was resolved by the product owner:
+  - The acceptance list says a payment filter on a sales question ("¿cuánto vendí ayer en efectivo?") gives no match.
+  - The spec's trigger table makes "efectivo" a payment-methods trigger that wins over the sales total, so that message gets the payment breakdown, which includes the cash figure.
+  - Decision: keep the code and fix the spec (acceptance list and D6).
+- [x] List which of the 6 optional eval cases match: `top_dishes_top_margin` and `top_dishes_worst_seller` match with their expected args. `sales_avg_ticket`, `sales_vs_previous_week`, `top_dishes_least_profitable` and `locations_worst_food_cost` fall through.
 
 ### Task 8: PRs (no new code)
 
