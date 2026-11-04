@@ -209,3 +209,80 @@ def test_data_status_with_gaps_and_no_report(example: Any, el_guero: dict[UUID, 
         "Faltan datos de: 5 de octubre, 6 de octubre.\n"
         "Cobertura de costos: 100.0%."
     )
+
+
+def test_compare_locations(example: Any, el_guero: dict[UUID, str]) -> None:
+    args = {"metric": "net_sales", "period": "last_week"}
+    reply = render("compare_locations", args, example("compare_locations"), el_guero)
+    assert reply.text == (
+        "Ventas de la semana pasada por sucursal:\n"
+        "1. Centro: $184,320.50\n"
+        "2. Polanco: $160,920.80 (-$23,399.70 vs. Centro)"
+    )
+
+
+def test_compare_locations_food_cost_with_missing_locations(
+    example: Any, el_guero: dict[UUID, str]
+) -> None:
+    envelope = example("compare_locations")
+    rows = [
+        {
+            **envelope.data["rows"][0],
+            "value": {"raw": 37.4569, "text": "37.5%"},
+            "diff_vs_best": {"raw": 0, "text": "0.0 pts"},
+        },
+    ]
+    envelope = envelope.model_copy(
+        update={
+            "data": {"metric": "food_cost_pct", "rows": rows},
+            "flags": [Flag(code="missing_locations", message="Sin datos para: Polanco.")],
+        }
+    )
+    args = {"metric": "food_cost_pct", "period": "yesterday"}
+    reply = render("compare_locations", args, envelope, el_guero)
+    assert (
+        reply.text == "Food cost de ayer por sucursal:\n1. Centro: 37.5%\nSin datos para: Polanco."
+    )
+
+
+def test_compare_locations_without_rows(example: Any, el_guero: dict[UUID, str]) -> None:
+    envelope = example("compare_locations")
+    envelope = envelope.model_copy(update={"data": {"metric": "net_sales", "rows": []}})
+    reply = render(
+        "compare_locations", {"metric": "net_sales", "period": "today"}, envelope, el_guero
+    )
+    assert reply.text == "No hay ventas registradas hoy."
+
+
+def test_payment_methods(example: Any, el_guero: dict[UUID, str]) -> None:
+    args = {"period": "yesterday", "by": "payment_method", "location_id": CENTRO}
+    reply = render("get_sales_breakdown", args, example("get_sales_breakdown"), el_guero)
+    assert reply.text == (
+        "Ventas de ayer en Centro por forma de pago:\n"
+        "- Tarjeta: $17,781.15 (57.0%)\n"
+        "- Efectivo: $11,230.20 (36.0%)\n"
+        "- Transferencia: $2,183.65 (7.0%)"
+    )
+
+
+def test_payment_methods_unknown_key_partial_detail_and_no_rows(
+    example: Any, el_guero: dict[UUID, str]
+) -> None:
+    envelope = example("get_sales_breakdown")
+    row = {**envelope.data["rows"][0], "key": "vales"}
+    message = "Solo 3 de 7 días con ventas tienen este detalle."
+    partial = envelope.model_copy(
+        update={
+            "data": {"by": "payment_method", "rows": [row]},
+            "flags": [Flag(code="partial_data", message=message)],
+        }
+    )
+    args = {"period": "last_week", "by": "payment_method"}
+    assert render("get_sales_breakdown", args, partial, el_guero).text == (
+        "Ventas de la semana pasada en tus 2 sucursales por forma de pago:\n"
+        "- vales: $17,781.15 (57.0%)\n" + message
+    )
+    empty = envelope.model_copy(update={"data": {"by": "payment_method", "rows": []}})
+    assert render("get_sales_breakdown", args, empty, el_guero).text == (
+        "No hay ventas registradas la semana pasada en tus 2 sucursales."
+    )

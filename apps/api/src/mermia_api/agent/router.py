@@ -73,6 +73,27 @@ PREVIOUS_WEEK = ("semana anterior", "anterior", "antepasada")  # "la pasada vs l
 DISH_TRIGGERS = ("platillo", "platillos")
 FOOD_COST_TRIGGERS = ("food cost", "foodcost", "costo de alimentos")
 DATA_STATUS_TRIGGERS = ("al dia", "actualizados", "actualizado", "ultimo reporte")
+LOCATIONS_TRIGGERS = (
+    "cada local",
+    "cada sucursal",
+    "por local",
+    "por sucursal",
+    "cual de mis locales",
+    "cual de mis sucursales",
+    "cual de mis dos locales",
+    "cual de mis dos sucursales",
+    "en cual sucursal",
+    "en cual local",
+)
+PAYMENT_TRIGGERS = (
+    "tarjeta",
+    "efectivo",
+    "transferencia",
+    "forma de pago",
+    "formas de pago",
+    "metodo de pago",
+    "metodos de pago",
+)
 DISH_MEASURES = {
     "vendido": "units",
     "vendidos": "units",
@@ -110,11 +131,17 @@ def route(text: str, locations: Mapping[UUID, str]) -> Match | None:
 
     # a specific intent wins over the sales total; two specific intents is not certain
     specific = [parse for triggers, parse in _SPECIFIC if _take(list(words), triggers)]
+    if _compare_locations in specific:  # "food cost por sucursal" compares locations
+        specific = [parse for parse in specific if parse is not _food_cost]
     if len(specific) > 1:
         return None
     parse = specific[0] if specific else _sales_total
     match = parse(words, periods, named)
-    return match if match is not None and _understood(words) else None
+    if match is None or not _understood(words):
+        return None
+    if match.intent == "compare_locations" and len(locations) < 2:
+        return None
+    return match
 
 
 Parser = Callable[[list[str], set[PeriodName], set[UUID]], Match | None]
@@ -190,6 +217,37 @@ def _data_status(words: list[str], periods: set[PeriodName], named: set[UUID]) -
     return Match("data_status", "get_data_status", scope)
 
 
+def _compare_locations(
+    words: list[str], periods: set[PeriodName], named: set[UUID]
+) -> Match | None:
+    """Ranks every location the user can see. Names in the text are accepted ("Centro y
+    Polanco") but never sent: the RPC compares all of them, as the eval case expects."""
+    _take(words, LOCATIONS_TRIGGERS)
+    _take(words, ("lleva", "mas"))  # "cuál de mis locales lleva más ventas"
+    metrics = set()
+    if _take(words, SALES_TRIGGERS):
+        metrics.add("net_sales")
+    if _take(words, FOOD_COST_TRIGGERS):
+        metrics.add("food_cost_pct")
+    if len(periods) != 1 or len(metrics) != 1:
+        return None
+    (period,) = periods
+    return Match(
+        "compare_locations", "compare_locations", {"metric": metrics.pop(), "period": period}
+    )
+
+
+def _payment_methods(words: list[str], periods: set[PeriodName], named: set[UUID]) -> Match | None:
+    _take(words, PAYMENT_TRIGGERS)
+    _take(words, SALES_TRIGGERS)  # "cuánto entró por tarjeta"
+    scope = _scope(named)
+    if len(periods) != 1 or scope is None:
+        return None
+    (period,) = periods
+    args = {"period": period, "by": "payment_method", **scope}
+    return Match("payment_methods", "get_sales_breakdown", args)
+
+
 def _scope(named: set[UUID]) -> dict[str, Any] | None:
     """The location argument: none named means all the user's, two is not one location."""
     if len(named) > 1:
@@ -202,6 +260,8 @@ _SPECIFIC: tuple[tuple[tuple[str, ...], Parser], ...] = (
     (DISH_TRIGGERS, _top_dishes),
     (FOOD_COST_TRIGGERS, _food_cost),
     (DATA_STATUS_TRIGGERS, _data_status),
+    (LOCATIONS_TRIGGERS, _compare_locations),
+    (PAYMENT_TRIGGERS, _payment_methods),
 )
 
 

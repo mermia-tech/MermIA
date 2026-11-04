@@ -18,10 +18,12 @@ from pydantic import TypeAdapter
 from mermia_contracts.agent import TextMsg
 from mermia_contracts.rpc import (
     RPCS,
+    CompareLocationsData,
     ComparePeriodsData,
     DataStatusData,
     FoodCostData,
     RpcEnvelope,
+    SalesBreakdownData,
     SalesSummaryData,
     TopDishesData,
 )
@@ -167,6 +169,35 @@ def _day(day: dt.date) -> str:
     return f"{day.day} de {MONTHS[day.month - 1]}"
 
 
+_METRIC_ES = {"net_sales": "Ventas", "food_cost_pct": "Food cost"}
+PAYMENT_ES = {"card": "Tarjeta", "cash": "Efectivo", "transfer": "Transferencia"}
+
+
+def _compare_locations(
+    data: CompareLocationsData, args: dict[str, Any], locations: Mapping[UUID, str]
+) -> list[str]:
+    period = PERIOD_ES[args["period"]]
+    if not data.rows:
+        return [f"No hay ventas registradas {period}."]
+    best = min(data.rows, key=lambda r: r.rank).name
+    lines = [f"{_METRIC_ES[data.metric]} de {period} por sucursal:"]
+    for r in sorted(data.rows, key=lambda r: r.rank):
+        behind = f" ({r.diff_vs_best.text} vs. {best})" if r.name != best else ""
+        lines.append(f"{r.rank}. {r.name}: {r.value.text}{behind}")
+    return lines
+
+
+def _payment_methods(
+    data: SalesBreakdownData, args: dict[str, Any], locations: Mapping[UUID, str]
+) -> list[str]:
+    when = f"{PERIOD_ES[args['period']]} {_where(args, locations)}"
+    if not data.rows:
+        return [f"No hay ventas registradas {when}."]
+    return [f"Ventas de {when} por forma de pago:"] + [
+        f"- {PAYMENT_ES.get(r.key, r.key)}: {r.net_sales.text} ({r.share.text})" for r in data.rows
+    ]
+
+
 def _where(args: dict[str, Any], locations: Mapping[UUID, str]) -> str:
     if "location_id" in args:
         return f"en {locations[UUID(args['location_id'])]}"
@@ -185,4 +216,6 @@ _RENDERERS: dict[str, Callable[[Any, dict[str, Any], Mapping[UUID, str]], list[s
     "get_top_dishes": _top_dishes,
     "get_food_cost_pct": _food_cost,
     "get_data_status": _data_status,
+    "compare_locations": _compare_locations,
+    "get_sales_breakdown": _payment_methods,
 }

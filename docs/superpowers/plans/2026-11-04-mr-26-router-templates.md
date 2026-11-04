@@ -269,7 +269,7 @@ This is the largest parser, so it gets its own task.
 **Files:** Modify `router.py`, `templates.py`; tests as above.
 
 **Steps:**
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
   - Add `locations_centro_vs_polanco_last_week`, `locations_this_month_sales` and `ops_payment_split` to `MUST_MATCH`.
   - **Compare locations:**
     - A one-location user gets `None`.
@@ -286,8 +286,15 @@ This is the largest parser, so it gets its own task.
   - **`None`:**
     - "¿quién de mis meseros vende más este mes?";
     - "¿qué día de la semana me deja más?".
-- [ ] **Steps 2-4:** FAIL, implement, PASS + mypy.
-- [ ] **Step 5: Commit** `MR-26: compare locations and payment methods intents`.
+- [x] **Steps 2-4:** FAIL, implement, PASS + mypy.
+- [x] **Step 5: Commit** `MR-26: compare locations and payment methods intents`.
+
+**Result (2026-11-04):**
+- Red: 14 failed.
+- Green: `uv run pytest apps/api` gives 238 passed and 16 skipped; mypy and ruff are clean.
+- All 9 MUST_MATCH cases now match: 11 of 40 eval cases match, the other 2 are optional.
+- Compare locations wins over food cost, through one explicit rule in `route()`. It needs two or more locations, and never sends `location_ids`.
+- Behind-the-best rows read "(-$23,399.70 vs. Centro)", using `diff_vs_best.text` as given.
 
 **Acceptance:** the sweep is green and all 9 MUST_MATCH cases match.
 **Dependencies:** Task 2. **Scope:** S.
