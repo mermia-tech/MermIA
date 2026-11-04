@@ -162,3 +162,17 @@ def test_the_template_path_loads_no_llm_sdk() -> None:
         "assert not loaded, loaded\n"
     )
     subprocess.run([sys.executable, "-c", code], check=True)
+
+
+def test_no_data_on_a_comparison_names_the_weeks(
+    el_guero: dict[UUID, str], fake_rpc: Any, counting_broker: Any
+) -> None:
+    fake_rpc.answers["compare_periods"] = _error("no_data")
+    response = answer(
+        _text(el_guero, "ventas de la semana pasada vs la anterior"),
+        locations=el_guero,
+        rpc=fake_rpc,
+        broker=counting_broker,
+    )
+    assert response.route == "template"
+    assert _reply_text(response) == "No tengo datos completos para comparar esas semanas."

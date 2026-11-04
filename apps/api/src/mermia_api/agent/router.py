@@ -9,7 +9,7 @@ no match. Not matching is never wrong: the message goes to the LLM broker.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Literal
 from uuid import UUID
@@ -67,6 +67,8 @@ FILLER = _words(
 )
 
 SALES_TRIGGERS = ("vendi", "vendio", "vendimos", "venta", "ventas", "entro")
+COMPARE_TRIGGERS = ("contra", "vs", "versus", "comparado con", "comparada con")
+PREVIOUS_WEEK = ("semana anterior", "anterior", "antepasada")  # "la pasada vs la anterior"
 
 
 def route(text: str, locations: Mapping[UUID, str]) -> Match | None:
@@ -79,16 +81,53 @@ def route(text: str, locations: Mapping[UUID, str]) -> Match | None:
     named = {by_name[name] for name in _take(words, by_name)}
     periods = {PERIODS[phrase] for phrase in _take(words, PERIODS)}
 
-    if not _take(words, SALES_TRIGGERS):
+    # a specific intent wins over the sales total; two specific intents is not certain
+    specific = [parse for triggers, parse in _SPECIFIC if _take(list(words), triggers)]
+    if len(specific) > 1:
         return None
-    if len(periods) != 1 or len(named) > 1 or not _understood(words):
+    parse = specific[0] if specific else _sales_total
+    match = parse(words, periods, named)
+    return match if match is not None and _understood(words) else None
+
+
+Parser = Callable[[list[str], set[PeriodName], set[UUID]], Match | None]
+
+
+def _sales_total(words: list[str], periods: set[PeriodName], named: set[UUID]) -> Match | None:
+    scope = _scope(named)
+    if not _take(words, SALES_TRIGGERS) or len(periods) != 1 or scope is None:
         return None
     (period,) = periods
-    args: dict[str, Any] = {"period": period}
-    if named:
-        args["location_id"] = str(next(iter(named)))
     intent: Intent = "sales_yesterday" if period == "yesterday" else "sales_period"
-    return Match(intent, "get_sales_summary", args)
+    return Match(intent, "get_sales_summary", {"period": period, **scope})
+
+
+def _compare_periods(words: list[str], periods: set[PeriodName], named: set[UUID]) -> Match | None:
+    """Last week against the week before only: the other pairs compare part of a period with a
+    whole one (resolve_period ends this_week and this_month today)."""
+    _take(words, COMPARE_TRIGGERS)
+    metrics = set()
+    if _take(words, SALES_TRIGGERS):
+        metrics.add("net_sales")
+    if _take(words, ("ticket promedio",)):
+        metrics.add("avg_ticket")
+    if _take(words, PREVIOUS_WEEK):
+        periods = periods | {"prev_week"}
+    scope = _scope(named)
+    if periods != {"last_week", "prev_week"} or len(metrics) != 1 or scope is None:
+        return None
+    args = {"metric": metrics.pop(), "period_a": "last_week", "period_b": "prev_week", **scope}
+    return Match("compare_periods", "compare_periods", args)
+
+
+def _scope(named: set[UUID]) -> dict[str, Any] | None:
+    """The location argument: none named means all the user's, two is not one location."""
+    if len(named) > 1:
+        return None
+    return {"location_id": str(next(iter(named)))} if named else {}
+
+
+_SPECIFIC: tuple[tuple[tuple[str, ...], Parser], ...] = ((COMPARE_TRIGGERS, _compare_periods),)
 
 
 def _take(words: list[str], phrases: Iterable[str]) -> list[str]:

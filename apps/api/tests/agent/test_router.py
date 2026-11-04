@@ -175,3 +175,44 @@ def test_match_args_validate(text: str, el_guero: dict[UUID, str]) -> None:
     match = route(text, el_guero)
     assert match is not None
     RPCS[match.rpc].args.model_validate(match.args)
+
+
+@pytest.mark.parametrize(
+    ("text", "metric"),
+    [
+        ("¿cuánto vendí la semana pasada contra la antepasada?", "net_sales"),
+        ("ventas de la semana pasada vs la anterior", "net_sales"),
+        ("ventas de la semana pasada comparado con la semana anterior", "net_sales"),
+        ("ticket promedio de la semana pasada contra la antepasada", "avg_ticket"),
+    ],
+)
+def test_last_week_against_the_week_before(
+    text: str, metric: str, el_guero: dict[UUID, str]
+) -> None:
+    match = route(text, el_guero)
+    assert match is not None
+    assert match.intent == "compare_periods"
+    assert match.rpc == "compare_periods"
+    assert match.args == {"metric": metric, "period_a": "last_week", "period_b": "prev_week"}
+
+
+def test_compare_periods_takes_a_location(el_guero: dict[UUID, str]) -> None:
+    match = route("ventas de la semana pasada vs la anterior en Centro", el_guero)
+    assert match is not None
+    assert match.args["location_id"] == CENTRO
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "ventas de este mes contra el mes pasado",  # part of a month against a whole month
+        "ventas de esta semana vs la pasada",  # part of a week against a whole week
+        "ventas de ayer contra antier",
+        "propinas de la semana pasada contra la antepasada",  # a metric it does not know
+        "la semana pasada contra la anterior",  # no metric
+        "ventas y ticket promedio de la semana pasada vs la anterior",  # two metrics
+        "ventas de la semana pasada contra la anterior en Centro y Polanco",
+    ],
+)
+def test_compare_periods_not_sure_means_no_match(text: str, el_guero: dict[UUID, str]) -> None:
+    assert route(text, el_guero) is None

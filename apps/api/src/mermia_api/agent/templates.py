@@ -14,7 +14,7 @@ from uuid import UUID
 from pydantic import TypeAdapter
 
 from mermia_contracts.agent import TextMsg
-from mermia_contracts.rpc import RPCS, RpcEnvelope, SalesSummaryData
+from mermia_contracts.rpc import RPCS, ComparePeriodsData, RpcEnvelope, SalesSummaryData
 
 PERIOD_ES = {
     "today": "hoy",
@@ -43,6 +43,8 @@ def render(
 
 
 def no_data(rpc: str, args: dict[str, Any]) -> TextMsg:
+    if rpc == "compare_periods":
+        return TextMsg(kind="text", text="No tengo datos completos para comparar esas semanas.")
     return TextMsg(kind="text", text=f"No tengo datos de {PERIOD_ES[args['period']]} todavía.")
 
 
@@ -65,6 +67,18 @@ def _sales_summary(
     return lines
 
 
+def _compare_periods(
+    data: ComparePeriodsData, args: dict[str, Any], locations: Mapping[UUID, str]
+) -> list[str]:
+    a, b = _cap(PERIOD_ES[args["period_a"]]), PERIOD_ES[args["period_b"]]
+    what = {"net_sales": "vendiste", "avg_ticket": "tu ticket promedio fue"}[data.metric]
+    change = f" ({data.pct_change.text})" if data.pct_change is not None else ""
+    return [
+        f"{a} {_where(args, locations)} {what} {data.a.text} contra {data.b.text} {b}.",
+        f"Diferencia: {data.abs_change.text}{change}.",
+    ]
+
+
 def _where(args: dict[str, Any], locations: Mapping[UUID, str]) -> str:
     if "location_id" in args:
         return f"en {locations[UUID(args['location_id'])]}"
@@ -79,4 +93,5 @@ def _cap(text: str) -> str:
 
 _RENDERERS: dict[str, Callable[[Any, dict[str, Any], Mapping[UUID, str]], list[str]]] = {
     "get_sales_summary": _sales_summary,
+    "compare_periods": _compare_periods,
 }

@@ -83,3 +83,32 @@ def test_data_that_does_not_fit_the_rpc_model_is_rejected(
     envelope = example("get_sales_summary").model_copy(update={"data": {"net_sales": "lots"}})
     with pytest.raises(ValidationError):
         render("get_sales_summary", {"period": "last_week"}, envelope, el_guero)
+
+
+def test_compare_periods(example: Any, el_guero: dict[UUID, str]) -> None:
+    args = {
+        "metric": "net_sales",
+        "period_a": "last_week",
+        "period_b": "prev_week",
+        "location_id": CENTRO,
+    }
+    reply = render("compare_periods", args, example("compare_periods"), el_guero)
+    assert reply.text == (
+        "La semana pasada en Centro vendiste $184,320.50 contra $171,905.00 la semana "
+        "antepasada.\n"
+        "Diferencia: +$12,415.50 (+7.2%)."
+    )
+
+
+def test_compare_periods_average_ticket_and_no_percentage(
+    example: Any, el_guero: dict[UUID, str]
+) -> None:
+    envelope = example("compare_periods")
+    data = {**envelope.data, "metric": "avg_ticket", "pct_change": None}
+    args = {"metric": "avg_ticket", "period_a": "last_week", "period_b": "prev_week"}
+    reply = render("compare_periods", args, envelope.model_copy(update={"data": data}), el_guero)
+    assert reply.text == (
+        "La semana pasada en tus 2 sucursales tu ticket promedio fue $184,320.50 contra "
+        "$171,905.00 la semana antepasada.\n"
+        "Diferencia: +$12,415.50."
+    )

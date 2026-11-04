@@ -166,7 +166,7 @@ The work is built in vertical slices: the first slice takes one intent end to en
 **Files:** Modify `router.py`, `templates.py`; tests in `test_router.py`, `test_templates.py`.
 
 **Steps:**
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
   - **Matches:**
     - "¿cómo me fue la semana pasada contra la antepasada?" and "la semana pasada vs la anterior" give `last_week` vs `prev_week` with `net_sales`.
     - "ticket promedio" gives `avg_ticket`.
@@ -178,8 +178,15 @@ The work is built in vertical slices: the first slice takes one intent end to en
     - From `compare_periods.json`, the exact expected string with the `a`, `b`, `abs_change` and `pct_change` texts.
     - A null `pct_change` leaves its line out.
     - `missing_days` adds its message.
-- [ ] **Step 2: Run, FAIL. Step 3: Implement. Step 4: Run, PASS, mypy clean.**
-- [ ] **Step 5: Commit** `MR-26: compare last week against the week before`.
+- [x] **Step 2: Run, FAIL. Step 3: Implement. Step 4: Run, PASS, mypy clean.**
+- [x] **Step 5: Commit** `MR-26: compare last week against the week before`.
+
+**Result (2026-11-04):**
+- Red: 8 failed (router matches, both templates, the no_data reply). The negatives already passed.
+- Green: `uv run pytest apps/api` gives 173 passed and 16 skipped; mypy and ruff are clean.
+- Eval matches are unchanged (`sales_yesterday`, `sales_last_week`). `sales_avg_ticket` and `sales_vs_previous_week` fall through, as optional cases may.
+- Deviation from the plan: the positive "¿cómo me fue la semana pasada contra la antepasada?" names no metric. The spec says no metric means no match, so the test uses "¿cuánto vendí…?" and "la semana pasada contra la anterior" (no metric) is a negative.
+- The router now picks one intent: the specific intents (`_SPECIFIC`) win over the sales total, and two specific intents give None.
 
 **Acceptance:** the sweep is still green, `sales_month_vs_last` still gives `None`, and the hand-written matches hold.
 **Dependencies:** Task 2. **Scope:** S.
