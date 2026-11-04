@@ -26,6 +26,20 @@
    "yield_qty": "1.000000",
    "lines": [
     {
+     "ingredient_name": "Tortilla de maíz",
+     "ingredient_external_id": null,
+     "qty_base": "75.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Carne al pastor (adobada)",
+     "ingredient_external_id": null,
+     "qty_base": "63.850000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
      "ingredient_name": "Salsa verde (preparada)",
      "ingredient_external_id": null,
      "qty_base": "30.000000",
@@ -33,9 +47,9 @@
      "yield_override_pct": null
     },
     {
-     "ingredient_name": "Tortilla de maíz",
+     "ingredient_name": "Piña",
      "ingredient_external_id": null,
-     "qty_base": "75.000000",
+     "qty_base": "28.000000",
      "unit": "g",
      "yield_override_pct": null
     },
@@ -54,23 +68,9 @@
      "yield_override_pct": null
     },
     {
-     "ingredient_name": "Piña",
-     "ingredient_external_id": null,
-     "qty_base": "28.000000",
-     "unit": "g",
-     "yield_override_pct": null
-    },
-    {
      "ingredient_name": "Cilantro",
      "ingredient_external_id": null,
      "qty_base": "5.000000",
-     "unit": "g",
-     "yield_override_pct": null
-    },
-    {
-     "ingredient_name": "Carne al pastor (adobada)",
-     "ingredient_external_id": null,
-     "qty_base": "63.850000",
      "unit": "g",
      "yield_override_pct": null
     }
@@ -96,16 +96,9 @@
    "yield_qty": "1.000000",
    "lines": [
     {
-     "ingredient_name": "Cilantro",
+     "ingredient_name": "Bistec de res",
      "ingredient_external_id": null,
-     "qty_base": "5.000000",
-     "unit": "g",
-     "yield_override_pct": null
-    },
-    {
-     "ingredient_name": "Salsa verde (preparada)",
-     "ingredient_external_id": null,
-     "qty_base": "30.000000",
+     "qty_base": "90.000000",
      "unit": "g",
      "yield_override_pct": null
     },
@@ -113,6 +106,13 @@
      "ingredient_name": "Tortilla de maíz",
      "ingredient_external_id": null,
      "qty_base": "75.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Salsa verde (preparada)",
+     "ingredient_external_id": null,
+     "qty_base": "30.000000",
      "unit": "g",
      "yield_override_pct": null
     },
@@ -131,9 +131,9 @@
      "yield_override_pct": null
     },
     {
-     "ingredient_name": "Bistec de res",
+     "ingredient_name": "Cilantro",
      "ingredient_external_id": null,
-     "qty_base": "90.000000",
+     "qty_base": "5.000000",
      "unit": "g",
      "yield_override_pct": null
     }
@@ -145,13 +145,6 @@
    "yield_qty": "1.000000",
    "lines": [
     {
-     "ingredient_name": "Arroz",
-     "ingredient_external_id": null,
-     "qty_base": "35.000000",
-     "unit": "g",
-     "yield_override_pct": null
-    },
-    {
      "ingredient_name": "Leche entera",
      "ingredient_external_id": null,
      "qty_base": "120.000000",
@@ -159,9 +152,9 @@
      "yield_override_pct": null
     },
     {
-     "ingredient_name": "Canela en raja",
+     "ingredient_name": "Arroz",
      "ingredient_external_id": null,
-     "qty_base": "1.000000",
+     "qty_base": "35.000000",
      "unit": "g",
      "yield_override_pct": null
     },
@@ -169,6 +162,13 @@
      "ingredient_name": "Azúcar",
      "ingredient_external_id": null,
      "qty_base": "30.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Canela en raja",
+     "ingredient_external_id": null,
+     "qty_base": "1.000000",
      "unit": "g",
      "yield_override_pct": null
     }
@@ -180,13 +180,6 @@
    "yield_qty": "1.000000",
    "lines": [
     {
-     "ingredient_name": "Tortilla de maíz",
-     "ingredient_external_id": null,
-     "qty_base": "75.000000",
-     "unit": "g",
-     "yield_override_pct": null
-    },
-    {
      "ingredient_name": "Suadero",
      "ingredient_external_id": null,
      "qty_base": "90.000000",
@@ -194,9 +187,23 @@
      "yield_override_pct": null
     },
     {
+     "ingredient_name": "Tortilla de maíz",
+     "ingredient_external_id": null,
+     "qty_base": "75.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
      "ingredient_name": "Salsa verde (preparada)",
      "ingredient_external_id": null,
      "qty_base": "30.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Limón",
+     "ingredient_external_id": null,
+     "qty_base": "20.000000",
      "unit": "g",
      "yield_override_pct": null
     },
@@ -211,13 +218,6 @@
      "ingredient_name": "Cilantro",
      "ingredient_external_id": null,
      "qty_base": "5.000000",
-     "unit": "g",
-     "yield_override_pct": null
-    },
-    {
-     "ingredient_name": "Limón",
-     "ingredient_external_id": null,
-     "qty_base": "20.000000",
      "unit": "g",
      "yield_override_pct": null
     }
@@ -250,9 +250,9 @@
      "yield_override_pct": null
     },
     {
-     "ingredient_name": "Cilantro",
+     "ingredient_name": "Bistec de res",
      "ingredient_external_id": null,
-     "qty_base": "5.000000",
+     "qty_base": "50.000000",
      "unit": "g",
      "yield_override_pct": null
     },
@@ -264,9 +264,9 @@
      "yield_override_pct": null
     },
     {
-     "ingredient_name": "Bistec de res",
+     "ingredient_name": "Salsa verde (preparada)",
      "ingredient_external_id": null,
-     "qty_base": "50.000000",
+     "qty_base": "30.000000",
      "unit": "g",
      "yield_override_pct": null
     },
@@ -278,9 +278,9 @@
      "yield_override_pct": null
     },
     {
-     "ingredient_name": "Salsa verde (preparada)",
+     "ingredient_name": "Cilantro",
      "ingredient_external_id": null,
-     "qty_base": "30.000000",
+     "qty_base": "5.000000",
      "unit": "g",
      "yield_override_pct": null
     }
@@ -292,6 +292,13 @@
    "yield_qty": "1.000000",
    "lines": [
     {
+     "ingredient_name": "Masa de maíz",
+     "ingredient_external_id": null,
+     "qty_base": "90.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
      "ingredient_name": "Queso Oaxaca",
      "ingredient_external_id": null,
      "qty_base": "60.000000",
@@ -302,13 +309,6 @@
      "ingredient_name": "Salsa verde (preparada)",
      "ingredient_external_id": null,
      "qty_base": "20.000000",
-     "unit": "g",
-     "yield_override_pct": null
-    },
-    {
-     "ingredient_name": "Masa de maíz",
-     "ingredient_external_id": null,
-     "qty_base": "90.000000",
      "unit": "g",
      "yield_override_pct": null
     },
@@ -327,16 +327,16 @@
    "yield_qty": "1.000000",
    "lines": [
     {
-     "ingredient_name": "Piña",
+     "ingredient_name": "Carne al pastor (adobada)",
      "ingredient_external_id": null,
-     "qty_base": "20.000000",
+     "qty_base": "90.000000",
      "unit": "g",
      "yield_override_pct": null
     },
     {
-     "ingredient_name": "Carne al pastor (adobada)",
+     "ingredient_name": "Tortilla de harina",
      "ingredient_external_id": null,
-     "qty_base": "90.000000",
+     "qty_base": "70.000000",
      "unit": "g",
      "yield_override_pct": null
     },
@@ -348,16 +348,16 @@
      "yield_override_pct": null
     },
     {
-     "ingredient_name": "Salsa verde (preparada)",
+     "ingredient_name": "Piña",
      "ingredient_external_id": null,
      "qty_base": "20.000000",
      "unit": "g",
      "yield_override_pct": null
     },
     {
-     "ingredient_name": "Tortilla de harina",
+     "ingredient_name": "Salsa verde (preparada)",
      "ingredient_external_id": null,
-     "qty_base": "70.000000",
+     "qty_base": "20.000000",
      "unit": "g",
      "yield_override_pct": null
     }
@@ -369,16 +369,16 @@
    "yield_qty": "1.000000",
    "lines": [
     {
-     "ingredient_name": "Flor de jamaica",
+     "ingredient_name": "Azúcar",
      "ingredient_external_id": null,
-     "qty_base": "12.000000",
+     "qty_base": "35.000000",
      "unit": "g",
      "yield_override_pct": null
     },
     {
-     "ingredient_name": "Azúcar",
+     "ingredient_name": "Flor de jamaica",
      "ingredient_external_id": null,
-     "qty_base": "35.000000",
+     "qty_base": "12.000000",
      "unit": "g",
      "yield_override_pct": null
     }
@@ -404,6 +404,20 @@
    "yield_qty": "1.000000",
    "lines": [
     {
+     "ingredient_name": "Carne al pastor (adobada)",
+     "ingredient_external_id": null,
+     "qty_base": "45.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Queso Oaxaca",
+     "ingredient_external_id": null,
+     "qty_base": "30.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
      "ingredient_name": "Tortilla de maíz",
      "ingredient_external_id": null,
      "qty_base": "30.000000",
@@ -415,20 +429,6 @@
      "ingredient_external_id": null,
      "qty_base": "5.000000",
      "unit": "ml",
-     "yield_override_pct": null
-    },
-    {
-     "ingredient_name": "Queso Oaxaca",
-     "ingredient_external_id": null,
-     "qty_base": "30.000000",
-     "unit": "g",
-     "yield_override_pct": null
-    },
-    {
-     "ingredient_name": "Carne al pastor (adobada)",
-     "ingredient_external_id": null,
-     "qty_base": "45.000000",
-     "unit": "g",
      "yield_override_pct": null
     }
    ]
@@ -481,9 +481,9 @@
    "yield_qty": "1.000000",
    "lines": [
     {
-     "ingredient_name": "Frijol negro",
+     "ingredient_name": "Carne al pastor (adobada)",
      "ingredient_external_id": null,
-     "qty_base": "25.000000",
+     "qty_base": "110.000000",
      "unit": "g",
      "yield_override_pct": null
     },
@@ -491,6 +491,20 @@
      "ingredient_name": "Aguacate Hass",
      "ingredient_external_id": null,
      "qty_base": "40.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Jitomate",
+     "ingredient_external_id": null,
+     "qty_base": "30.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Frijol negro",
+     "ingredient_external_id": null,
+     "qty_base": "25.000000",
      "unit": "g",
      "yield_override_pct": null
     },
@@ -507,20 +521,6 @@
      "qty_base": "1.000000",
      "unit": "pza",
      "yield_override_pct": null
-    },
-    {
-     "ingredient_name": "Jitomate",
-     "ingredient_external_id": null,
-     "qty_base": "30.000000",
-     "unit": "g",
-     "yield_override_pct": null
-    },
-    {
-     "ingredient_name": "Carne al pastor (adobada)",
-     "ingredient_external_id": null,
-     "qty_base": "110.000000",
-     "unit": "g",
-     "yield_override_pct": null
     }
    ]
   },
@@ -530,13 +530,6 @@
    "yield_qty": "1.000000",
    "lines": [
     {
-     "ingredient_name": "Tortilla de maíz",
-     "ingredient_external_id": null,
-     "qty_base": "100.000000",
-     "unit": "g",
-     "yield_override_pct": null
-    },
-    {
      "ingredient_name": "Bistec de res",
      "ingredient_external_id": null,
      "qty_base": "180.000000",
@@ -544,9 +537,9 @@
      "yield_override_pct": null
     },
     {
-     "ingredient_name": "Cebolla blanca",
+     "ingredient_name": "Tortilla de maíz",
      "ingredient_external_id": null,
-     "qty_base": "50.000000",
+     "qty_base": "100.000000",
      "unit": "g",
      "yield_override_pct": null
     },
@@ -554,6 +547,13 @@
      "ingredient_name": "Queso Oaxaca",
      "ingredient_external_id": null,
      "qty_base": "60.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Cebolla blanca",
+     "ingredient_external_id": null,
+     "qty_base": "50.000000",
      "unit": "g",
      "yield_override_pct": null
     },

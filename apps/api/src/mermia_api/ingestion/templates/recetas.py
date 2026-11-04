@@ -3,11 +3,16 @@ owner or manager in Excel or Google Sheets, and read back by parsers/mermia_rece
 sheet and column names this module uses.
 
 - "Instrucciones": how to fill it, in Mexican Spanish.
-- "Recetas": the title block, the header, then one block per dish, listed by units sold in the
-  28 days before the template's date. A dish with a recipe of record is prefilled with its
-  lines in base units (a yield only when it differs from the ingredient's default); a dish
-  without one gets its row plus BLANK_ROWS blank rows. Insumo and Unidad have dropdowns: the
-  Insumo one only warns, so a new ingredient can still be typed.
+- "Recetas": the title block, the header, then one block per menu item (modifiers left out:
+  "Extra queso" is costed with the dish it goes on), listed by units sold in the 28 days
+  before the template's date. A dish with a recipe of record is prefilled with its lines in
+  base units, biggest quantity first (a yield only when it differs from the ingredient's
+  default); a dish without one gets its row plus BLANK_ROWS blank rows. Insumo and Unidad have
+  dropdowns: the Insumo one only warns, so a new ingredient can still be typed.
+- A template for the whole tenant says "Todas las sucursales" where the location goes, and
+  lists only the items shared by every location (the ones the loader can match without one).
+- Text that starts with = + - or @ (a dish named "=HYPERLINK(...)") is written as text, never
+  as a formula.
 - "Insumos": the tenant's ingredients, a protected reference that feeds the Insumo dropdown.
 
 render(data) is pure and gives the same bytes for the same data. build(conn, ...) reads the
@@ -40,13 +45,13 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.worksheet import Worksheet
 
 from mermia_api.ingestion.parsers import mermia_recetas as fmt
-from mermia_api.ingestion.recipes import current_recipe
+from mermia_api.ingestion.recipes import TENANT_TIMEZONE, current_recipe
 from mermia_api.ingestion.registry import parse_file
 
 BLANK_ROWS = 8  # rows to fill below a dish without a recipe
-EXTRA_ROWS = 300  # rows below the last dish that keep the dropdowns, for dishes the owner adds
+EXTRA_ROWS = 300  # rows below the last dish that keep the dropdowns, for lines the owner adds
 SALES_DAYS = 28  # dishes are listed by units sold in this many days before the template's date
-TENANT_TIMEZONE = "America/Mexico_City"  # "today" for a template of the whole tenant
+FORMULA_START = ("=", "+", "-", "@")  # what a spreadsheet may read as a formula
 WIDTHS = (10, 34, 11, 34, 11, 9, 15, 30)  # Recetas columns, in characters
 INGREDIENT_WIDTHS = (34, 13, 21, 16)
 INSTRUCTIONS = (
@@ -61,8 +66,9 @@ INSTRUCTIONS = (
     "escríbelo solo si en este platillo es distinto, por ejemplo 75.",
     "6. Elige el insumo de la lista. Si no está, escribe su nombre: lo doy de alta cuando "
     "apruebes la receta.",
-    "7. Para un platillo nuevo, escribe su nombre en «Platillo» debajo del último. No cambies la "
-    "Clave de los que ya están.",
+    "7. Solo los platillos de la lista pueden llevar receta: no cambies su nombre ni su Clave. "
+    "Un platillo nuevo aparece en la lista cuando se vende en Soft Restaurant o se da de alta "
+    "en el menú; entonces pídeme una plantilla nueva.",
     "8. Guarda el archivo en Excel (.xlsx) y envíamelo. Ningún cambio se usa hasta que lo "
     "apruebes.",
 )
@@ -106,17 +112,29 @@ def _number(value: Decimal) -> int | float:
     return int(value) if value == value.to_integral_value() else float(value)
 
 
+def _append(ws: Worksheet, values: Sequence[Any]) -> None:
+    """Appends a row. A text value a spreadsheet could take for a formula stays text, so it
+    reads back as typed (openpyxl turns "=..." into a formula; Excel would run +, - and @ ones
+    once edited)."""
+    ws.append(list(values))
+    for column, value in enumerate(values, start=1):
+        if isinstance(value, str) and value.startswith(FORMULA_START):
+            cell = ws.cell(ws.max_row, column)
+            cell.data_type = "s"
+            cell.quotePrefix = True
+
+
 def _instructions(ws: Worksheet) -> None:
     ws.column_dimensions["A"].width = 110
     for line in INSTRUCTIONS:
-        ws.append([line])
+        _append(ws, [line])
     ws["A1"].font = Font(bold=True, size=14)
 
 
 def _recipes(ws: Worksheet, data: Template) -> None:
-    title = data.restaurant if data.location is None else f"{data.restaurant} - {data.location}"
+    title = f"{data.restaurant} - {data.location or fmt.ALL_LOCATIONS}"
     for line in (title, fmt.TITLE, fmt.VERSION_LINE, fmt.DATE_LINE.format(data.day)):
-        ws.append([line])
+        _append(ws, [line])
     ws["A2"].font = Font(bold=True, size=14)
     ws.append([])
     ws.append(list(fmt.HEADER))
@@ -129,14 +147,15 @@ def _recipes(ws: Worksheet, data: Template) -> None:
     for d in data.dishes:
         dish = [d.code, d.name, _number(d.yield_qty or Decimal(1))]
         if not d.lines:
-            ws.append(dish)
+            _append(ws, dish)
             for _ in range(BLANK_ROWS):
                 ws.append([])
             continue
         for i, x in enumerate(d.lines):
             pct = None if x.yield_pct is None else _number(x.yield_pct)
-            ws.append(
-                [*(dish if i == 0 else [None] * 3), x.ingredient, _number(x.qty_base), x.unit, pct]
+            _append(
+                ws,
+                [*(dish if i == 0 else [None] * 3), x.ingredient, _number(x.qty_base), x.unit, pct],
             )
     _dropdowns(ws, data, header_row + 1, ws.max_row + EXTRA_ROWS)
 
@@ -174,7 +193,7 @@ def _ingredients(ws: Worksheet, data: Template) -> None:
     for cell in ws[1]:
         cell.font = Font(bold=True)
     for x in data.ingredients:
-        ws.append([x.name, x.base_unit, _number(x.default_yield_pct), x.category])
+        _append(ws, [x.name, x.base_unit, _number(x.default_yield_pct), x.category])
     for i, width in enumerate(INGREDIENT_WIDTHS):
         ws.column_dimensions[chr(ord("A") + i)].width = width
     ws.protection.sheet = True  # a reference: no password, it only prevents slips
@@ -215,10 +234,16 @@ def _save(wb: Workbook, stamp: dt.datetime) -> bytes:
     return out.getvalue()
 
 
+def ordered(lines: Sequence[TemplateLine]) -> tuple[TemplateLine, ...]:
+    """A dish's lines as the template lists them: biggest quantity first, ties by name."""
+    return tuple(sorted(lines, key=lambda x: (-x.qty_base, x.ingredient)))
+
+
 def _dishes(
     conn: psycopg.Connection[Any], tenant_id: UUID, location_id: UUID | None, day: dt.date
 ) -> tuple[TemplateDish, ...]:
-    """The active menu, by units sold in the SALES_DAYS before `day`, with its recipes."""
+    """The active menu but its modifiers, by units sold in the SALES_DAYS before `day`, with its
+    recipes. Without a location, only the items every location shares."""
     items = conn.execute(
         """select mi.id, mi.external_id, mi.name
            from public.menu_item mi
@@ -226,8 +251,8 @@ def _dishes(
              on v.tenant_id = mi.tenant_id and v.menu_item_id = mi.id
             and (%s::uuid is null or v.location_id = %s)
             and v.business_date >= %s and v.business_date < %s
-           where mi.tenant_id = %s and mi.is_active
-             and (%s::uuid is null or mi.location_id is null or mi.location_id = %s)
+           where mi.tenant_id = %s and mi.is_active and mi.kind <> 'modifier'
+             and (mi.location_id is null or mi.location_id = %s)
            group by mi.id
            order by coalesce(sum(v.units), 0) desc, mi.name, mi.id""",
         (
@@ -236,7 +261,6 @@ def _dishes(
             day - dt.timedelta(days=SALES_DAYS),
             day,
             tenant_id,
-            location_id,
             location_id,
         ),
     ).fetchall()
@@ -249,8 +273,8 @@ def _dishes(
                 code,
                 name,
                 None if recipe is None else recipe.yield_qty,
-                tuple(
-                    TemplateLine(x.name, x.qty_base, x.unit, x.yield_override_pct) for x in lines
+                ordered(
+                    [TemplateLine(x.name, x.qty_base, x.unit, x.yield_override_pct) for x in lines]
                 ),
             )
         )

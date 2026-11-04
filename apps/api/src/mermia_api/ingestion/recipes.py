@@ -20,7 +20,12 @@ For every recipe of a catalog batch:
 - The newest proposal wins: filing one expires every other pending recipe.upsert of the dish
   (resolved_via 'superseded', the schema has no such status yet) with an audit_log row.
 - Recipes are tenant-wide: a change to a recipe that came from another location's file (or, when
-  that cannot be traced, any change in a tenant with several locations) is a warning.
+  that cannot be traced, any change in a tenant with several locations) is a warning. A batch
+  without a location (a template for the whole tenant) is matched against the shared menu, on
+  Mexico City's date, and gets no such warning.
+- A MermIA template is a copy of the recipes of its date: a dish whose recipe of record took
+  effect after that date is held (plantilla.recipe_changed_since), so an old template never
+  undoes a newer recipe. The other dishes load.
 """
 
 from __future__ import annotations
@@ -36,6 +41,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from mermia_api.ingestion.items import find_item
+from mermia_api.ingestion.parsers import mermia_recetas
 from mermia_contracts.batch import IssueIn, NormalizedBatch, RecipeIn, RecipeLineIn
 from mermia_contracts.db.models import IssueSeverity
 from mermia_contracts.keys import normalize_name
@@ -51,6 +57,7 @@ KIND = PendingKind.recipe_upsert
 BASE_UNITS = ("g", "ml", "pza")
 REQUIRED_ROLE = "manager"  # MR-32 keeps it; only the owner can approve recipe.upsert in the seed
 TTL = dt.timedelta(hours=24)
+TENANT_TIMEZONE = "America/Mexico_City"  # "today" for a batch or template of the whole tenant
 SUPERSEDED = "superseded"  # resolved_via of a pending change a newer proposal replaced
 # the parsers' issue for a recipe they did not pass on (SR Recetas, MermIA template)
 PARSER_HELD = ("sr.recipe_held", "plantilla.recipe_held")
@@ -157,21 +164,25 @@ def _listed(names: list[str]) -> str:
 def propose_recipes(
     conn: psycopg.Connection[Any],
     tenant_id: UUID,
-    location_id: UUID,
+    location_id: UUID | None,
     batch_id: UUID,
     batch: NormalizedBatch,
     proposed_by: UUID | None,
 ) -> Proposals:
     """Files a recipe.upsert pending change for every recipe of `batch` that differs from the
-    recipe of record. Runs inside the loader's transaction."""
+    recipe of record. Runs inside the loader's transaction. `location_id` is None for a batch of
+    the whole tenant."""
     day = _today(conn, location_id)
     ingredients = _ingredients(conn, tenant_id, day)
     clashes = _new_ingredient_units(batch.recipes, ingredients)
     issues = _code_name_warnings(batch.recipes)
     dishes: list[_Dish] = []
+    template = batch.parser == mermia_recetas.PARSER
     for recipe in batch.recipes:
         try:
-            dishes.append(_resolve(conn, tenant_id, location_id, recipe, ingredients, clashes))
+            dishes.append(
+                _resolve(conn, tenant_id, location_id, recipe, ingredients, clashes, template)
+            )
         except _Held as e:
             issues.append(e.issue)
     per_item = Counter(d.menu_item_id for d in dishes)
@@ -197,6 +208,9 @@ def propose_recipes(
         if filed.newer_pending is not None:
             issues.append(_newer_pending_issue(d.name, filed.newer_pending))
             continue
+        if filed.changed_since is not None:
+            issues.append(_changed_since_issue(d.name, filed.changed_since, batch.period.to))
+            continue
         counts[filed.outcome] += 1
         if filed.change_id is None:
             continue
@@ -210,7 +224,7 @@ def propose_recipes(
                     "por el de este archivo.",
                 )
             )
-        if filed.other_location(location_id, several):
+        if location_id is not None and filed.other_location(location_id, several):
             chain.append(d.name)
     if chain:
         issues.append(_chain_warning(chain))
@@ -234,6 +248,15 @@ def _newer_pending_issue(name: str, report_date: dt.date) -> IssueIn:
     )
 
 
+def _changed_since_issue(name: str, changed: dt.date, template_day: dt.date) -> IssueIn:
+    return _issue(
+        IssueSeverity.warning,
+        "plantilla.recipe_changed_since",
+        f"La receta de «{name}» cambió el {changed:%d/%m}, después de esta plantilla "
+        f"({template_day:%d/%m}); descarga una plantilla nueva.",
+    )
+
+
 def _chain_warning(dishes: list[str]) -> IssueIn:
     return _issue(
         IssueSeverity.warning,
@@ -252,12 +275,16 @@ def _locations(conn: psycopg.Connection[Any], tenant_id: UUID) -> int:
     return int(row[0])
 
 
-def _today(conn: psycopg.Connection[Any], location_id: UUID) -> dt.date:
-    """The location's business date: recipes are compared with the recipe in effect today."""
-    row = conn.execute(
-        "select (now() at time zone timezone)::date from public.location where id = %s",
-        (location_id,),
-    ).fetchone()
+def _today(conn: psycopg.Connection[Any], location_id: UUID | None) -> dt.date:
+    """The location's business date (Mexico City's for the whole tenant): recipes are compared
+    with the recipe in effect today."""
+    if location_id is None:
+        row = conn.execute("select (now() at time zone %s)::date", (TENANT_TIMEZONE,)).fetchone()
+    else:
+        row = conn.execute(
+            "select (now() at time zone timezone)::date from public.location where id = %s",
+            (location_id,),
+        ).fetchone()
     assert row is not None and isinstance(row[0], dt.date)
     return row[0]
 
@@ -313,18 +340,23 @@ def _code_name_warnings(recipes: list[RecipeIn]) -> list[IssueIn]:
 def _resolve(
     conn: psycopg.Connection[Any],
     tenant_id: UUID,
-    location_id: UUID,
+    location_id: UUID | None,
     recipe: RecipeIn,
     ingredients: dict[str, list[_Ingredient]],
     clashes: dict[str, list[str]],
+    template: bool,
 ) -> _Dish:
     dish = recipe.menu_item_name
     item_id, how = find_item(conn, tenant_id, location_id, recipe.menu_item_external_id, dish)
     if item_id is None:
+        check = (
+            "Solo tomo recetas de los platillos de la lista; revisa que el nombre no haya cambiado."
+            if template
+            else "Revisa que el nombre sea el mismo que en Soft Restaurant."
+        )
         raise _held(
             "recipe.item_unknown",
-            f"No encontré «{dish}» en tu menú, así que no tomé su receta. Revisa que el nombre "
-            "sea el mismo que en Soft Restaurant.",
+            f"No encontré «{dish}» en tu menú, así que no tomé su receta. {check}",
         )
     if how == "code":
         raise _held(
@@ -414,6 +446,7 @@ class _Current:
     recipe_version: int
     yield_qty: Decimal
     lines: tuple[_Line, ...]
+    effective_from: dt.date | None = None
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -429,7 +462,8 @@ def current_recipe(
 ) -> _Current | None:
     """The dish's recipe of record today, with its lines."""
     row = conn.execute(
-        """select r.id, r.recipe_version, coalesce(r.yield_qty, 1) from public.recipe r
+        """select r.id, r.recipe_version, coalesce(r.yield_qty, 1), r.effective_from
+           from public.recipe r
            where r.id = app.recipe_of_record(%s, null, %s)""",
         (menu_item_id, day),
     ).fetchone()
@@ -462,6 +496,7 @@ def current_recipe(
             )
             for x in lines
         ),
+        row[3],
     )
 
 
@@ -525,6 +560,7 @@ class _Filed:
     origin: UUID | None = None  # the file location of the recipe of record, if traceable
     has_recipe: bool = False
     newer_pending: dt.date | None = None  # report date of a pending change that blocks this one
+    changed_since: dt.date | None = None  # a template's recipe took effect after its date then
 
     def other_location(self, location_id: UUID, several: bool) -> bool:
         """Whether this change may undo another location's recipe (tenant-wide recipes)."""
@@ -550,6 +586,9 @@ def _propose(
         and Counter(x.same() for x in before.lines) == Counter(x.same() for x in d.lines)
     ):
         return _Filed("unchanged")
+    stale = _changed_after(before, batch) if batch.parser == mermia_recetas.PARSER else None
+    if stale is not None:
+        return _Filed("changed_since", changed_since=stale)
     proposal = RecipeUpsertProposal(
         kind=PendingKind.recipe_upsert,
         target_id=d.menu_item_id,
@@ -619,6 +658,14 @@ def _propose(
     replaced = _supersede(conn, tenant_id, batch_id, d.menu_item_id, change_id, proposed_by)
     origin = _origin(conn, tenant_id, d.menu_item_id) if before is not None else None
     return _Filed("proposed", change_id, replaced, origin, before is not None)
+
+
+def _changed_after(before: _Current | None, batch: NormalizedBatch) -> dt.date | None:
+    """When the recipe of record took effect after the template's date (its Fecha): the
+    template was filled from an older recipe, so proposing it would undo the newer one."""
+    if before is None or before.effective_from is None:
+        return None
+    return before.effective_from if before.effective_from > batch.period.to else None
 
 
 def _newer_pending(

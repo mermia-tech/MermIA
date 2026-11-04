@@ -143,8 +143,43 @@ def test_rendering_is_deterministic() -> None:
 def test_a_template_for_the_whole_tenant_has_no_location() -> None:
     data = Template("Taquería El Güero", None, DATA.day, DATA.dishes, ())
     recetas = sheet_rows(render(data), fmt.SHEET_RECIPES)
-    assert recetas[0][0] == "Taquería El Güero"
+    assert recetas[0][0] == "Taquería El Güero - Todas las sucursales"
     assert parse_file(render(data)).location_hint is None
+
+
+@pytest.mark.parametrize(("location", "hint"), [(None, None), ("Centro", "Centro")])
+def test_a_restaurant_name_with_a_dash_gives_no_false_location(
+    location: str | None, hint: str | None
+) -> None:
+    data = Template("Tacos - El Güero", location, DATA.day, DATA.dishes, ())
+    assert parse_file(render(data)).location_hint == hint
+
+
+def test_instruction_7_does_not_promise_new_dishes() -> None:
+    text = " ".join(str(r[0]) for r in sheet_rows(render(DATA), fmt.SHEET_INSTRUCTIONS) if r[0])
+    assert "Para un platillo nuevo, escribe su nombre" not in text
+    assert "Solo los platillos de la lista" in text
+    assert "Soft Restaurant" in text
+
+
+FORMULA = '=HYPERLINK("http://example.com","clic")'
+
+
+@pytest.mark.parametrize("name", [FORMULA, "+52 tacos", "-menos sal", "@pastor"])
+def test_a_name_that_looks_like_a_formula_is_written_as_text(name: str) -> None:
+    dish = TemplateDish("P009", name, Decimal(1), (TemplateLine(name, Decimal(10), "g", None),))
+    ingredient = TemplateIngredient(name, "g", Decimal(100), None)
+    data = Template(name, None, DATA.day, (dish,), (ingredient,))
+    wb = load_workbook(io.BytesIO(render(data)))
+    cells = [
+        wb[fmt.SHEET_RECIPES].cell(HEADER_ROW + 1, 2),
+        wb[fmt.SHEET_RECIPES].cell(HEADER_ROW + 1, 4),
+        wb[fmt.SHEET_INGREDIENTS].cell(2, 1),
+    ]
+    for cell in cells:
+        assert (cell.value, cell.data_type, cell.quotePrefix) == (name, "s", True)
+    (recipe,) = parse_file(render(data)).recipes
+    assert (recipe.menu_item_name, recipe.lines[0].ingredient_name) == (name, name)
 
 
 # --- on the seed ----------------------------------------------------------------------------
@@ -216,13 +251,13 @@ def test_the_template_lists_the_menu_by_units_sold_with_the_seed_recipes(
 ) -> None:
     data = build(conn, TENANT, CENTRO, DAY)
     assert (data.restaurant, data.location, data.day) == ("Taquería El Güero", "Centro", DAY)
-    assert len(data.dishes) == 41 and len(data.ingredients) == 61
+    assert len(data.dishes) == 39 and len(data.ingredients) == 61
     assert [d.name for d in data.dishes[:3]] == [
         "Tacos al pastor (orden de 3)",
         "Coca-Cola",
         "Tacos de bistec (orden de 3)",
     ]
-    assert [bool(d.lines) for d in data.dishes] == [True] * 15 + [False] * 26
+    assert [bool(d.lines) for d in data.dishes] == [True] * 15 + [False] * 24
     sr = {r.menu_item_external_id: r for r in parse_file(SR_SAMPLE.read_bytes()).recipes}
     for d in data.dishes[:15]:  # the seed recipes, as the SR sample prints them
         recipe = sr[d.code]
@@ -323,3 +358,140 @@ def test_the_committed_sample_is_what_the_cli_writes_from_the_seed(tmp_path: Pat
     assert out.read_bytes() == SAMPLE.read_bytes(), "regenerate the sample with the CLI"
     golden = SAMPLE.with_name(SAMPLE.stem + ".golden.json")
     assert out.with_name(golden.name).read_text() == golden.read_text()
+
+
+@pytest.mark.db
+def test_the_template_leaves_menu_modifiers_out(conn: psycopg.Connection[Any]) -> None:
+    names = {d.name for d in build(conn, TENANT, CENTRO, DAY).dishes}
+    assert not names & {"Extra queso", "Extra aguacate"}
+    assert {"Coca-Cola", "Guacamole con totopos"} <= names, "drinks and dishes stay"
+
+
+@pytest.mark.db
+def test_prefilled_lines_go_biggest_quantity_first(conn: psycopg.Connection[Any]) -> None:
+    (pastor,) = [d for d in build(conn, TENANT, CENTRO, DAY).dishes if d.code == "P001"]
+    assert [(x.ingredient, x.qty_base) for x in pastor.lines] == [
+        ("Tortilla de maíz", Decimal(75)),
+        ("Carne al pastor (adobada)", Decimal("63.85")),
+        ("Salsa verde (preparada)", Decimal(30)),
+        ("Piña", Decimal(28)),
+        ("Limón", Decimal(20)),
+        ("Cebolla blanca", Decimal(15)),
+        ("Cilantro", Decimal(5)),
+    ]
+
+
+def test_lines_with_the_same_quantity_go_by_name() -> None:
+    lines = (
+        TemplateLine("Sal", Decimal(1), "g", None),
+        TemplateLine("Ajo", Decimal(1), "g", None),
+        TemplateLine("Res", Decimal(90), "g", None),
+    )
+    assert [x.ingredient for x in writer.ordered(lines)] == ["Res", "Ajo", "Sal"]
+
+
+@pytest.mark.db
+def test_an_unknown_dish_in_a_template_does_not_send_the_owner_to_soft_restaurant(
+    conn: psycopg.Connection[Any], source: UUID
+) -> None:
+    filled = edited(
+        render(build(conn, TENANT, CENTRO, DAY)),
+        {("Tacos al pastor (orden de 3)", ""): {fmt.CODE: None, fmt.DISH: "Pozole rojo grande"}},
+    )
+    r = load(conn, parse_file(filled), source_id=source)
+    (issue,) = [i for i in r.issues if i.code == "recipe.item_unknown"]
+    assert "«Pozole rojo grande»" in issue.message_es
+    assert "Soft Restaurant" not in issue.message_es
+
+
+PASTOR_ITEM = UUID("f496f051-9f85-5f8a-a4b6-c1a814d37c73")
+
+
+def newer_pastor_recipe(conn: psycopg.Connection[Any], effective_from: dt.date) -> None:
+    """A version 2 of the pastor recipe (less meat), the recipe of record from `effective_from`;
+    test setup only, rolled back."""
+    row = conn.execute(
+        """insert into public.recipe
+             (tenant_id, menu_item_id, recipe_version, effective_from, yield_qty, status)
+           select tenant_id, menu_item_id, 2, %s, yield_qty, 'confirmed' from public.recipe
+           where menu_item_id = %s and recipe_version = 1 returning id""",
+        (effective_from, PASTOR_ITEM),
+    ).fetchone()
+    assert row is not None
+    conn.execute(
+        """insert into public.recipe_line
+             (tenant_id, recipe_id, ingredient_id, sub_recipe_id, qty_base, yield_override_pct)
+           select rl.tenant_id, %s, rl.ingredient_id, rl.sub_recipe_id,
+                  case when i.name = 'Carne al pastor (adobada)' then 50 else rl.qty_base end,
+                  rl.yield_override_pct
+           from public.recipe_line rl join public.recipe r on r.id = rl.recipe_id
+           left join public.ingredient i on i.id = rl.ingredient_id
+           where r.menu_item_id = %s and r.recipe_version = 1""",
+        (row[0], PASTOR_ITEM),
+    )
+
+
+@pytest.mark.db
+def test_a_dish_whose_recipe_changed_after_the_template_is_held(
+    conn: psycopg.Connection[Any], source: UUID
+) -> None:
+    template = render(build(conn, TENANT, CENTRO, DAY))  # Fecha 12/10/2026
+    newer_pastor_recipe(conn, dt.date(2026, 10, 20))
+    r = load(conn, parse_file(template), source_id=source, proposed_by=LUPITA)
+    assert stats(conn, r.batch_id) == {
+        "status": "parsed",
+        "proposed": 0,
+        "unchanged": 14,
+        "held": 1,
+    }
+    (issue,) = [i for i in r.issues if i.code == "plantilla.recipe_changed_since"]
+    assert issue.message_es == (
+        "La receta de «Tacos al pastor (orden de 3)» cambió el 20/10, después de esta "
+        "plantilla (12/10); descarga una plantilla nueva."
+    )
+    assert r.pending_change_ids == ()
+
+
+@pytest.mark.db
+def test_a_recipe_changed_before_the_template_is_compared_as_usual(
+    conn: psycopg.Connection[Any], source: UUID
+) -> None:
+    newer_pastor_recipe(conn, dt.date(2026, 10, 1))
+    template = render(build(conn, TENANT, CENTRO, DAY))
+    r = load(conn, parse_file(template), source_id=source, proposed_by=LUPITA)
+    assert stats(conn, r.batch_id)["unchanged"] == 15
+    assert r.issues == ()
+
+
+@pytest.fixture
+def tenant_source(conn: psycopg.Connection[Any]) -> UUID:
+    """A tenant-level manual source (no location), as an email inbox would be."""
+    row = conn.execute(
+        """insert into public.source (tenant_id, location_id, kind, config, status)
+           values (%s, null, 'manual', '{"report": "plantilla_recetas"}', 'active') returning id""",
+        (TENANT,),
+    ).fetchone()
+    assert row is not None
+    return UUID(str(row[0]))
+
+
+@pytest.mark.db
+def test_a_tenant_wide_template_loads_without_a_location(
+    conn: psycopg.Connection[Any], tenant_source: UUID
+) -> None:
+    template = render(build(conn, TENANT, None, DAY))
+    filled = edited(template, {("Tacos al pastor (orden de 3)", "Cilantro"): {fmt.QTY: 7}})
+    batch = parse_file(filled)
+    assert batch.location_hint is None
+    r = load(conn, batch, source_id=tenant_source, proposed_by=LUPITA)
+    codes = {i.code for i in r.issues}
+    assert "location.unknown" not in codes
+    assert "recipe.chain_location_differs" not in codes, "no location: no chain comparison"
+    assert stats(conn, r.batch_id) == {
+        "status": "parsed",
+        "proposed": 1,
+        "unchanged": 14,
+        "held": 0,
+    }
+    again = load(conn, parse_file(filled), source_id=tenant_source, proposed_by=LUPITA)
+    assert (again.duplicate, again.batch_id) == (True, r.batch_id)

@@ -77,7 +77,7 @@ Each file has a `.golden.json` beside it: the `NormalizedBatch` a parser must pr
 
 ## Recipe template sample (`templates/`)
 
-- `plantilla_recetas_v1_L1.xlsx`: the MermIA recipe template for Centro on 2026-10-12, prefilled from the seed (the 15 recipes, then the dishes without one), with its `.golden.json`.
+- `plantilla_recetas_v1_L1.xlsx`: the MermIA recipe template for Centro on 2026-10-12, prefilled from the seed (the 15 recipes, biggest quantity first, then the items without one; modifiers left out), with its `.golden.json`.
 
 It is written by the template's CLI from the seeded database, not by `mermia_fixtures`. Regenerate it after changing the seed or the template:
 
