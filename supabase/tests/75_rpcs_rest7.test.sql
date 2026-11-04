@@ -185,7 +185,7 @@ select is(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, %L)', '"last_wee
            where m.external_id = 'P001' and a.discount > 0 and a.period_from between '2026-10-05' and '2026-10-11'),
           'discounts: the Martes de pastor promotion, once per dish and day without tickets');
 select is((select jsonb_agg(f ->> 'code') from jsonb_array_elements(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, %L)', '"last_week"', 'discounts')) -> 'flags') f),
-          '["count_by_day"]', 'and says how it counted');
+          '["count_by_day", "partial_detail"]', 'and says how it counted, and that no waiter detail covers those days');
 select is(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, %L)', '"last_week"', 'discounts')) #>> '{data,amount,raw}',
           (select sum(d.discounts)::text from public.daily_sales_agg d where d.business_date between '2026-10-05' and '2026-10-11'),
           'the discount amount is the daily figure');
@@ -308,6 +308,168 @@ select is(pg_temp.rpc(:OTHER_TENANT, format('api.get_cost_alerts(%L)', '"last_30
           '{"price_moves": [], "breaches": [], "suggestions": []}', 'get_cost_alerts: no prices, dishes or suggestions of El Güero');
 select is(pg_temp.rpc('{}', format('api.get_cost_alerts(%L)', '"last_30d"')) -> 'data',
           '{"price_moves": [], "breaches": [], "suggestions": []}', 'no claims, no alerts');
+
+-- PR #77 review fixes ---------------------------------------------------------------------
+-- H1: a day that reports the amount but not the count adds to neither; no count at all is no_data
+savepoint h1;
+update public.daily_sales_agg set cancellations_count = null where location_id = :'CENTRO' and business_date = '2026-10-09';
+select is(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, location_id => %L)', '"last_week"', :'CENTRO')) #> '{data,amount,raw}',
+          (select to_jsonb(sum(d.cancellations_amount)) from public.daily_sales_agg d
+           where d.location_id = :'CENTRO' and d.business_date between '2026-10-05' and '2026-10-11' and d.business_date <> '2026-10-09'),
+          'H1: count and amount come from the same days (the day without a count is left out of both)');
+update public.daily_sales_agg set cancellations_count = null where location_id = :'CENTRO';
+select is(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, location_id => %L)', '"last_week"', :'CENTRO')) #>> '{error,code}', 'no_data',
+          'H1: no day reports a count: no_data, never count 0');
+rollback to savepoint h1;
+savepoint h1_discounts;
+update public.import_batch b set status = 'rolled_back'
+where b.id in (select a.batch_id from public.item_sales_agg a where a.location_id = :'CENTRO');
+select is(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, %L, %L)', '{"from":"2026-10-06","to":"2026-10-06"}', 'discounts', :'CENTRO')) #>> '{error,code}', 'no_data',
+          'H1: discounts on an aggregate day with no item detail have no count: no_data, never count 0');
+select is(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, %L, %L)', '"last_week"', 'discounts', :'CENTRO')) #> '{data,amount,raw}', '0',
+          'H1: over the week, only the days with a count add to the amount (the discount days have none)');
+select ok(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, %L, %L)', '"last_week"', 'discounts', :'CENTRO')) -> 'flags' @> '[{"code": "partial_data"}]',
+          'H1: and they are flagged');
+rollback to savepoint h1_discounts;
+
+-- M1 / N1: the detail covers what the totals cover, and says so when it does not add up
+select ok(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, location_id => %L)', '"last_week"', :'CENTRO')) -> 'flags'
+            @> '[{"code": "partial_detail"}]',
+          'M1: last week''s detail (one day of tickets) does not add up to the totals: partial_detail');
+select ok(not (pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, %L, %L)', '{"from":"2026-10-10","to":"2026-10-10"}', 'cancellations', :'CENTRO')) -> 'flags'
+            @> '[{"code": "partial_detail"}]'), 'M1: the Saturday''s detail adds up: no flag');
+savepoint ticket_cancel;
+insert into public.import_batch (id, tenant_id, source_id, location_id, parser, slice_key, status, applied_at)
+select 'eeeeeeee-0000-7000-8000-000000000201', s.tenant_id, s.id, s.location_id, 'sr.erp_push@v1', 'mr24-cancel', 'applied', '2026-10-12T09:00:00-06:00'
+from public.source s where s.location_id = :'CENTRO' limit 1;
+insert into public.sale_ticket (id, tenant_id, location_id, source_id, external_id, batch_id, business_date, opened_at, closed_at, channel, staff_id, subtotal, discount, tax, total, status)
+select x.id::uuid, b.tenant_id, b.location_id, b.source_id, x.ext, b.id, '2026-10-12', '2026-10-12T13:00:00-06:00', '2026-10-12T13:30:00-06:00', 'dine_in',
+       (select st.id from public.staff st where st.display_name = x.waiter and st.location_id = :'CENTRO'), round(x.total / 1.16), 0, x.total - round(x.total / 1.16), x.total, x.status::app.ticket_status
+from public.import_batch b,
+     (values ('eeeeeeee-0000-7000-8000-0000000002a1', 'P-1', 'Pepe', 13000, 'paid'),
+             ('eeeeeeee-0000-7000-8000-0000000002a2', 'C-1', 'Ana', 20000, 'cancelled')) x(id, ext, waiter, total, status)
+where b.id = 'eeeeeeee-0000-7000-8000-000000000201';
+insert into public.sale_line (tenant_id, location_id, source_id, batch_id, ticket_id, menu_item_id, qty, unit_price, net, is_void, voided_by)
+select b.tenant_id, b.location_id, b.source_id, b.id, x.ticket::uuid, x.item::uuid, x.qty, x.net, x.net, x.void,
+       case when x.void then (select st.id from public.staff st where st.display_name = 'Pepe' and st.location_id = :'CENTRO') end
+from public.import_batch b,
+     (values ('eeeeeeee-0000-7000-8000-0000000002a1', :'PASTOR', 2, 13000, false),
+             ('eeeeeeee-0000-7000-8000-0000000002a1', :'PASTOR', 1, 15000, true),
+             ('eeeeeeee-0000-7000-8000-0000000002a2', :'PASTOR', 0.4, 12000, false),
+             ('eeeeeeee-0000-7000-8000-0000000002a2', :'COCA', -1, 8000, false)) x(ticket, item, qty, net, void)
+where b.id = 'eeeeeeee-0000-7000-8000-000000000201';
+select is(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, location_id => %L)', '"today"', :'CENTRO')) #> '{data,by_staff}',
+          '[{"name": "Ana", "count": 1, "amount": {"raw": 20000, "text": "$200.00"}}]',
+          'M1: a ticket day''s staff detail is its cancelled tickets, as its totals are (no voided line of a paid ticket)');
+select is(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, location_id => %L)', '"today"', :'CENTRO')) #> '{data,top_items}',
+          '[{"name": "Tacos al pastor (orden de 3)", "count": 1, "amount": {"raw": 12000, "text": "$120.00"}},
+            {"name": "Coca-Cola", "count": 0, "amount": {"raw": 8000, "text": "$80.00"}}]',
+          'N2: a weighed line counts once and a negative quantity never makes a negative count');
+rollback to savepoint ticket_cancel;
+
+-- M2: IVA follows the menu price's tax rate in every cost RPC (8 % in the northern border zone)
+savepoint border;
+update public.menu_item_price set tax_rate = 0.08 where location_id = :'CENTRO';
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-11', '2026-10-11') > 0, 'M2: snapshots recomputed at 8 % IVA');
+select is((pg_temp.rpc(:OWNER, format('api.get_food_cost_pct(%L, %L)', '"yesterday"', :'CENTRO')) #>> '{data,theoretical,raw}')::numeric,
+          (select round(100 * sum(v.units * c.cost) / round(sum(v.net / 1.08)), 4)
+           from app.v_item_sales_daily v join public.dish_cost_snapshot c
+             on c.menu_item_id = v.menu_item_id and c.location_id = v.location_id and c.date = v.business_date
+           where v.location_id = :'CENTRO' and v.business_date = '2026-10-11'),
+          'M2: get_food_cost_pct takes IVA out at the item''s rate');
+select is(pg_temp.rpc(:OWNER, format('api.compare_periods(%L, %L, %L, %L)', 'food_cost_pct', '"yesterday"', '"yesterday"', :'CENTRO')) #>> '{data,a,raw}',
+          pg_temp.rpc(:OWNER, format('api.get_food_cost_pct(%L, %L)', '"yesterday"', :'CENTRO')) #>> '{data,theoretical,raw}',
+          'M2: and compare_periods says the same');
+select is((select (x #>> '{value,raw}')::numeric from jsonb_array_elements(
+             pg_temp.rpc(:OWNER, format('api.get_top_dishes(%L, %L, %L, %s, %L)', '"yesterday"', 'margin', 'desc', 10, :'CENTRO')) #> '{data,rows}') x
+           where x ->> 'menu_item_id' = :'PASTOR'),
+          (select round(sum(v.net / 1.08) - sum(v.units * c.cost))
+           from app.v_item_sales_daily v join public.dish_cost_snapshot c
+             on c.menu_item_id = v.menu_item_id and c.location_id = v.location_id and c.date = v.business_date
+           where v.location_id = :'CENTRO' and v.business_date = '2026-10-11' and v.menu_item_id = :'PASTOR'),
+          'M2: get_top_dishes margins too');
+rollback to savepoint border;
+
+-- M3: a dish the engine stopped costing is flagged stale and never confirmed
+savepoint stale;
+update public.dish_cost_snapshot set confidence = 'confirmed';
+delete from public.dish_cost_snapshot where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date > '2026-09-15';
+select ok(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L, %L)', 'tacos al pastor', :'CENTRO')) -> 'flags' @> '[{"code": "stale_cost"}]',
+          'M3: an old snapshot (newer ones exist for other dishes) is flagged stale_cost');
+select is(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L, %L)', 'tacos al pastor', :'CENTRO')) #>> '{data,confidence}', 'estimated',
+          'M3: and its confidence is estimated');
+select is(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L, %L)', 'tacos de bistec', :'CENTRO')) -> 'flags', '[]',
+          'M3: a current snapshot is not stale');
+rollback to savepoint stale;
+
+-- M4: a suggestion's subject resolves to an active dish priced at the location, never a guess
+savepoint subject;
+insert into public.menu_item (tenant_id, name, kind, is_active) values (:'TENANT', 'Coca-Cola', 'drink', false);
+insert into public.price_suggestion (tenant_id, location_id, rule, subject, status, suggested_price, rationale_code)
+values (:'TENANT', :'CENTRO', 'margin_breach', 'Coca-Cola', 'open', 3300, 'target_food_cost');
+select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(location_id => %L)', :'CENTRO')) #>> '{data,suggestions,0,menu_item_id}', :'COCA',
+          'M4: a retired dish with the same name is not the subject');
+insert into public.menu_item (id, tenant_id, name, kind) values ('eeeeeeee-0000-7000-8000-000000000301', :'TENANT', 'Coca-Cola', 'drink');
+select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(location_id => %L)', :'CENTRO')) #>> '{data,suggestions,0,menu_item_id}', :'COCA',
+          'M4: nor one not priced at the location');
+insert into public.menu_item_price (tenant_id, location_id, menu_item_id, price_gross, effective_from)
+values (:'TENANT', :'CENTRO', 'eeeeeeee-0000-7000-8000-000000000301', 2500, '2026-09-01');
+select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(location_id => %L)', :'CENTRO')) #> '{data,suggestions,0}',
+          '{"menu_item_id": null, "name": "Coca-Cola", "current_price": null, "suggested_price": {"raw": 3300, "text": "$33.00"}}',
+          'M4: two priced dishes with that name: no dish, no current price');
+rollback to savepoint subject;
+
+-- M5: the confidence flag qualifies the breaches only
+savepoint breach_conf;
+update public.dish_cost_snapshot set confidence = 'confirmed';
+update public.dish_cost_snapshot set confidence = 'estimated' where menu_item_id = :'PASTOR';
+select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #>> '{flags,0,code}', 'cost_confirmed',
+          'M5: every breach confirmed: cost_confirmed, whatever the dishes that do not breach');
+rollback to savepoint breach_conf;
+
+-- M6: the alert window ends today; a window that starts after today is invalid
+savepoint future_price;
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+select :'TENANT', i.id, 0.300, '2026-10-25', 'cfdi' from public.ingredient i where i.name = 'Carne al pastor (adobada)';
+select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '{"from":"2026-10-09","to":"2026-11-01"}', :'CENTRO')) #> '{meta,period_resolved}',
+          '{"from": "2026-10-09", "to": "2026-10-12"}', 'M6: a range that ends in the future still ends today');
+select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '{"from":"2026-09-12","to":"2026-11-01"}', :'CENTRO')) #> '{data,price_moves,0,new_unit_price,raw}',
+          '0.195', 'M6: a price that starts after today is not a move yet');
+select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '{"from":"2026-10-13","to":"2026-10-20"}', :'CENTRO')) #>> '{error,code}', 'invalid_args',
+          'M6: a window that starts after today is invalid');
+rollback to savepoint future_price;
+
+-- L2: a recipe nested too deep after its snapshot still gets an answer, without cost drivers
+savepoint deep;
+set local session_replication_role = replica;
+insert into public.recipe_line (tenant_id, recipe_id, sub_recipe_id, qty_base)
+values (:'TENANT', '46faac9d-fc08-5876-af8d-6b3b958b52b3', '46faac9d-fc08-5876-af8d-6b3b958b52b3', 1);
+set local session_replication_role = origin;
+select is(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L, %L)', 'tacos al pastor', :'CENTRO')) #>> '{data,match}', 'resolved',
+          'L2: the margin is still answered');
+rollback to savepoint deep;
+
+-- L6: a ticket day without payment records is not payment detail
+savepoint no_payments;
+insert into public.import_batch (id, tenant_id, source_id, location_id, parser, slice_key, status, applied_at)
+select 'eeeeeeee-0000-7000-8000-000000000401', s.tenant_id, s.id, s.location_id, 'sr.erp_push@v1', 'mr24-nopay', 'applied', '2026-10-12T09:00:00-06:00'
+from public.source s where s.location_id = :'CENTRO' limit 1;
+insert into public.sale_ticket (id, tenant_id, location_id, source_id, external_id, batch_id, business_date, opened_at, closed_at, channel, subtotal, discount, tax, total, status)
+select 'eeeeeeee-0000-7000-8000-0000000004a1', b.tenant_id, b.location_id, b.source_id, 'N-1', b.id, '2026-10-11', '2026-10-11T13:00:00-06:00',
+       '2026-10-11T13:30:00-06:00', 'dine_in', 11207, 0, 1793, 13000, 'paid'
+from public.import_batch b where b.id = 'eeeeeeee-0000-7000-8000-000000000401';
+select ok(pg_temp.rpc(:OWNER, format('api.get_sales_breakdown(%L, %L, %L)', '"last_week"', 'payment_method', :'CENTRO')) -> 'flags'
+            @> '[{"code": "partial_data"}]', 'L6: the ticket day has no payments: the payment breakdown is partial');
+rollback to savepoint no_payments;
+
+-- L8: a price move counts only for ingredients a live dish uses
+savepoint retired;
+update public.menu_item set is_active = false;
+select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data,price_moves}', '[]',
+          'L8: no active dish uses the ingredients: no price moves');
+rollback to savepoint retired;
+select isnt(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data,price_moves}', '[]',
+          'L8: the live dishes'' ingredients still move');
 
 select * from finish();
 rollback;

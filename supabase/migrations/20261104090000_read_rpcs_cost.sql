@@ -17,8 +17,14 @@
 -- - Target food cost: 32.0 % (app.food_cost_target, 03 "Food cost % targets"); no table holds a
 --   per-tenant target yet and tenant.settings is backend-only. A dish breaches the target when its
 --   food cost is above target + 3 pts (03 alert table).
--- - Food cost and margin take IVA out as MR-17 does (net - round(net x 16 / 116)), so
---   get_food_cost_pct and compare_periods('food_cost_pct') agree.
+-- - IVA comes out of item sales at the rate of the menu price in effect that day (16 % when the
+--   price row has none), the rate the engine uses for the snapshot's net price, so food cost and
+--   margin agree across RPCs in the northern border zone (8 %) or for 0 % items. Item nets are
+--   taken out of IVA per row unrounded and the sum is rounded once (app.net_ex_iva); for one rate
+--   that is MR-17's net - round(net x 16 / 116). 20261104090200_iva_by_tax_rate.sql moves
+--   compare_periods, compare_locations and get_top_dishes onto the same rule.
+-- - get_dish_margin flags `stale_cost` (and says `estimated`) when the snapshot is older than the
+--   location's latest one or than 30 days: the engine stopped costing the dish.
 
 -- Cost helpers -----------------------------------------------------------------------------
 create function app.food_cost_target() returns numeric
@@ -50,30 +56,42 @@ as $$
   end
 $$;
 
--- Items sold over [f, t] with the dish cost snapshot of that day and its confidence (as
--- app.item_rows, plus the confidence).
-create function app.item_cost_rows(locs uuid[], f date, t date)
-returns table (location_id uuid, day date, menu_item_id uuid, units numeric, net bigint, discount bigint,
-               cost bigint, confidence app.cost_confidence)
+-- The menu price row in effect on a day at a location (the engine's rule), its price and its
+-- IVA rate (16 % when the row has none, as the engine assumes).
+create function app.menu_price_row(item uuid, loc uuid, on_date date) returns table (price_gross bigint, tax_rate numeric)
 language sql stable set search_path = ''
 as $$
-  select v.location_id, v.business_date, v.menu_item_id, v.units, v.net, v.discount, c.cost, c.confidence
+  select p.price_gross, coalesce(p.tax_rate, 0.16) from public.menu_item_price p
+  where p.menu_item_id = item and p.location_id = loc
+    and p.effective_from <= on_date and (p.effective_to is null or p.effective_to >= on_date)
+  order by p.effective_from desc, p.created_at desc
+  limit 1
+$$;
+
+create function app.menu_price_on(item uuid, loc uuid, on_date date) returns bigint
+language sql stable set search_path = ''
+as $$ select r.price_gross from app.menu_price_row(item, loc, on_date) r $$;
+
+-- A net with IVA inside, without it, unrounded: callers sum and round once. The rate is a
+-- fraction (0.16); null is 16 %.
+create function app.net_ex_iva(net numeric, tax_rate numeric) returns numeric
+language sql immutable set search_path = ''
+as $$ select net / (1 + coalesce(tax_rate, 0.16)) $$;
+
+-- Items sold over [f, t] with the dish cost snapshot of that day and its confidence (as
+-- app.item_rows, plus the confidence and the net without IVA at the day's menu price rate).
+create function app.item_cost_rows(locs uuid[], f date, t date)
+returns table (location_id uuid, day date, menu_item_id uuid, units numeric, net bigint, discount bigint,
+               cost bigint, confidence app.cost_confidence, net_ex_iva numeric)
+language sql stable set search_path = ''
+as $$
+  select v.location_id, v.business_date, v.menu_item_id, v.units, v.net, v.discount, c.cost, c.confidence,
+         app.net_ex_iva(v.net, (select r.tax_rate from app.menu_price_row(v.menu_item_id, v.location_id, v.business_date) r))
   from app.v_item_sales_daily v
   left join public.dish_cost_snapshot c
     on c.tenant_id = v.tenant_id and c.menu_item_id = v.menu_item_id
    and c.location_id = v.location_id and c.date = v.business_date
   where v.location_id = any (locs) and v.business_date between f and t
-$$;
-
--- The menu price in effect on a day at a location (the engine's rule).
-create function app.menu_price_on(item uuid, loc uuid, on_date date) returns bigint
-language sql stable set search_path = ''
-as $$
-  select p.price_gross from public.menu_item_price p
-  where p.menu_item_id = item and p.location_id = loc
-    and p.effective_from <= on_date and (p.effective_to is null or p.effective_to >= on_date)
-  order by p.effective_from desc, p.created_at desc
-  limit 1
 $$;
 
 -- Top 3 cost drivers of a dish on a day: each top-level recipe line's share of the recipe cost
@@ -115,9 +133,12 @@ $$;
 -- `dish` is a menu item id or a name. A name matches the dishes whose name holds every word of
 -- it; an exact name wins. One match is resolved, several are `ambiguous` (the 5 that sold the
 -- most units in the last 30 days), none is not_found. The margin is the latest snapshot on or
--- before today (meta.period_resolved is its day). With no location asked, a single location with
--- a snapshot is used, or the first when every location agrees on cost and price; otherwise the
--- answer is `needs_location` (D24).
+-- before today (meta.period_resolved is its day). It is stale when it is older than the latest
+-- snapshot of any dish at that location, or than 30 days: the engine stopped costing the dish (a
+-- price or the recipe went missing), so the answer says `estimated` and flags `stale_cost`. With
+-- no location asked, a single location with a snapshot is used, or the first when every location
+-- agrees on cost and price; otherwise the answer is `needs_location` (D24). A recipe changed
+-- since the snapshot that now nests too deep loses its cost drivers, not the answer.
 create function api.get_dish_margin(dish text, location_id uuid default null) returns jsonb
 language plpgsql stable security invoker set search_path = ''
 as $$
@@ -132,6 +153,8 @@ declare
   opts jsonb;
   pick jsonb;
   food numeric;
+  drivers jsonb;
+  flags jsonb := '[]';
 begin
   if locs is null then
     return app.rpc_error('not_found', 'location not found');
@@ -192,14 +215,22 @@ begin
     return app.rpc_error('not_found', 'dish not found', locs);
   end if;
 
-  select jsonb_agg(to_jsonb(x) order by x.name, x.location_id) into opts
+  select jsonb_agg(to_jsonb(x) - 'latest' || jsonb_build_object(
+           'stale', x.stale,
+           'confidence', case when x.stale then 'estimated'::app.cost_confidence else x.confidence end)
+         order by x.name, x.location_id) into opts
   from (
-    select distinct on (s.location_id) s.location_id, l.name, s.date, s.cost, s.price_net, s.confidence,
-           app.menu_price_on(item_id, s.location_id, s.date) as price_gross
-    from public.dish_cost_snapshot s
-    join public.location l on l.id = s.location_id
-    where s.menu_item_id = item_id and s.location_id = any (locs) and s.date <= today
-    order by s.location_id, s.date desc
+    select y.*, (y.date < y.latest or y.date < today - 30) as stale
+    from (
+      select distinct on (s.location_id) s.location_id, l.name, s.date, s.cost, s.price_net, s.confidence,
+             app.menu_price_on(item_id, s.location_id, s.date) as price_gross,
+             (select max(o.date) from public.dish_cost_snapshot o
+              where o.location_id = s.location_id and o.date <= today) as latest
+      from public.dish_cost_snapshot s
+      join public.location l on l.id = s.location_id
+      where s.menu_item_id = item_id and s.location_id = any (locs) and s.date <= today
+      order by s.location_id, s.date desc
+    ) y
   ) x
   where x.price_net > 0 and x.price_gross >= x.price_net;
 
@@ -218,6 +249,18 @@ begin
 
   pick := opts -> 0;
   food := 100.0 * (pick ->> 'cost')::bigint / (pick ->> 'price_net')::bigint;
+  if (pick ->> 'stale')::boolean then
+    flags := flags || app.flag('stale_cost',
+      format('Costo calculado al %s: no hay uno más reciente de este platillo (falta un precio o la receta).',
+             to_char((pick ->> 'date')::date, 'DD/MM/YYYY')));
+  end if;
+  begin
+    select coalesce(jsonb_agg(jsonb_build_object('ingredient', d.ingredient, 'share', app.pct(d.share))), '[]')
+    into drivers
+    from app.cost_drivers(item_id, (pick ->> 'date')::date) d;
+  exception when sqlstate '54001' then
+    drivers := '[]';  -- the recipe now nests more than 8 levels: no drivers, still the margin
+  end;
   return app.rpc_ok(
     jsonb_build_object(
       'match', 'resolved',
@@ -231,10 +274,8 @@ begin
       'margin_pct', app.pct(100 - round(food, 4)),
       'food_cost', app.pct(food),
       'confidence', pick -> 'confidence',
-      'cost_drivers', coalesce((
-        select jsonb_agg(jsonb_build_object('ingredient', d.ingredient, 'share', app.pct(d.share)))
-        from app.cost_drivers(item_id, (pick ->> 'date')::date) d), '[]')),
-    locs, '[]', 100, array[(pick ->> 'date')::date, (pick ->> 'date')::date]);
+      'cost_drivers', drivers),
+    locs, flags, 100, array[(pick ->> 'date')::date, (pick ->> 'date')::date]);
 exception when sqlstate '22023' then
   return app.rpc_error('invalid_args', sqlerrm, coalesce(locs, '{}'));
 end
@@ -266,11 +307,12 @@ begin
 
   select sum(c.units * c.cost) filter (where c.cost is not null) as cost,
          sum(c.net) filter (where c.cost is not null) as covered_net,
+         round(sum(c.net_ex_iva) filter (where c.cost is not null)) as covered_ex_iva,
          sum(c.net) as total_net,
          array_agg(distinct c.confidence) filter (where c.confidence is not null) as levels
   into x
   from app.item_cost_rows(locs, r[1], r[2]) c;
-  if coalesce(x.covered_net, 0) - round(coalesce(x.covered_net, 0) * 16 / 116.0) <= 0 then
+  if coalesce(x.covered_ex_iva, 0) <= 0 then
     return app.rpc_error('no_data', 'No costed dish sales for the period', locs);
   end if;
 
@@ -281,8 +323,7 @@ begin
     from (
       select coalesce(mc.name, 'Sin categoría') as name, sum(c.net) as total_net,
              100 * sum(c.units * c.cost) filter (where c.cost is not null)
-               / nullif(sum(c.net) filter (where c.cost is not null)
-                        - round(sum(c.net) filter (where c.cost is not null) * 16 / 116.0), 0) as fc
+               / nullif(round(sum(c.net_ex_iva) filter (where c.cost is not null)), 0) as fc
       from app.item_cost_rows(locs, r[1], r[2]) c
       join public.menu_item m on m.id = c.menu_item_id
       left join public.menu_category mc on mc.id = m.category_id
@@ -300,7 +341,7 @@ begin
 
   return app.rpc_ok(
     jsonb_build_object(
-      'theoretical', app.pct(100 * x.cost / (x.covered_net - round(x.covered_net * 16 / 116.0))),
+      'theoretical', app.pct(100 * x.cost / x.covered_ex_iva),
       'target', app.pct(app.food_cost_target()),
       'coverage', app.pct(100.0 * x.covered_net / x.total_net),
       'by_category', categories),
@@ -339,7 +380,7 @@ begin
     where m.kind <> 'modifier'
   ), d as (
     select x.menu_item_id, sum(x.units) as units,
-           sum(x.net - round(x.net * 16 / 116.0)) - sum(x.units * x.cost) as cm
+           round(sum(x.net_ex_iva)) - sum(x.units * x.cost) as cm
     from x where x.cost is not null
     group by x.menu_item_id having sum(x.units) > 0
   ), tot as (
@@ -386,16 +427,19 @@ end
 $$;
 
 -- get_cost_alerts ---------------------------------------------------------------------------
--- `since` names where the window starts; it runs through today (a price that starts today is
--- news), and meta.period_resolved says so.
--- - Price moves: ingredients used by a recipe in effect whose price of record at the end of the
---   window differs by at least 8 % (the lower threshold of the 03 alert table; its 30-day
---   average and top-20-spend rules are not applied yet) from the one the day before the window, in
---   the order the new prices started.
+-- `since` names where the window starts; it runs through today, never later (a price that starts
+-- today is news; one that starts tomorrow is not yet), and meta.period_resolved says so. A
+-- `since` that starts after today is invalid.
+-- - Price moves: ingredients a live dish uses (the recipe of record of an active dish, through
+--   its sub-recipes of record) whose price of record at the end of the window differs by at least
+--   8 % (the lower threshold of the 03 alert table; its 30-day average and top-20-spend rules are
+--   not applied yet) from the one the day before the window, in the order the new prices started.
 -- - Breaches: dishes whose latest snapshot in the window is above target + 3 pts (03), the worst
---   location when several are asked; highest food cost first.
+--   location when several are asked; highest food cost first. The confidence flag is the
+--   breaches' own (the snapshots they quote).
 -- - Suggestions: open price_suggestion rows (status null, 'open' or 'pending'), computed by the
---   backend; the dish and its current price are given when `subject` is a dish id or name.
+--   backend; the dish and its current price are given when `subject` is a dish id, or the name of
+--   one active dish (or of the one priced at the location among several); otherwise no dish.
 create function app.price_text(pesos numeric, unit app.base_unit) returns text
 language sql immutable set search_path = ''
 as $$
@@ -404,6 +448,38 @@ as $$
     when 'ml' then app.fmt_money(round(pesos * 100000)) || '/L'
     else app.fmt_money(round(pesos * 100)) || '/pza'
   end
+$$;
+
+-- Ingredients the recipes of record of active dishes use on a day, through sub-recipes (the
+-- engine's depth limit).
+create function app.live_ingredients(on_date date) returns table (ingredient_id uuid)
+language sql stable set search_path = ''
+as $$
+  with recursive used(recipe_id, depth) as (
+    select app.recipe_of_record(m.id, null, on_date), 0 from public.menu_item m where m.is_active
+    union
+    select app.recipe_of_record(null, sr.produces_ingredient_id, on_date), u.depth + 1
+    from used u
+    join public.recipe_line rl on rl.recipe_id = u.recipe_id
+    join public.recipe sr on sr.id = rl.sub_recipe_id
+    where u.depth < 8
+  )
+  select distinct rl.ingredient_id from used u join public.recipe_line rl on rl.recipe_id = u.recipe_id
+  where rl.ingredient_id is not null
+$$;
+
+-- The dish a suggestion's subject names: its id, or the one active dish with that name, or the
+-- one of them priced at one of `locs` on the day; null otherwise (never an arbitrary pick).
+create function app.subject_item(subject text, locs uuid[], on_date date) returns uuid
+language sql stable set search_path = ''
+as $$
+  select coalesce(
+    (select mi.id from public.menu_item mi where mi.id::text = lower(btrim(subject))),
+    (select case when count(*) = 1 then min(x.id::text)
+                 when count(*) filter (where x.priced) = 1 then min(x.id::text) filter (where x.priced) end::uuid
+     from (select mi.id, exists (select 1 from unnest(locs) l where app.menu_price_on(mi.id, l, on_date) is not null) as priced
+           from public.menu_item mi
+           where mi.is_active and app.norm_name(mi.name) = app.norm_name(subject)) x))
 $$;
 
 create function api.get_cost_alerts(since jsonb default '"last_7d"', location_id uuid default null) returns jsonb
@@ -425,7 +501,10 @@ begin
   end if;
   today := app.business_today(location_id);
   r := app.resolve_period(coalesce(since, '"last_7d"'), today);
-  w_to := greatest(r[2], today);
+  if r[1] > today then
+    raise exception 'since must start on or before today' using errcode = '22023';
+  end if;
+  w_to := today;
 
   select coalesce(jsonb_agg(jsonb_build_object(
            'ingredient', m.name,
@@ -441,10 +520,7 @@ begin
     cross join lateral app.price_of_record(i.id, w_to) n
     where o.unit_price_net > 0 and n.unit_price_net > 0 and n.effective_from >= r[1]
       and abs(n.unit_price_net - o.unit_price_net) >= 0.08 * o.unit_price_net
-      and exists (select 1 from public.recipe_line rl join public.recipe rc on rc.id = rl.recipe_id
-                  where rl.ingredient_id = i.id
-                    and (rc.effective_from is null or rc.effective_from <= w_to)
-                    and (rc.effective_to is null or rc.effective_to >= w_to))
+      and i.id in (select u.ingredient_id from app.live_ingredients(w_to) u)
   ) m;
 
   with latest as (
@@ -453,7 +529,7 @@ begin
     where s.location_id = any (locs) and s.date between r[1] and w_to and s.price_net > 0
     order by s.menu_item_id, s.location_id, s.date desc
   ), worst as (
-    select distinct on (l.menu_item_id) l.menu_item_id, 100.0 * l.cost / l.price_net as fc
+    select distinct on (l.menu_item_id) l.menu_item_id, 100.0 * l.cost / l.price_net as fc, l.confidence
     from latest l order by l.menu_item_id, 100.0 * l.cost / l.price_net desc
   )
   select coalesce((select jsonb_agg(jsonb_build_object('menu_item_id', b.menu_item_id, 'name', m.name,
@@ -461,7 +537,7 @@ begin
                                     order by round(b.fc, 4) desc, m.name)
                    from worst b join public.menu_item m on m.id = b.menu_item_id
                    where b.fc > app.food_cost_target() + 3), '[]'),
-         (select array_agg(distinct l.confidence) from latest l)
+         (select array_agg(distinct b.confidence) from worst b where b.fc > app.food_cost_target() + 3)
   into breaches, levels;
 
   select coalesce(jsonb_agg(jsonb_build_object(
@@ -473,14 +549,10 @@ begin
   into suggestions
   from (
     select ps.id, ps.subject, ps.rule, ps.suggested_price, ps.created_at, m.id as item_id, m.name as item_name,
-           case when m.id is not null and coalesce(ps.location_id, get_cost_alerts.location_id) is not null
-                then app.menu_price_on(m.id, coalesce(ps.location_id, get_cost_alerts.location_id), today) end as price
-    from public.price_suggestion ps
-    left join lateral (
-      select mi.id, mi.name from public.menu_item mi
-      where mi.id::text = lower(btrim(ps.subject)) or app.norm_name(mi.name) = app.norm_name(ps.subject)
-      order by mi.id::text = lower(btrim(ps.subject)) desc, mi.id limit 1
-    ) m on true
+           case when m.id is not null and ps.loc is not null then app.menu_price_on(m.id, ps.loc, today) end as price
+    from (select p.*, coalesce(p.location_id, get_cost_alerts.location_id) as loc from public.price_suggestion p) ps
+    left join public.menu_item m
+      on m.id = app.subject_item(ps.subject, case when ps.loc is not null then array[ps.loc] else locs end, today)
     where (ps.location_id = any (locs) or ps.location_id is null)
       and (ps.status is null or ps.status in ('open', 'pending'))
       and ps.suggested_price is not null
@@ -506,8 +578,9 @@ grant execute on function
   app.price_of_record(uuid, date), app.recipe_of_record(uuid, uuid, date), app.recipe_cost(uuid, date, int),
   app.food_cost_target(), app.pct(numeric, boolean), app.money(numeric),
   app.confidence_flag(app.cost_confidence[]), app.item_cost_rows(uuid[], date, date),
-  app.menu_price_on(uuid, uuid, date), app.cost_drivers(uuid, date), app.norm_name(text),
-  app.price_text(numeric, app.base_unit)
+  app.menu_price_row(uuid, uuid, date), app.menu_price_on(uuid, uuid, date), app.net_ex_iva(numeric, numeric),
+  app.cost_drivers(uuid, date), app.norm_name(text), app.price_text(numeric, app.base_unit),
+  app.live_ingredients(date), app.subject_item(text, uuid[], date)
   to authenticated;
 grant execute on function
   api.get_dish_margin(text, uuid), api.get_food_cost_pct(jsonb, uuid, text),
