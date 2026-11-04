@@ -65,11 +65,11 @@ WRITE_VERBS = _words(
 
 FILLER = _words(
     "cuanto cuanta cuantos cuantas cual cuales que me mi mis tu tus de del la el las los lo en "
-    "con y por fue es son se a al dime dame oye hola porfa favor ya total totales todas todos "
-    "sucursales locales"
+    "con y por fue es son se a al dime dame oye hola porfa favor ya total totales todas todos"
 )
 
 SALES_TRIGGERS = ("vendi", "vendio", "vendimos", "venta", "ventas", "entro")
+AMOUNT_WORDS = ("cuanto", "cuanta")  # "qué vendimos" asks what, not how much
 COMPARE_TRIGGERS = ("contra", "vs", "versus", "comparado con", "comparada con")
 PREVIOUS_WEEK = ("semana anterior", "anterior", "antepasada")  # "la pasada vs la anterior"
 DISH_TRIGGERS = ("platillo", "platillos")
@@ -125,15 +125,17 @@ NUMBERS = {
 
 def route(text: str, locations: Mapping[UUID, str]) -> Match | None:
     """The one intent `text` asks for, or None when any word is not understood."""
-    words = re.sub(r"[^a-z0-9]+", " ", normalize_name(text)).split()
-    if WRITE_VERBS.intersection(words):
+    words = _normalized(text)
+    if _take(list(words), ("por que",)):  # "por qué" asks why
         return None
 
     # a name two locations share cannot tell them apart: it stays unknown, the message falls through
-    names = {location_id: normalize_name(name) for location_id, name in locations.items()}
+    names = {location_id: " ".join(_normalized(name)) for location_id, name in locations.items()}
     count = Counter(names.values())
     by_name = {name: location_id for location_id, name in names.items() if count[name] == 1}
     named = {by_name[name] for name in _take(words, by_name)}
+    if WRITE_VERBS.intersection(words):  # after the names: a location may be called "Baja"
+        return None
     periods = {PERIODS[phrase] for phrase in _take(words, PERIODS)}
 
     # a specific intent wins over the sales total; two specific intents is not certain
@@ -156,7 +158,10 @@ Parser = Callable[[list[str], set[PeriodName], set[UUID]], Match | None]
 
 def _sales_total(words: list[str], periods: set[PeriodName], named: set[UUID]) -> Match | None:
     scope = _scope(named)
-    if not _take(words, SALES_TRIGGERS) or len(periods) != 1 or scope is None:
+    triggers = _take(words, SALES_TRIGGERS)
+    if not triggers or not (_take(list(words), AMOUNT_WORDS) or {"venta", "ventas"} & {*triggers}):
+        return None
+    if len(periods) != 1 or scope is None:
         return None
     (period,) = periods
     intent: Intent = "sales_yesterday" if period == "yesterday" else "sales_period"
@@ -329,6 +334,11 @@ def menu(locations: Mapping[UUID, str]) -> dict[str, tuple[str, Match]]:
         for intent, option in MENU.items()
         if intent != "compare_locations" or len(locations) > 1
     }
+
+
+def _normalized(text: str) -> list[str]:
+    """Lower case, no accents, no punctuation: the same words for the text and the names."""
+    return re.sub(r"[^a-z0-9]+", " ", normalize_name(text)).split()
 
 
 def _take(words: list[str], phrases: Iterable[str]) -> list[str]:

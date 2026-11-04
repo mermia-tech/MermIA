@@ -327,3 +327,15 @@ def test_de_el_is_contracted(
 )
 def test_no_data_contracts_de_el(rpc: str, args: dict[str, Any], text: str) -> None:
     assert no_data(rpc, args).text == text
+
+
+def test_one_ticket_reads_singular(example: Any, el_guero: dict[UUID, str]) -> None:
+    envelope = example("get_sales_summary")
+    data = {**envelope.data, "tickets": 1}
+    reply = render(
+        "get_sales_summary",
+        {"period": "yesterday", "location_id": CENTRO},
+        envelope.model_copy(update={"data": data}),
+        el_guero,
+    )
+    assert reply.text.splitlines()[1] == "1 ticket, ticket promedio $284.45."

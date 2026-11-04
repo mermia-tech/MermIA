@@ -93,7 +93,7 @@ def _sales_summary(
     ]
     parts = []
     if data.tickets is not None:
-        parts.append(f"{data.tickets} tickets")
+        parts.append(f"{data.tickets} ticket{'' if data.tickets == 1 else 's'}")
     if data.avg_ticket is not None:
         parts.append(f"ticket promedio {data.avg_ticket.text}")
     if parts:
