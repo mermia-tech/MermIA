@@ -304,12 +304,18 @@ This is the largest parser, so it gets its own task.
 **Files:** Modify `router.py` (menu table: intent → fixed arguments), `broker.py` (menu), `__init__.py` (`tpl:` handling); test `test_answer.py`.
 
 **Steps:**
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
   - The stub's reply is one `choices` message with the 8 options from the spec. The locations option is left out for a one-location user. Ids are `tpl:<intent>`. Every label fits in 24 characters, including "Semana vs anterior".
   - Each `tpl:<intent>` runs its fixed arguments and returns `route="template"`.
   - An unknown `tpl:foo`, and `tpl:compare_locations` from a one-location user, go to the broker.
-- [ ] **Steps 2-4:** FAIL, implement, PASS + mypy.
-- [ ] **Step 5: Commit** `MR-26: fallback menu and template taps`.
+- [x] **Steps 2-4:** FAIL, implement, PASS + mypy.
+- [x] **Step 5: Commit** `MR-26: fallback menu and template taps`.
+
+**Result (2026-11-04):**
+- Red: 10 failed.
+- Green: `uv run pytest apps/api` gives 249 passed and 16 skipped; mypy and ruff are clean.
+- The menu table (`MENU`, `menu(locations)`) lives in `router.py`. The stub broker and `answer()` both read it, so a button and its tap cannot drift apart.
+- The Task 2 stub test now expects the `choices` message.
 
 **Acceptance:** every menu option is answered by a template, and no button is left without an answer.
 **Dependencies:** Tasks 3-6 (the menu needs every intent). **Scope:** S.

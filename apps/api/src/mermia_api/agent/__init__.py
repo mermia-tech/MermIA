@@ -10,7 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from mermia_api.agent.broker import Broker
-from mermia_api.agent.router import Match, route
+from mermia_api.agent.router import Match, menu, route
 from mermia_api.agent.templates import no_data, render
 from mermia_contracts.agent import AgentRequest, AgentResponse, AgentRoute, TextMsg
 from mermia_contracts.rpc import RPCS, RpcEnvelope, RpcErrorCode
@@ -29,7 +29,11 @@ def answer(
     loads them); a mismatch is a caller bug and must not be answered with a wrong scope."""
     if set(locations) != set(request.location_ids):
         raise ValueError("locations must name exactly the request's location_ids")
-    match = route(request.input.text, locations) if request.input.type == "text" else None
+    match = None
+    if request.input.type == "text":
+        match = route(request.input.text, locations)
+    elif request.input.type == "action" and request.input.action_id in menu(locations):
+        _, match = menu(locations)[request.input.action_id]
     if match is None:
         return broker(request, locations)
     return _template(match, locations, rpc)

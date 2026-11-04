@@ -265,6 +265,65 @@ _SPECIFIC: tuple[tuple[tuple[str, ...], Parser], ...] = (
 )
 
 
+# The fallback menu (spec: Fallback): each option's label and the call a tap runs.
+MENU: dict[Intent, tuple[str, Match]] = {
+    "sales_yesterday": (
+        "Ventas de ayer",
+        Match("sales_yesterday", "get_sales_summary", {"period": "yesterday"}),
+    ),
+    "sales_period": (
+        "Ventas semana pasada",
+        Match("sales_period", "get_sales_summary", {"period": "last_week"}),
+    ),
+    "compare_periods": (
+        "Semana vs anterior",
+        Match(
+            "compare_periods",
+            "compare_periods",
+            {"metric": "net_sales", "period_a": "last_week", "period_b": "prev_week"},
+        ),
+    ),
+    "top_dishes": (
+        "Top 5 platillos del mes",
+        Match(
+            "top_dishes",
+            "get_top_dishes",
+            {"period": "this_month", "metric": "units", "order": "desc", "limit": 5},
+        ),
+    ),
+    "food_cost": (
+        "Food cost de ayer",
+        Match("food_cost", "get_food_cost_pct", {"period": "yesterday"}),
+    ),
+    "compare_locations": (
+        "Ventas por sucursal",
+        Match(
+            "compare_locations",
+            "compare_locations",
+            {"metric": "net_sales", "period": "last_week"},
+        ),
+    ),
+    "payment_methods": (
+        "Formas de pago de ayer",
+        Match(
+            "payment_methods",
+            "get_sales_breakdown",
+            {"period": "yesterday", "by": "payment_method"},
+        ),
+    ),
+    "data_status": ("¿Datos al día?", Match("data_status", "get_data_status", {})),
+}
+
+
+def menu(locations: Mapping[UUID, str]) -> dict[str, tuple[str, Match]]:
+    """The menu options this user can tap, by action id (`tpl:<intent>`)."""
+    return {
+        f"tpl:{intent}": option
+        for intent, option in MENU.items()
+        if intent != "compare_locations" or len(locations) > 1
+    }
+
+
 def _take(words: list[str], phrases: Iterable[str]) -> list[str]:
     """Removes every whole-word occurrence of `phrases` from `words`, longest phrase first, and
     returns the phrases found (one entry per occurrence)."""
