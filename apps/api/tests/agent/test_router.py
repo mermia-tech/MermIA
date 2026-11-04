@@ -411,3 +411,12 @@ def test_locations_and_payments_not_sure_means_no_match(
     text: str, el_guero: dict[UUID, str]
 ) -> None:
     assert route(text, el_guero) is None
+
+
+def test_a_payment_method_on_a_sales_question_gets_the_breakdown(
+    el_guero: dict[UUID, str],
+) -> None:
+    # the breakdown holds that exact figure (spec D6, decided at Checkpoint B)
+    match = route("¿cuánto vendí ayer en efectivo?", el_guero)
+    assert match is not None
+    assert match.args == {"period": "yesterday", "by": "payment_method"}
