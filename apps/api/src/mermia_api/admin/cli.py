@@ -1,12 +1,12 @@
 """CLI for concierge onboarding (MR-30):
 
-    uv run python -m mermia_api.admin <spec.yaml> [--dry-run] [--auth-users] [--allow-remote-auth]
+    uv run python -m mermia_api.admin <spec.yaml> --operator <handle> [--dry-run]
 
 Connects with MERMIA_DB_URL (or --db-url): the postgres connection, never a client key. One
-transaction; --dry-run applies everything and rolls it back. --auth-users also needs
-MERMIA_API_URL and MERMIA_SERVICE_ROLE_KEY and is skipped in a dry run. Prints the database as
-host:port/dbname (never the password) and phone numbers masked. Exit codes: 0 done, 1 refused
-(nothing saved), 2 bad arguments or an invalid spec.
+transaction; --dry-run applies everything and rolls it back. --operator (who runs it) goes into
+every audit row's request_id. Prints the database as host:port/dbname (never the password) and
+phone numbers masked. Exit codes: 0 done, 1 refused (nothing saved), 2 bad arguments or an
+invalid spec. Supabase Auth users (Phase 2 dashboard) are not created here.
 """
 
 from __future__ import annotations
@@ -21,8 +21,7 @@ import psycopg
 from psycopg.conninfo import conninfo_to_dict
 from pydantic import ValidationError
 
-from mermia_api.admin.auth import AuthAdmin, AuthAdminError, SupabaseAuthAdmin
-from mermia_api.admin.onboard import OnboardingError, Summary, onboard
+from mermia_api.admin.onboard import OnboardingError, Summary, check_operator, onboard
 from mermia_api.admin.spec import OnboardingSpec, load_spec
 
 EXIT_OK, EXIT_REFUSED, EXIT_USAGE = 0, 1, 2
@@ -45,6 +44,9 @@ def render(summary: Summary, db: str, dry_run: bool) -> str:
         detail = f"  {c.detail}" if c.detail else ""
         lines.append(f"  {c.entity:<10} {c.label:<{width}}  {c.action:<9}{detail}".rstrip())
     lines += [f"  note: {n}" for n in summary.notes]
+    created = any(c.entity == "tenant" and c.action == "created" for c in summary.changes)
+    if created and not dry_run:
+        lines.append(f"  next: add tenant.id: {summary.tenant_id} to the spec before rerunning it")
     counts = {
         a: sum(c.action == a for c in summary.changes) for a in ("created", "updated", "unchanged")
     }
@@ -64,29 +66,24 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         description="Creates or updates a tenant, its locations and its users from a spec file.",
     )
     parser.add_argument("spec", type=Path, help="YAML or JSON spec (see admin/example.yaml)")
+    parser.add_argument(
+        "--operator", required=True, type=operator, help="your handle, recorded in the audit log"
+    )
     parser.add_argument("--dry-run", action="store_true", help="apply, report, then roll back")
-    parser.add_argument(
-        "--auth-users", action="store_true", help="link users with an email to Supabase Auth"
-    )
-    parser.add_argument(
-        "--allow-remote-auth", action="store_true", help="allow a non-loopback MERMIA_API_URL"
-    )
     parser.add_argument("--db-url", default=os.environ.get("MERMIA_DB_URL"))
     return parser.parse_args(argv)
 
 
-def auth_client(args: argparse.Namespace) -> AuthAdmin | None:
-    if not args.auth_users or args.dry_run:
-        return None
-    url, key = os.environ.get("MERMIA_API_URL"), os.environ.get("MERMIA_SERVICE_ROLE_KEY")
-    if not url or not key:
-        raise ValueError("--auth-users needs MERMIA_API_URL and MERMIA_SERVICE_ROLE_KEY")
-    return SupabaseAuthAdmin(url, key, allow_remote=args.allow_remote_auth)
+def operator(value: str) -> str:
+    try:
+        return check_operator(value)
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(str(e)) from None
 
 
-def run(args: argparse.Namespace, spec: OnboardingSpec, auth: AuthAdmin | None) -> Summary:
+def run(args: argparse.Namespace, spec: OnboardingSpec) -> Summary:
     with psycopg.connect(args.db_url) as conn, conn.transaction(force_rollback=args.dry_run):
-        return onboard(conn, spec, auth=auth)
+        return onboard(conn, spec, operator=args.operator)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -96,7 +93,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         return EXIT_USAGE
     try:
         spec = load_spec(args.spec)
-        auth = auth_client(args)
     except ValidationError as e:
         print(f"{args.spec.name}: invalid spec", *validation_lines(e), sep="\n", file=sys.stderr)
         return EXIT_USAGE
@@ -104,8 +100,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"{args.spec.name}: {e}", file=sys.stderr)
         return EXIT_USAGE
     try:
-        summary = run(args, spec, auth)
-    except (OnboardingError, AuthAdminError) as e:
+        summary = run(args, spec)
+    except OnboardingError as e:
         print(f"refused, nothing saved: {e}", file=sys.stderr)
         return EXIT_REFUSED
     except psycopg.Error as e:
@@ -113,6 +109,4 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"database error, nothing saved: {reason}", file=sys.stderr)
         return EXIT_REFUSED
     print(render(summary, db_label(args.db_url), args.dry_run))
-    if args.auth_users and args.dry_run:
-        print("  note: --auth-users is skipped in a dry run")
     return EXIT_OK

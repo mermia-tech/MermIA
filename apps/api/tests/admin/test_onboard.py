@@ -24,7 +24,9 @@ from mermia_api.admin.spec import OnboardingSpec
 pytestmark = pytest.mark.db
 
 EL_GUERO = UUID("03299e41-28bd-5779-bcc6-0e5e76580fad")
+EL_GUERO_CENTRO = "705e8e51-376b-5785-adbb-405eff4e2a22"
 RODRIGO_PHONE = "+525512345001"  # El Güero's owner in the seed
+OPERATOR = "test-operator"
 
 SPEC: dict[str, Any] = {
     "tenant": {"name": "Taquería La Prueba", "rfc": "TLP200101AB1"},
@@ -42,6 +44,15 @@ SPEC: dict[str, Any] = {
 
 def make(**over: Any) -> OnboardingSpec:
     return OnboardingSpec.model_validate({**SPEC, **over})
+
+
+def again(first: Summary, **over: Any) -> OnboardingSpec:
+    """The spec of a rerun: the tenant pinned by the id the first run printed."""
+    return make(tenant={**SPEC["tenant"], "id": str(first.tenant_id)}, **over)
+
+
+def apply(conn: psycopg.Connection[Any], spec: OnboardingSpec) -> Summary:
+    return onboard(conn, spec, operator=OPERATOR)
 
 
 @pytest.fixture
@@ -99,7 +110,7 @@ def as_member(conn: psycopg.Connection[Any], tenant: UUID, phone: str) -> Iterat
 def test_onboard_creates_the_tenant_locations_users_and_sources(
     conn: psycopg.Connection[Any],
 ) -> None:
-    s = onboard(conn, make())
+    s = apply(conn, make())
     t = s.tenant_id
     assert one(conn, "select name from public.tenant where id = %s", t) == "Taquería La Prueba"
     locs = dict(conn.execute("select name, id from public.location where tenant_id = %s", (t,)))
@@ -114,8 +125,7 @@ def test_onboard_creates_the_tenant_locations_users_and_sources(
         (t,),
     ).fetchall()
     assert rows == [
-        ("Ana", "admin", True, None,
-         ["ingredient_price.set", "recipe.upsert", "menu_item_price.set"]),
+        ("Ana", "admin", True, None, ["ingredient_price.set", "menu_item_price.set"]),
         ("Beto", "manager", False, [locs["Roma"]],
          ["import_batch.approve", "import_batch.rollback"]),
         ("Rosa", "owner", True, None, [
@@ -135,7 +145,7 @@ def test_onboard_creates_the_tenant_locations_users_and_sources(
 def test_the_whatsapp_identity_is_verified_and_keyed_by_wa_id(
     conn: psycopg.Connection[Any],
 ) -> None:
-    onboard(conn, make())
+    apply(conn, make())
     row = conn.execute(
         """select ci.channel::text, ci.external_id, ci.verified_at is not null
            from public.channel_identity ci where ci.user_id = %s""",
@@ -145,13 +155,13 @@ def test_the_whatsapp_identity_is_verified_and_keyed_by_wa_id(
 
 
 def test_a_rerun_creates_nothing_and_audits_nothing(conn: psycopg.Connection[Any]) -> None:
-    first = onboard(conn, make())
+    first = apply(conn, make())
     audit = one(conn, "select count(*) from public.audit_log where tenant_id = %s", first.tenant_id)
     counts = [
         one(conn, f"select count(*) from public.{table}")
         for table in ("tenant", "location", "app_user", "membership", "channel_identity", "source")
     ]
-    second = onboard(conn, make())
+    second = apply(conn, again(first))
     assert second.tenant_id == first.tenant_id
     assert actions(second) == {"unchanged": len(first.changes)}
     assert counts == [
@@ -166,7 +176,7 @@ def test_a_rerun_creates_nothing_and_audits_nothing(conn: psycopg.Connection[Any
 def test_every_created_row_is_audited_without_phone_numbers(
     conn: psycopg.Connection[Any],
 ) -> None:
-    s = onboard(conn, make())
+    s = apply(conn, make())
     rows = conn.execute(
         """select action, entity_type, actor_kind::text, request_id, after::text
            from public.audit_log where tenant_id = %s""",
@@ -174,30 +184,30 @@ def test_every_created_row_is_audited_without_phone_numbers(
     ).fetchall()
     assert len(rows) == len(s.changes) == s.audit_rows
     assert {r[2] for r in rows} == {"system"}
-    assert {r[3] for r in rows} == {f"mermia_api.admin:{s.run_id}"}
+    assert {r[3] for r in rows} == {f"mermia_api.admin:{OPERATOR}:{s.run_id}"}
     assert ("admin.tenant.create", "tenant") in {(r[0], r[1]) for r in rows}
     assert not any("5500000" in r[4] for r in rows), "no phone or wa_id in the audit trail"
 
 
 def test_a_changed_spec_updates_in_place(conn: psycopg.Connection[Any]) -> None:
-    first = onboard(conn, make())
+    first = apply(conn, make())
     users = [
         SPEC["users"][0],
-        {**SPEC["users"][1], "locations": ["Centro", "Roma"], "name": "Alberto"},
+        {**SPEC["users"][1], "locations": ["Centro", "Roma"], "name": "BETO"},
         {**SPEC["users"][2], "role": "manager", "locations": ["Centro"]},
     ]
     locations = [{**SPEC["locations"][0], "address": "Calle 2"}, SPEC["locations"][1]]
-    second = onboard(conn, make(users=users, locations=locations))
+    second = apply(conn, again(first, users=users, locations=locations))
     assert second.tenant_id == first.tenant_id
     updated = {(c.entity, c.label) for c in second.changes if c.action == "updated"}
     assert updated == {
         ("location", "Centro"),
-        ("user", "Alberto"),
-        ("membership", "Alberto"),
+        ("user", "BETO"),
+        ("membership", "BETO"),
         ("membership", "Ana"),
     }
     beto = user_id(conn, "+525500000002")
-    assert one(conn, "select name from public.app_user where id = %s", beto) == "Alberto"
+    assert one(conn, "select name from public.app_user where id = %s", beto) == "BETO"
     scope = one(
         conn,
         "select cardinality(location_ids) from public.membership where user_id = %s",
@@ -214,25 +224,43 @@ def test_a_changed_spec_updates_in_place(conn: psycopg.Connection[Any]) -> None:
 def test_a_member_left_out_of_the_spec_is_kept_and_reported(
     conn: psycopg.Connection[Any],
 ) -> None:
-    onboard(conn, make())
-    s = onboard(conn, make(users=SPEC["users"][:1]))
-    assert any("Beto" in n and "not in the spec" in n for n in s.notes)
+    first = apply(conn, make())
+    s = apply(conn, again(first, users=SPEC["users"][:1]))
+    assert any("Beto" in n and "keeps their access" in n for n in s.notes), s.notes
     assert (
         one(conn, "select count(*) from public.membership where tenant_id = %s", s.tenant_id) == 3
     )
 
 
-def test_the_tenant_is_found_by_name_however_it_is_written(
+def test_a_rerun_without_the_tenant_id_is_refused(conn: psycopg.Connection[Any]) -> None:
+    first = apply(conn, make())
+    hint = f"add tenant.id: {first.tenant_id}"
+    assert hint in cli.render(first, "db", dry_run=False)
+    assert hint not in cli.render(first, "db", dry_run=True), "a dry run's id is discarded"
+    with pytest.raises(OnboardingError, match=f"already exists.*{first.tenant_id}"):
+        apply(conn, make(tenant={"name": "taqueria la prueba"}))
+
+
+def test_a_new_restaurant_named_like_an_existing_tenant_is_refused(
     conn: psycopg.Connection[Any],
 ) -> None:
-    first = onboard(conn, make())
-    again = onboard(conn, make(tenant={"name": "taqueria la prueba"}))
-    assert again.tenant_id == first.tenant_id
+    """Skeptic probe h1.yaml: a name match must not hand El Güero to a stranger."""
+    spec = OnboardingSpec.model_validate(
+        {
+            "tenant": {"name": "TAQUERIA el guero", "rfc": "XYZ200101AB1"},
+            "locations": [{"name": "Sucursal Nueva"}],
+            "users": [{"name": "Extraño", "phone": "+525599990001", "role": "owner"}],
+        }
+    )
+    with pytest.raises(OnboardingError, match="already exists"):
+        apply(conn, spec)
+    assert one(conn, "select rfc from public.tenant where id = %s", EL_GUERO) == "TEG190415MX2"
+    assert one(conn, "select count(*) from public.membership where tenant_id = %s", EL_GUERO) == 3
 
 
 def test_a_pinned_id_renames_the_tenant(conn: psycopg.Connection[Any]) -> None:
-    first = onboard(conn, make())
-    renamed = onboard(conn, make(tenant={"id": str(first.tenant_id), "name": "La Prueba 2"}))
+    first = apply(conn, make())
+    renamed = apply(conn, make(tenant={"id": str(first.tenant_id), "name": "La Prueba 2"}))
     assert renamed.tenant_id == first.tenant_id
     assert one(conn, "select name from public.tenant where id = %s", first.tenant_id) == (
         "La Prueba 2"
@@ -241,15 +269,15 @@ def test_a_pinned_id_renames_the_tenant(conn: psycopg.Connection[Any]) -> None:
 
 def test_a_pinned_id_that_does_not_exist_is_refused(conn: psycopg.Connection[Any]) -> None:
     with pytest.raises(OnboardingError, match="no tenant with id"):
-        onboard(conn, make(tenant={"id": "0193f000-0000-7000-8000-000000000000", "name": "X"}))
+        apply(conn, make(tenant={"id": "0193f000-0000-7000-8000-000000000000", "name": "X"}))
 
 
 def test_two_tenants_with_the_same_name_need_a_pinned_id(conn: psycopg.Connection[Any]) -> None:
     conn.execute(
         "insert into public.tenant (name) values ('Taquería La Prueba'), ('TAQUERIA LA PRUEBA')"
     )
-    with pytest.raises(OnboardingError, match="2 tenants"):
-        onboard(conn, make())
+    with pytest.raises(OnboardingError, match="already exists"):
+        apply(conn, make())
 
 
 def test_a_phone_of_another_tenants_user_with_another_name_is_refused(
@@ -257,15 +285,70 @@ def test_a_phone_of_another_tenants_user_with_another_name_is_refused(
 ) -> None:
     users = [{"name": "Rosa", "phone": RODRIGO_PHONE, "role": "owner"}]
     with pytest.raises(OnboardingError, match=r"\+52\*{6}5001 already belongs to"):
-        onboard(conn, make(users=users))
+        apply(conn, make(users=users))
     assert one(conn, "select name from public.app_user where phone_e164 = %s", RODRIGO_PHONE) == (
         "Rodrigo"
     )
 
 
+def test_a_phone_of_another_tenants_user_with_the_same_name_needs_existing_user(
+    conn: psycopg.Connection[Any],
+) -> None:
+    """Skeptic probe h2.yaml: a typo that hits another 'Rodrigo' must not go through."""
+    users = [
+        {"name": "Rodrigo", "phone": RODRIGO_PHONE, "role": "owner", "email": "otro@example.com"}
+    ]
+    with pytest.raises(OnboardingError, match="existing_user: true"):
+        apply(conn, make(users=users))
+
+
+def test_a_phone_with_another_name_is_refused_even_without_another_tenant(
+    conn: psycopg.Connection[Any],
+) -> None:
+    conn.execute(
+        "insert into public.app_user (name, phone_e164) values ('Huérfano', '+525599990002')"
+    )
+    users = [{"name": "Rosa", "phone": "+525599990002", "role": "owner"}]
+    with pytest.raises(OnboardingError, match="already belongs to"):
+        apply(conn, make(users=users))
+
+
+def test_existing_user_for_an_unknown_phone_is_refused(conn: psycopg.Connection[Any]) -> None:
+    users = [{"name": "Rosa", "phone": "+525599990003", "role": "owner", "existing_user": True}]
+    with pytest.raises(OnboardingError, match="no user has"):
+        apply(conn, make(users=users))
+
+
+def test_a_shared_users_name_and_email_are_never_changed(conn: psycopg.Connection[Any]) -> None:
+    conn.execute(
+        "update public.app_user set email = 'rodrigo@elguero.mx' where phone_e164 = %s",
+        (RODRIGO_PHONE,),
+    )
+    users = [
+        {"name": "RODRIGO", "phone": RODRIGO_PHONE, "role": "owner", "existing_user": True,
+         "email": "otro@example.com"},
+    ]  # fmt: skip
+    s = apply(conn, make(users=users))
+    row = conn.execute(
+        "select name, email from public.app_user where phone_e164 = %s", (RODRIGO_PHONE,)
+    ).fetchone()
+    assert row == ("Rodrigo", "rodrigo@elguero.mx")
+    assert ("user", "unchanged") in {(c.entity, c.action) for c in s.changes}
+    assert any("email" in n and "not changed" in n for n in s.notes), s.notes
+    assert (
+        one(
+            conn,
+            """select count(*) from public.audit_log
+               where tenant_id = %s and entity_type = 'app_user'""",
+            EL_GUERO,
+        )
+        == 0
+    ), "nothing about El Güero's user is written to El Güero's audit"
+
+
 def test_the_same_person_can_join_a_second_tenant(conn: psycopg.Connection[Any]) -> None:
-    users = [{"name": "Rodrigo", "phone": RODRIGO_PHONE, "role": "owner"}]
-    s = onboard(conn, make(users=users))
+    users = [{"name": "Rodrigo", "phone": RODRIGO_PHONE, "role": "owner", "existing_user": True}]
+    s = apply(conn, make(users=users))
     rodrigo = user_id(conn, RODRIGO_PHONE)
     tenants = {
         r[0]
@@ -278,9 +361,68 @@ def test_the_same_person_can_join_a_second_tenant(conn: psycopg.Connection[Any])
 
 
 def test_a_location_of_another_tenant_cannot_be_pinned(conn: psycopg.Connection[Any]) -> None:
-    centro = "705e8e51-376b-5785-adbb-405eff4e2a22"  # El Güero's
     with pytest.raises(OnboardingError, match="no location with id"):
-        onboard(conn, make(locations=[{"id": centro, "name": "Centro"}, SPEC["locations"][1]]))
+        apply(
+            conn, make(locations=[{"id": EL_GUERO_CENTRO, "name": "Centro"}, SPEC["locations"][1]])
+        )
+
+
+def test_a_mexican_phone_with_the_old_1_finds_the_same_user(conn: psycopg.Connection[Any]) -> None:
+    """Skeptic probe m1.yaml: +52 1 55... is Rodrigo, not a second app_user."""
+    users = [{"name": "Pepe", "phone": "+52 1 55 1234 5001", "role": "owner"}]
+    with pytest.raises(OnboardingError, match="already belongs to 'Rodrigo'"):
+        apply(conn, make(users=users))
+
+
+def test_two_spec_locations_resolving_to_one_row_are_refused(
+    conn: psycopg.Connection[Any],
+) -> None:
+    """Skeptic probe m2.yaml: renaming Centro to Norte and listing Centro again."""
+    spec = OnboardingSpec.model_validate(
+        {
+            "tenant": {"id": str(EL_GUERO), "name": "Taquería El Güero"},
+            "locations": [
+                {"id": EL_GUERO_CENTRO, "name": "Norte"},
+                {"name": "Centro"},
+                {"name": "Polanco"},
+            ],
+            "users": [{"name": "Rodrigo", "phone": RODRIGO_PHONE, "role": "owner"}],
+        }
+    )
+    with pytest.raises(OnboardingError, match="same location"):
+        apply(conn, spec)
+
+
+def test_leaving_the_timezone_out_keeps_the_stored_one(conn: psycopg.Connection[Any]) -> None:
+    conn.execute(
+        "update public.location set timezone = 'America/Cancun' where id = %s", (EL_GUERO_CENTRO,)
+    )
+    spec = OnboardingSpec.model_validate(
+        {
+            "tenant": {"id": str(EL_GUERO), "name": "Taquería El Güero"},
+            "locations": [{"name": "Centro"}, {"name": "Polanco"}, {"name": "Nueva"}],
+            "users": [{"name": "Rodrigo", "phone": RODRIGO_PHONE, "role": "owner"}],
+        }
+    )
+    apply(conn, spec)
+    zones = dict(
+        conn.execute("select name, timezone from public.location where tenant_id = %s", (EL_GUERO,))
+    )
+    assert zones["Centro"] == "America/Cancun"
+    assert zones["Nueva"] == "America/Mexico_City", "the default applies to a new location"
+
+
+def test_the_audit_says_an_email_changed_without_the_email(conn: psycopg.Connection[Any]) -> None:
+    first = apply(conn, make())
+    users = [{**SPEC["users"][0], "email": "rosa2@example.com"}, *SPEC["users"][1:]]
+    apply(conn, again(first, users=users))
+    rows = conn.execute(
+        """select before::text, after::text, after ->> 'email_changed' from public.audit_log
+           where tenant_id = %s and entity_type = 'app_user' order by ts, id""",
+        (first.tenant_id,),
+    ).fetchall()
+    assert not any("example.com" in (b or "") + a for b, a, _ in rows), rows
+    assert [r[2] for r in rows if r[2]] == ["true", "true"], "Rosa created with one, then changed"
 
 
 def test_onboarding_el_guero_again_changes_nothing_but_adds_sources_and_identities(
@@ -289,7 +431,7 @@ def test_onboarding_el_guero_again_changes_nothing_but_adds_sources_and_identiti
     """The seed's restaurant as a spec: tenant, locations, users and memberships all match."""
     el_guero = OnboardingSpec.model_validate(
         {
-            "tenant": {"name": "Taquería El Güero"},
+            "tenant": {"id": str(EL_GUERO), "name": "Taquería El Güero"},
             "locations": [{"name": "Centro"}, {"name": "Polanco"}],
             "users": [
                 {"name": "Rodrigo", "phone": RODRIGO_PHONE, "role": "owner"},
@@ -300,7 +442,7 @@ def test_onboarding_el_guero_again_changes_nothing_but_adds_sources_and_identiti
             ],
         }
     )  # fmt: skip
-    s = onboard(conn, el_guero)
+    s = apply(conn, el_guero)
     assert s.tenant_id == EL_GUERO
     changed = {(c.entity, c.action) for c in s.changes if c.action != "unchanged"}
     assert changed == {("whatsapp", "created"), ("source", "created")}, (
@@ -311,7 +453,7 @@ def test_onboarding_el_guero_again_changes_nothing_but_adds_sources_and_identiti
 def test_owner_sees_only_the_new_tenant_and_all_its_locations(
     conn: psycopg.Connection[Any],
 ) -> None:
-    s = onboard(conn, make())
+    s = apply(conn, make())
     with as_member(conn, s.tenant_id, "+525500000001"):
         assert [r[0] for r in conn.execute("select id from public.tenant")] == [s.tenant_id]
         assert {r[0] for r in conn.execute("select name from public.location")} == {
@@ -324,7 +466,7 @@ def test_owner_sees_only_the_new_tenant_and_all_its_locations(
 
 
 def test_manager_sees_only_their_location(conn: psycopg.Connection[Any]) -> None:
-    s = onboard(conn, make())
+    s = apply(conn, make())
     with as_member(conn, s.tenant_id, "+525500000002"):
         assert [r[0] for r in conn.execute("select id from public.tenant")] == [s.tenant_id]
         assert [r[0] for r in conn.execute("select name from public.location")] == ["Roma"]
@@ -334,7 +476,7 @@ def test_manager_sees_only_their_location(conn: psycopg.Connection[Any]) -> None
 
 
 def test_identity_tables_stay_hidden_from_the_new_owner(conn: psycopg.Connection[Any]) -> None:
-    s = onboard(conn, make())
+    s = apply(conn, make())
     with as_member(conn, s.tenant_id, "+525500000001"):
         for table in ("membership", "app_user", "channel_identity"):
             with pytest.raises(psycopg.errors.InsufficientPrivilege), conn.transaction():
@@ -347,7 +489,7 @@ def test_the_cli_dry_run_saves_nothing(tmp_path: Path, capsys: pytest.CaptureFix
     url = os.environ["MERMIA_DB_URL"]
     with psycopg.connect(url) as c:
         before = one(c, "select count(*) from public.tenant")
-    assert cli.main([str(path), "--dry-run"]) == 0
+    assert cli.main([str(path), "--dry-run", "--operator", OPERATOR]) == 0
     out = capsys.readouterr().out
     with psycopg.connect(url) as c:
         assert one(c, "select count(*) from public.tenant") == before
@@ -363,7 +505,7 @@ def test_the_cli_reports_a_refusal_without_a_traceback(
     path.write_text(
         json.dumps({**SPEC, "users": [{"name": "X", "phone": RODRIGO_PHONE, "role": "owner"}]})
     )
-    assert cli.main([str(path), "--dry-run"]) == 1
+    assert cli.main([str(path), "--dry-run", "--operator", OPERATOR]) == 1
     err = capsys.readouterr().err
     assert "already belongs to" in err and RODRIGO_PHONE not in err
 
@@ -373,5 +515,15 @@ def test_the_cli_reports_an_invalid_spec(
 ) -> None:
     path = tmp_path / "spec.json"
     path.write_text(json.dumps({**SPEC, "users": []}))
-    assert cli.main([str(path), "--dry-run"]) == 2
+    assert cli.main([str(path), "--dry-run", "--operator", OPERATOR]) == 2
     assert "users" in capsys.readouterr().err
+
+
+def test_the_cli_needs_an_operator(tmp_path: Path) -> None:
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(SPEC))
+    with pytest.raises(SystemExit) as exit_:
+        cli.main([str(path), "--dry-run"])
+    assert exit_.value.code == 2
+    with pytest.raises(SystemExit):
+        cli.main([str(path), "--dry-run", "--operator", "two words"])

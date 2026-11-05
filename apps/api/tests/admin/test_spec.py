@@ -11,7 +11,6 @@ from mermia_api.admin.spec import (
     OnboardingSpec,
     load_spec,
     mask_phone,
-    wa_id,
 )
 from mermia_contracts.pending import PendingKind
 
@@ -42,7 +41,8 @@ def test_a_valid_spec_gets_the_role_defaults() -> None:
     assert not manager.all_locations and manager.location_names == ("Roma",)
     assert manager.approvals == ("import_batch.approve", "import_batch.rollback")
     assert s.tenant.rfc == "TLP200101AB1", "RFC is stored upper case"
-    assert s.locations[0].timezone == "America/Mexico_City"
+    assert s.locations[0].timezone is None, "the default is applied only when inserting"
+    assert not owner.existing_user
 
 
 def test_admin_and_support_defaults() -> None:
@@ -54,7 +54,9 @@ def test_admin_and_support_defaults() -> None:
     s = OnboardingSpec.model_validate(spec(users=users))
     admin, support = s.users[2:]
     assert admin.all_locations
-    assert admin.approvals == ("ingredient_price.set", "recipe.upsert", "menu_item_price.set")
+    assert admin.approvals == ("ingredient_price.set", "menu_item_price.set"), (
+        "only the owner approves recipe.upsert by default (MR-25)"
+    )
     assert support.all_locations and support.approvals == ()
 
 
@@ -153,5 +155,49 @@ def test_masking_keeps_the_country_code_and_last_four() -> None:
     assert "1234" not in mask_phone("+525512345001")
 
 
-def test_wa_id_is_the_number_without_plus() -> None:
-    assert wa_id("+525512345001") == "525512345001"
+def test_a_mexican_phone_is_stored_without_the_old_mobile_1() -> None:
+    users = [{"name": "Rosa", "phone": "+52 1 55 0000 0001", "role": "owner"}]
+    (owner,) = OnboardingSpec.model_validate(spec(users=users)).users
+    assert owner.phone == "+525500000001"
+
+
+def test_the_same_phone_written_with_and_without_the_1_is_listed_twice() -> None:
+    users = [
+        {"name": "Rosa", "phone": "+525500000001", "role": "owner"},
+        {"name": "Rosa2", "phone": "+5215500000001", "role": "admin"},
+    ]
+    with pytest.raises(ValidationError, match="phone listed twice"):
+        OnboardingSpec.model_validate(spec(users=users))
+
+
+def test_a_location_id_pinned_twice_is_refused() -> None:
+    pin = "0193f000-0000-7000-8000-000000000001"
+    locations = [{"id": pin, "name": "Centro"}, {"id": pin, "name": "Roma"}]
+    with pytest.raises(ValidationError, match="location id listed twice"):
+        OnboardingSpec.model_validate(spec(locations=locations))
+
+
+def test_an_email_listed_twice_is_refused() -> None:
+    users = [
+        {"name": "Rosa", "phone": "+525500000001", "role": "owner", "email": "a@example.com"},
+        {"name": "Beto", "phone": "+525500000002", "role": "admin", "email": "A@example.com"},
+    ]
+    with pytest.raises(ValidationError, match="email listed twice"):
+        OnboardingSpec.model_validate(spec(users=users))
+
+
+def test_existing_user_marks_a_person_of_another_tenant() -> None:
+    users = [{"name": "Rosa", "phone": "+525500000001", "role": "owner", "existing_user": True}]
+    (owner,) = OnboardingSpec.model_validate(spec(users=users)).users
+    assert owner.existing_user
+
+
+def test_a_duplicate_yaml_key_is_refused(tmp_path: Path) -> None:
+    path = tmp_path / "spec.yaml"
+    path.write_text(
+        "tenant: {name: X}\nlocations: [{name: A}]\n"
+        "users:\n  - name: R\n    phone: '+525500000001'\n    role: manager\n"
+        "    locations: all\n    role: owner\n"
+    )
+    with pytest.raises(ValueError, match="duplicate key 'role'"):
+        load_spec(path)

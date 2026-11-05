@@ -62,18 +62,20 @@ specs out of git because they hold phone numbers):
 
 ```bash
 export MERMIA_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres   # the admin (postgres) URL
-uv run python -m mermia_api.admin pilot.yaml --dry-run   # report what would change, save nothing
-uv run python -m mermia_api.admin pilot.yaml             # apply, in one transaction
+uv run python -m mermia_api.admin pilot.yaml --operator <you> --dry-run   # report, save nothing
+uv run python -m mermia_api.admin pilot.yaml --operator <you>             # apply, in one transaction
 ```
 
 Each user gets an `app_user`, a verified WhatsApp identity (so the channel can resolve the
 sender) and a `membership`: `owner`, `admin` and `support` see every location by default; a
-`manager` lists theirs. Rerunning the same file changes nothing; edit it and rerun to update.
-Nothing is deleted, every change writes an `audit_log` row, and phone numbers are printed masked.
-`--auth-users` also links users that have an email to Supabase Auth (Phase 2 dashboard; needs
-`MERMIA_API_URL` and `MERMIA_SERVICE_ROLE_KEY`, loopback only unless `--allow-remote-auth`).
-A real run against the local database adds a second tenant that some seed tests do not expect;
-`supabase db reset` brings it back to the seed.
+`manager` lists theirs. The first run creates the tenant and prints its id: add it to the spec
+as `tenant.id` before rerunning (a spec without an id is refused when a tenant with that name
+exists). Rerunning the same file then changes nothing; edit it and rerun to update. A phone
+that already belongs to someone under another name is refused, and a member of another tenant
+needs `existing_user: true`. Nothing is deleted (members left out of the spec keep their
+access; the run warns), every change writes an `audit_log` row with your `--operator` handle,
+and phone numbers are printed masked. A real run against the local database adds a second
+tenant that some seed tests do not expect; `supabase db reset` brings it back to the seed.
 
 ## Contracts package
 

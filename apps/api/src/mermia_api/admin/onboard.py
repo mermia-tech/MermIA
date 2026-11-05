@@ -3,16 +3,21 @@
 Runs on the postgres connection (the admin URL): the identity tables are class X, so no client
 role can write them, and the script is the concierge path that does. Natural keys, so a rerun
 creates nothing twice:
-- tenant: its pinned id, or its name after normalize_name (two matches: refused, pin one);
-- location: its pinned id (must be in the tenant), or its normalized name in the tenant;
-- app_user: phone_e164 (unique). A phone whose user has another name and belongs to another
-  tenant is refused: it is most likely a typo that would hand this tenant to someone else;
+- tenant: only its pinned id. Without an id the tenant is created, and a tenant with the same
+  normalized name is refused: a name match must never hand an existing restaurant to a new
+  owner. The CLI prints the id to pin after the first real run;
+- location: its pinned id (must be in the tenant), or its normalized name in the tenant. Two
+  spec entries that resolve to the same row are refused;
+- app_user: phone_e164 (unique, canonical). An existing phone under another name is refused
+  (most likely a typo). A user who is a member of another tenant joins only with
+  `existing_user: true`, and their name and email are never changed (they are shared);
 - membership: (tenant_id, user_id) (unique); channel_identity: (whatsapp, wa_id) (unique);
 - source: one sr_report and one manual source per location (MR-25 decision 4), if missing.
 
-Nothing is deleted: locations and members in the database but not in the spec are kept and
-reported in the notes. Every created or updated row gets an audit_log row (actor_kind system,
-request_id `mermia_api.admin:<run id>`), with no phone number or wa_id in before/after. The
+Nothing is deleted: locations and members in the database but not in the spec are kept, and
+the notes warn that those members keep their access. Every created or updated row gets an
+audit_log row (actor_kind system, request_id `mermia_api.admin:<operator>:<run id>`), with no
+phone number, wa_id or email in before/after (an email change is logged as email_changed). The
 WhatsApp identity is created verified: the operator confirmed the number during onboarding.
 Consent (consent_log) is not recorded here; the user gives it on WhatsApp (MR-29).
 """
@@ -21,6 +26,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -31,20 +37,21 @@ import psycopg
 from psycopg import sql
 from psycopg.types.json import Jsonb
 
-from mermia_api.admin.auth import AuthAdmin
 from mermia_api.admin.spec import (
+    DEFAULT_TIMEZONE,
     LocationSpec,
     OnboardingSpec,
     TenantSpec,
     UserSpec,
     mask_phone,
-    wa_id,
 )
+from mermia_api.phone import wa_id
 from mermia_contracts.keys import normalize_name
 
 ACTOR = "mermia_api.admin"
 SOURCE_KINDS = ("sr_report", "manual")
 LOCK_KEY = "mermia_api.admin"
+OPERATOR = re.compile(r"^[a-z0-9][a-z0-9._-]{1,39}$")
 
 Action = Literal["created", "updated", "unchanged"]
 Conn = psycopg.Connection[Any]
@@ -56,7 +63,6 @@ AUDIT_ENTITY = {
     "user": "app_user",
     "whatsapp": "channel_identity",
     "membership": "membership",
-    "auth": "app_user",
 }
 AUDIT_VERB = {"created": "create", "updated": "update"}
 
@@ -86,8 +92,16 @@ class Summary:
     audit_rows: int
 
 
-def onboard(conn: Conn, spec: OnboardingSpec, *, auth: AuthAdmin | None = None) -> Summary:
+def check_operator(value: str) -> str:
+    """The operator's handle for the audit trail: lower case, 2-40 of a-z 0-9 . _ -."""
+    if not OPERATOR.match(value):
+        raise ValueError("operator must be a short handle like 'guillermo' (a-z, 0-9, . _ -)")
+    return value
+
+
+def onboard(conn: Conn, spec: OnboardingSpec, *, operator: str) -> Summary:
     """Applies the spec in the caller's transaction; the caller commits or rolls back."""
+    check_operator(operator)
     conn.execute("select pg_advisory_xact_lock(hashtextextended(%s, 0))", (LOCK_KEY,))
     run_id = uuid.uuid4()
     tenant = _tenant(conn, spec.tenant)
@@ -102,12 +116,8 @@ def onboard(conn: Conn, spec: OnboardingSpec, *, auth: AuthAdmin | None = None) 
         user_ids.append(user_id)
         changes.append(_whatsapp(conn, user_id, user))
         changes.append(_membership(conn, tenant.entity_id, user_id, user, loc_ids))
-        if auth is not None:
-            linked = _auth(conn, user_id, user, auth)
-            changes += [linked] if linked else []
-            notes += [] if linked else [f"{user.name}: no email, no auth user"]
     notes += _members_not_in_spec(conn, tenant.entity_id, user_ids)
-    audited = _audit(conn, tenant.entity_id, run_id, changes)
+    audited = _audit(conn, tenant.entity_id, f"{ACTOR}:{operator}:{run_id}", changes)
     return Summary(
         run_id, tenant.entity_id, spec.tenant.name, tuple(changes), tuple(notes), audited
     )
@@ -176,11 +186,13 @@ def _tenant(conn: Conn, spec: TenantSpec) -> Change:
         if not matches:
             raise OnboardingError(f"no tenant with id {spec.id}")
     else:
-        matches = [r for r in rows if normalize_name(r[1]) == normalize_name(spec.name)]
-        if len(matches) > 1:
+        same_name = [str(r[0]) for r in rows if normalize_name(r[1]) == normalize_name(spec.name)]
+        if same_name:
             raise OnboardingError(
-                f"{len(matches)} tenants are named like {spec.name!r}; pin one with tenant.id"
+                f"a tenant named like {spec.name!r} already exists ({', '.join(same_name)});"
+                " to update it, put its id in tenant.id; for a new restaurant, change the name"
             )
+        matches = []
     found = (matches[0][0], {"name": matches[0][1], "rfc": matches[0][2]}) if matches else None
     desired = {"name": spec.name, **_given(rfc=spec.rfc)}
     tid, action, before, after = _upsert(conn, "tenant", found, desired, {})
@@ -207,10 +219,20 @@ def _locations(
     ids: dict[str, UUID] = {}
     for loc in specs:
         found_id = _find_location(rows, loc)
+        if found_id is not None and found_id in ids.values():
+            raise OnboardingError(
+                f"{loc.name!r} and another spec location resolve to the same location"
+                f" ({rows[found_id]['name']!r}); rename in one run, add the new one in the next"
+            )
+        timezone = loc.timezone or (None if found_id else DEFAULT_TIMEZONE)
         desired = {
             "name": loc.name,
-            "timezone": loc.timezone,
-            **_given(address=loc.address, sr_version=loc.sr_version, sr_edition=loc.sr_edition),
+            **_given(
+                timezone=timezone,
+                address=loc.address,
+                sr_version=loc.sr_version,
+                sr_edition=loc.sr_edition,
+            ),
         }
         found = (found_id, rows[found_id]) if found_id else None
         lid, action, before, after = _upsert(
@@ -274,30 +296,61 @@ def _user(
     ).fetchone()
     label, phone = user.name, mask_phone(user.phone)
     desired = {"name": user.name, **_given(email=user.email)}
-    found = (row[0], {"name": row[1], "email": row[2]}) if row else None
-    if row is not None:
-        others = _other_tenants(conn, row[0], tenant_id)
-        if others and normalize_name(row[1]) != normalize_name(user.name):
+    if row is None:
+        if user.existing_user:
+            raise OnboardingError(f"{label}: existing_user is set but no user has {phone}")
+        new_id = _insert(conn, "app_user", {"phone_e164": user.phone, **desired})
+        changes.append(Change("user", label, "created", new_id, phone, after=_redact(desired)))
+        return new_id
+    uid: UUID = row[0]
+    name, email = row[1], row[2]
+    if normalize_name(name) != normalize_name(user.name):
+        raise OnboardingError(
+            f"{phone} already belongs to {name!r}; check the number (spec says {user.name!r})"
+        )
+    others, member_here = _tenants_of(conn, uid, tenant_id)
+    if others:
+        if not (user.existing_user or member_here):
             raise OnboardingError(
-                f"{mask_phone(user.phone)} already belongs to {row[1]!r}, a member of another"
-                f" tenant; check the number (spec says {user.name!r})"
+                f"{phone} is {name!r}, a member of {others} other tenant(s); if it is the same"
+                " person, set existing_user: true for them"
             )
-        if others:
-            notes.append(f"{user.name} is also a member of {others} other tenant(s)")
-    uid, action, before, after = _upsert(
-        conn, "app_user", found, desired, {"phone_e164": user.phone}
+        notes.append(f"{label} is also a member of {others} other tenant(s)")
+        if desired != {"name": name, **_given(email=email)}:
+            notes.append(f"{label}: name and email not changed (shared with another tenant)")
+        changes.append(Change("user", label, "unchanged", uid, phone))
+        return uid
+    before, after = _sync(conn, "app_user", uid, {"name": name, "email": email}, desired)
+    action: Action = "updated" if after else "unchanged"
+    changes.append(
+        Change(
+            "user",
+            label,
+            action,
+            uid,
+            phone,
+            before=_redact(before, mark=False),
+            after=_redact(after),
+        )
     )
-    changes.append(Change("user", label, action, uid, phone, before=before, after=after))
     return uid
 
 
-def _other_tenants(conn: Conn, user_id: UUID, tenant_id: UUID) -> int:
+def _redact(values: Mapping[str, Any], *, mark: bool = True) -> dict[str, Any]:
+    """Audit form of app_user values: the email itself never goes to the tenant's audit_log."""
+    out = {k: v for k, v in values.items() if k != "email"}
+    return {**out, "email_changed": True} if mark and "email" in values else out
+
+
+def _tenants_of(conn: Conn, user_id: UUID, tenant_id: UUID) -> tuple[int, bool]:
+    """(how many other tenants the user is a member of, whether they are a member of this one)."""
     row = conn.execute(
-        "select count(*) from public.membership where user_id = %s and tenant_id <> %s",
-        (user_id, tenant_id),
+        """select count(*) filter (where tenant_id <> %s), bool_or(tenant_id = %s)
+           from public.membership where user_id = %s""",
+        (tenant_id, tenant_id, user_id),
     ).fetchone()
     assert row is not None
-    return int(row[0])
+    return int(row[0]), bool(row[1])
 
 
 def _whatsapp(conn: Conn, user_id: UUID, user: UserSpec) -> Change:
@@ -374,44 +427,6 @@ def _membership(
     return Change("membership", user.name, action, mid, detail, before=before, after=after)
 
 
-def _auth(conn: Conn, user_id: UUID, user: UserSpec, auth: AuthAdmin) -> Change | None:
-    """Links the user to a Supabase Auth user found by email, or created through the API."""
-    if user.email is None:
-        return None
-    row = conn.execute(
-        "select auth_user_id from public.app_user where id = %s", (user_id,)
-    ).fetchone()
-    assert row is not None
-    if row[0] is not None:
-        return Change("auth", user.name, "unchanged", user_id)
-    found = conn.execute(
-        "select id from auth.users where lower(email) = lower(%s) order by created_at limit 1",
-        (user.email,),
-    ).fetchone()
-    taken = (
-        found is not None
-        and conn.execute(
-            "select 1 from public.app_user where auth_user_id = %s and id <> %s",
-            (found[0], user_id),
-        ).fetchone()
-    )
-    if taken:
-        raise OnboardingError(
-            f"{user.name}: the auth user with this email is already linked to another MermIA user"
-        )
-    auth_id = found[0] if found is not None else auth.create_user(user.email)
-    conn.execute("update public.app_user set auth_user_id = %s where id = %s", (auth_id, user_id))
-    action: Action = "updated" if found is not None else "created"
-    return Change(
-        "auth",
-        user.name,
-        action,
-        user_id,
-        before={"auth_user_id": None},
-        after={"auth_user_id": auth_id},
-    )
-
-
 def _members_not_in_spec(conn: Conn, tenant_id: UUID, user_ids: Sequence[UUID]) -> list[str]:
     rows = conn.execute(
         """select u.name, m.role::text from public.membership m
@@ -419,7 +434,11 @@ def _members_not_in_spec(conn: Conn, tenant_id: UUID, user_ids: Sequence[UUID]) 
            where m.tenant_id = %s and not (m.user_id = any(%s)) order by u.name""",
         (tenant_id, list(user_ids)),
     ).fetchall()
-    return [f"{name} ({role}) is a member but not in the spec (kept)" for name, role in rows]
+    return [
+        f"WARNING: {name} ({role}) is not in the spec but keeps their access (membership and"
+        " WhatsApp); a changed phone leaves the old number with access too. Remove by hand."
+        for name, role in rows
+    ]
 
 
 # Audit -----------------------------------------------------------------------------------------
@@ -429,7 +448,7 @@ def _jsonable(value: Mapping[str, Any] | None) -> Jsonb | None:
     return None if value is None else Jsonb(json.loads(json.dumps(value, default=str)))
 
 
-def _audit(conn: Conn, tenant_id: UUID, run_id: UUID, changes: Sequence[Change]) -> int:
+def _audit(conn: Conn, tenant_id: UUID, request_id: str, changes: Sequence[Change]) -> int:
     rows = [
         (
             tenant_id,
@@ -438,7 +457,7 @@ def _audit(conn: Conn, tenant_id: UUID, run_id: UUID, changes: Sequence[Change])
             c.entity_id,
             _jsonable(c.before),
             _jsonable(c.after),
-            f"{ACTOR}:{run_id}",
+            request_id,
         )
         for c in changes
         if c.action != "unchanged"

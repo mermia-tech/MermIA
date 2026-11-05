@@ -2,24 +2,28 @@
 
 A spec is declarative: running it again brings the database to what it says and creates
 nothing twice (see onboard.py for the natural keys). Pydantic validates everything here, before
-the database is touched. YAML is read with safe_load, so a JSON file works too.
+the database is touched. YAML is read with safe_load (a duplicate key is refused), so a JSON
+file works too. Phones are made canonical (mermia_api.phone: +52 1 ... becomes +52 ...).
 
 Role defaults (09 section 5.1 and the El Güero seed): owner, admin and support see every
 location; a manager must list theirs. `can_approve` defaults per role and may be overridden
 with the C5 kinds (PendingKind), except for support, which never approves (09 section 2.1).
+Only the owner approves `recipe.upsert` by default (MR-25), so the admin default leaves it out.
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Hashable
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
 from pydantic import Field, field_validator, model_validator
 
+from mermia_api.phone import canonical_phone
 from mermia_contracts.batch import Model, Text
 from mermia_contracts.db.models import MemberRole
 from mermia_contracts.keys import normalize_name
@@ -28,9 +32,6 @@ from mermia_contracts.pending import PendingKind
 EXAMPLE = Path(__file__).with_name("example.yaml")
 DEFAULT_TIMEZONE = "America/Mexico_City"
 
-# The same check as app_user.phone_e164 in the database.
-E164 = re.compile(r"^\+[1-9][0-9]{7,14}$")
-PHONE_SEPARATORS = re.compile(r"[\s\-().]")
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 # Persona moral (3 letters) or física (4), yymmdd, 3-character homoclave.
 RFC = re.compile(r"^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$")
@@ -38,11 +39,7 @@ RFC = re.compile(r"^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$")
 ROLE_APPROVALS: dict[MemberRole, tuple[PendingKind, ...]] = {
     MemberRole.owner: tuple(PendingKind),
     MemberRole.manager: (PendingKind.import_batch_approve, PendingKind.import_batch_rollback),
-    MemberRole.admin: (
-        PendingKind.ingredient_price_set,
-        PendingKind.recipe_upsert,
-        PendingKind.menu_item_price_set,
-    ),
+    MemberRole.admin: (PendingKind.ingredient_price_set, PendingKind.menu_item_price_set),
     MemberRole.support: (),
 }
 
@@ -56,13 +53,8 @@ def mask_phone(phone: str) -> str:
     return phone[:MASK_KEEP_START] + "*" * hidden + phone[len(phone) - MASK_KEEP_END :]
 
 
-def wa_id(phone: str) -> str:
-    """The WhatsApp id stored in channel_identity.external_id: the E.164 digits without '+'."""
-    return phone.removeprefix("+")
-
-
 class TenantSpec(Model):
-    id: UUID | None = None  # pins the tenant, so a rerun can rename it
+    id: UUID | None = None  # required to touch an existing tenant (reruns); its name may change
     name: Text
     rfc: str | None = None
 
@@ -80,7 +72,7 @@ class TenantSpec(Model):
 class LocationSpec(Model):
     id: UUID | None = None  # pins the location, so a rerun can rename it
     name: Text
-    timezone: str = DEFAULT_TIMEZONE
+    timezone: str | None = None  # None: keep the stored one; DEFAULT_TIMEZONE on insert
     address: Text | None = None
     sr_version: Text | None = None
     sr_edition: Text | None = None
@@ -92,7 +84,9 @@ class LocationSpec(Model):
 
     @field_validator("timezone")
     @classmethod
-    def _timezone(cls, value: str) -> str:
+    def _timezone(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         try:
             ZoneInfo(value)
         except (ZoneInfoNotFoundError, ValueError):
@@ -107,6 +101,8 @@ class UserSpec(Model):
     role: MemberRole
     locations: Literal["all"] | Annotated[list[Text], Field(min_length=1)] | None = None
     can_approve: tuple[PendingKind, ...] | None = None
+    # The phone belongs to a person who is already a member of another tenant: add them here too.
+    existing_user: bool = False
 
     @field_validator("name")
     @classmethod
@@ -116,10 +112,7 @@ class UserSpec(Model):
     @field_validator("phone")
     @classmethod
     def _phone(cls, value: str) -> str:
-        phone = PHONE_SEPARATORS.sub("", value)
-        if not E164.match(phone):
-            raise ValueError("phone must be E.164 with the country code, e.g. +52 55 1234 5678")
-        return phone
+        return canonical_phone(value)
 
     @field_validator("email")
     @classmethod
@@ -161,13 +154,19 @@ class OnboardingSpec(Model):
     @model_validator(mode="after")
     def _consistent(self) -> OnboardingSpec:
         names = [normalize_name(loc.name) for loc in self.locations]
-        twice = {n for n in names if names.count(n) > 1}
-        if twice:
-            raise ValueError(f"location listed twice: {', '.join(sorted(twice))}")
+        if _twice(names):
+            raise ValueError(f"location listed twice: {', '.join(sorted(_twice(names)))}")
+        pins = [str(loc.id) for loc in self.locations if loc.id is not None]
+        if len(set(pins)) < len(pins):
+            raise ValueError(f"location id listed twice: {', '.join(sorted(_twice(pins)))}")
         phones = [u.phone for u in self.users]
-        repeated = sorted({mask_phone(p) for p in phones if phones.count(p) > 1})
-        if repeated:
-            raise ValueError(f"phone listed twice: {', '.join(repeated)}")
+        if _twice(phones):
+            raise ValueError(
+                f"phone listed twice: {', '.join(sorted(map(mask_phone, _twice(phones))))}"
+            )
+        emails = [u.email for u in self.users if u.email is not None]
+        if _twice(emails):
+            raise ValueError(f"email listed twice: {', '.join(sorted(_twice(emails)))}")
         if not any(u.role == MemberRole.owner for u in self.users):
             raise ValueError("the spec needs at least one owner")
         for user in self.users:
@@ -177,10 +176,39 @@ class OnboardingSpec(Model):
         return self
 
 
+def _twice(values: list[str]) -> set[str]:
+    return {v for v in values if values.count(v) > 1}
+
+
+class DuplicateKeyError(yaml.YAMLError):
+    def __init__(self, key: object, line: int) -> None:
+        super().__init__(f"duplicate key {key!r} (line {line})")
+
+
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """safe_load keeps the last of two equal keys silently (two `role:` lines); this refuses."""
+
+
+def _mapping(loader: yaml.SafeLoader, node: yaml.MappingNode) -> dict[Any, Any]:
+    seen: set[Hashable] = set()
+    for key_node, _ in node.value:
+        key = loader.construct_object(key_node)
+        if isinstance(key, Hashable) and key in seen:
+            raise DuplicateKeyError(key, key_node.start_mark.line + 1)
+        if isinstance(key, Hashable):
+            seen.add(key)
+    return loader.construct_mapping(node)
+
+
+_UniqueKeyLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _mapping)
+
+
 def load_spec(path: Path) -> OnboardingSpec:
     """Reads a YAML (or JSON) spec file. Raises ValueError (ValidationError is one) if invalid."""
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data = yaml.load(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)  # a SafeLoader
+    except DuplicateKeyError as e:
+        raise ValueError(f"{path.name}: {e}") from None
     except yaml.YAMLError as e:
         mark = getattr(e, "problem_mark", None)
         where = f" (line {mark.line + 1})" if mark is not None else ""

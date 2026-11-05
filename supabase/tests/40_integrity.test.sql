@@ -67,8 +67,9 @@ select throws_ok($$insert into public.membership (tenant_id, user_id, role)
   '23505', null, 'one membership per user and tenant');
 
 -- identity uniqueness ---------------------------------------------------------------------------
-insert into public.channel_identity (user_id, channel, external_id) values ('11111111-1111-4111-8111-111111111111', 'whatsapp', '5215500000001');
-select throws_ok($$insert into public.channel_identity (user_id, channel, external_id) values ('22222222-2222-4222-8222-222222222222', 'whatsapp', '5215500000001')$$,
+-- external_id in the canonical form: 52 + 10 digits, no 521 (mermia_api.phone).
+insert into public.channel_identity (user_id, channel, external_id) values ('11111111-1111-4111-8111-111111111111', 'whatsapp', '525500000001');
+select throws_ok($$insert into public.channel_identity (user_id, channel, external_id) values ('22222222-2222-4222-8222-222222222222', 'whatsapp', '525500000001')$$,
   '23505', null, 'a sender id maps to one user per channel');
 
 -- ingestion (spec 5.7) ---------------------------------------------------------------------------------
