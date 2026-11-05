@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import re
 import unicodedata
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -16,6 +17,9 @@ Row = tuple[Any, ...]
 
 MAX_BYTES = 10 * 1024 * 1024  # an SR report for one location and period is far smaller
 MAX_NUMBER = Decimal(10) ** 12  # fits Quantity (12 integer digits) and Cents (bigint) alike
+# A comma in a text number is read only as a thousands separator in a full grouping (1,250.5).
+# Anything else ("0,075", "1,5") may be a decimal comma: refused, never guessed (x1000 off).
+THOUSANDS = re.compile(r"[+-]?[1-9]\d{0,2}(,\d{3})+(\.\d+)?")
 
 
 def open_workbook(data: bytes) -> Workbook:
@@ -65,6 +69,24 @@ def text(value: Any) -> str | None:
     return s or None
 
 
+def _without_thousands(s: str, where: str) -> str:
+    if "," not in s:
+        return s
+    if THOUSANDS.fullmatch(s):
+        return s.replace(",", "")
+    if any(c in s for c in "$()"):
+        raise MalformedReport(
+            f"El valor «{s}» en {where} tiene signo de pesos o paréntesis. Envíame el reporte "
+            "con números sin formato (por ejemplo 1250.50 o -1250).",
+            f"currency sign or parentheses in a number at {where}: {s!r}",
+        )
+    raise MalformedReport(
+        f"El valor «{s}» en {where} tiene una coma que no es separador de miles; no sé si es "
+        "decimal. Envíame el reporte con punto decimal (por ejemplo 0.075).",
+        f"ambiguous comma in a number at {where}: {s!r}",
+    )
+
+
 def number(value: Any, where: str) -> Decimal:
     """An exact decimal from a numeric cell. Floats go through their shortest repr (0.1 -> 0.1)."""
     if isinstance(value, bool) or value is None:
@@ -78,7 +100,7 @@ def number(value: Any, where: str) -> Decimal:
             # 15 significant digits, Excel's precision: 284.84999999999997 is 284.85
             d = Decimal(f"{value:.15g}")
         else:
-            d = Decimal(str(value).strip().replace(",", ""))
+            d = Decimal(_without_thousands(str(value).strip(), where))
     except InvalidOperation as e:
         raise MalformedReport(
             f"El valor «{value}» en {where} no es un número.",
