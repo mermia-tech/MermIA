@@ -9,7 +9,8 @@ The dish (Clave, Platillo, Porciones) is written once; the rows below it, blank 
 belong to it until the next Platillo. A dish written again (on every row, as in the SR report)
 joins its recipe. A dish with no line has no recipe yet and is skipped. A row with Clave or
 Porciones but no Platillo is a dish without a name: it and the rows below it are held, never
-joined to the dish above.
+joined to the dish above, and the dish above is held too (the row may be one of its lines, so it
+would load short).
 
 Output: one catalog batch (source_kind manual), one RecipeIn per dish with lines. Porciones is
 yield_qty (blank is one portion). Quantities leave in base units and yields as percent points,
@@ -197,8 +198,9 @@ def _missing(line: Line, name: str) -> bool:
     return _cell(line, name) is None
 
 
-def _read_line(line: Line, dish: str) -> RecipeLineIn:
-    """One recipe line, or a _Problem that holds the dish."""
+def _read_line(line: Line, dish: str, portions: Decimal) -> RecipeLineIn:
+    """One recipe line, or a _Problem that holds the dish. Cantidad is for the whole recipe
+    (`portions` portions); the implausible-quantity limit is per portion."""
     ingredient = _cell(line, INGREDIENT)
     n = line.n
     if ingredient is None:
@@ -233,7 +235,7 @@ def _read_line(line: Line, dish: str) -> RecipeLineIn:
         base = base_qty(qty, known[1], line.where(norm(QTY)))
     except MalformedReport as e:
         raise _Problem("plantilla.qty_invalid", e.message_es) from e
-    if base >= IMPLAUSIBLE_QTY[known[0]]:
+    if base / portions >= IMPLAUSIBLE_QTY[known[0]]:
         raise _Problem(
             "plantilla.qty_implausible",
             f"En la fila {n}, la cantidad de {ingredient} es {_cell(line, QTY)} {unit} "
@@ -319,7 +321,7 @@ class _Dishes:
 
     def add(self, d: _Dish, line: Line) -> None:
         try:
-            x = _read_line(line, d.name)
+            x = _read_line(line, d.name, d.portions or Decimal(1))
         except _Problem as p:
             self.hold(d, p, line.n)
             return
@@ -403,6 +405,8 @@ def _read_dishes(sheet_rows: list[Row], h: int, cols: Columns) -> _Dishes:
             current, skipping = dishes.start(line, name), False
         elif nameless is not None:
             dishes.orphan(nameless, n)
+            if current is not None:  # it may be this dish with its name left out: hold it too
+                current.errors.append(n)
             current, skipping = None, True
         if skipping or not _has_line(line):
             continue

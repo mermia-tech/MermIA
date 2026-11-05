@@ -495,3 +495,21 @@ def test_a_tenant_wide_template_loads_without_a_location(
     }
     again = load(conn, parse_file(filled), source_id=tenant_source, proposed_by=LUPITA)
     assert (again.duplicate, again.batch_id) == (True, r.batch_id)
+
+
+@pytest.mark.db
+def test_an_sr_recipe_report_without_a_location_is_still_refused(
+    conn: psycopg.Connection[Any],
+) -> None:
+    row = conn.execute(
+        """insert into public.source (tenant_id, location_id, kind, config, status)
+           values (%s, null, 'sr_report', '{"report": "recetas"}', 'active') returning id""",
+        (TENANT,),
+    ).fetchone()
+    assert row is not None
+    sr = parse_file(SR_SAMPLE.read_bytes())
+    batch = sr.model_copy(update={"location_hint": None})  # a title that names no location
+    r = load(conn, batch, source_id=UUID(str(row[0])), proposed_by=LUPITA)
+    assert r.status == "rejected"
+    assert "location.unknown" in {i.code for i in r.issues}
+    assert r.pending_change_ids == ()

@@ -188,6 +188,20 @@ def test_a_bad_line_holds_only_its_dish(bad: list[Any], code: str) -> None:
     assert f"fila {FIRST_ROW + 3}" in message
 
 
+def test_the_implausible_quantity_check_is_per_portion() -> None:
+    batch = parse_file(template(dish("P001", PASTOR, 10, "Tortilla de maíz", 1200, "pza")))
+    assert batch.issues == []
+    (pastor,) = batch.recipes
+    assert pastor.yield_qty == Decimal("10.000000")
+
+
+def test_a_quantity_implausible_per_portion_is_still_held() -> None:
+    batch = parse_file(
+        template(dish("P001", PASTOR, 10, "Tortilla de maíz", 10001, "pza"), *HORCHATA_ROWS)
+    )
+    assert errors(batch) == [("plantilla.qty_implausible", str(FIRST_ROW))]
+
+
 @pytest.mark.parametrize(
     ("porciones", "code"),
     [
@@ -302,13 +316,11 @@ def test_a_row_with_clave_or_porciones_but_no_platillo_is_held_not_joined(
             *HORCHATA_ROWS,
         )
     )
-    pastor, horchata = batch.recipes
-    assert (pastor.menu_item_name, horchata.menu_item_name) == (PASTOR, HORCHATA)
-    assert [x.ingredient_name for x in pastor.lines] == [
-        "Tortilla de maíz",
-        "Carne al pastor (adobada)",
-        "Salsa verde (preparada)",
-    ], "the nameless row and the rows below it do not join the dish above"
+    # the nameless row may be the dish above with its name left out: that dish would load with
+    # missing lines, so it is held as well
+    assert [r.menu_item_name for r in batch.recipes] == [HORCHATA]
+    (message,) = held(batch)
+    assert f"«{PASTOR}»" in message and f"fila {FIRST_ROW + 3}" in message
     assert errors(batch) == [("plantilla.dish_name_missing", str(FIRST_ROW + 3))]
     (issue,) = [i for i in batch.issues if i.code == "plantilla.dish_name_missing"]
     assert f"La fila {FIRST_ROW + 3} tiene {what} pero no el nombre del platillo" in (

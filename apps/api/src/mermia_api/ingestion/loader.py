@@ -8,8 +8,8 @@ tenant always comes from the source row, never from the caller. One call is one 
    one only while a proposal it filed is still pending.
 2. Checks the contract leaves to the loader (MR-10 spec 8.2, 03 B.5):
    - rejected: an unsupported grain, rows outside the period, totals that differ from the rows,
-     no location (a catalog batch may have none: recipes are tenant-wide), a value the database
-     refuses;
+     no location (the MermIA recipe template may have none: recipes are tenant-wide; an SR
+     report always needs one), a value the database refuses;
    - needs_review: a correction of an applied slice, a period other than the expected day, a
      location hint that names another location, an error-level issue from the parser.
 3. Stages the batch (status parsed / needs_review / rejected) with its issues and, unless
@@ -21,7 +21,8 @@ A catalog batch (recipes, MR-25) is never applied: the sales checks of step 2 do
 and instead of staging rows each recipe that differs from the recipe of record becomes a
 recipe.upsert pending change (ingestion/recipes.py). Its status is parsed when at least one
 recipe was proposed or found unchanged, and rejected when every recipe was held. Without a
-location its slice is the tenant's (TENANT_SLICE in place of the location).
+location (a template for the whole tenant) its slice is the tenant's (TENANT_SLICE in place of
+the location).
 """
 
 from __future__ import annotations
@@ -37,6 +38,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from mermia_api.ingestion.items import find_item
+from mermia_api.ingestion.parsers import mermia_recetas
 from mermia_api.ingestion.recipes import NO_PROPOSALS, propose_recipes
 from mermia_contracts.batch import Grain, IssueIn, NormalizedBatch
 from mermia_contracts.db.models import IssueSeverity
@@ -127,12 +129,13 @@ def _load(
     review: list[IssueIn] = []
 
     catalog = batch.grain == Grain.catalog
+    tenant_wide = catalog and batch.parser == mermia_recetas.PARSER  # may name no location
     location_id = _location(
-        conn, tenant_id, source_location, batch.location_hint, reject, review, catalog
+        conn, tenant_id, source_location, batch.location_hint, reject, review, tenant_wide
     )
     key = (
         slice_key(location_id or TENANT_SLICE, batch.parser, batch.period)
-        if location_id or catalog
+        if location_id or tenant_wide
         else None
     )
     # one load per slice at a time: a file arriving twice at once (email and WhatsApp) must
@@ -358,10 +361,11 @@ def _location(
     hint: str | None,
     reject: list[IssueIn],
     review: list[IssueIn],
-    catalog: bool,
+    tenant_wide: bool,
 ) -> UUID | None:
     """The source's location; for a tenant-level source (email inbox), the one the hint names.
-    A catalog batch with neither is for the whole tenant (None, not refused)."""
+    A `tenant_wide` batch (the recipe template) with neither is for the whole tenant (None, not
+    refused); any other batch without a location is refused."""
     named = None
     if hint is not None:
         rows = conn.execute(
@@ -381,7 +385,7 @@ def _location(
                 )
             )
         return source_location
-    if named is None and not (catalog and hint is None):
+    if named is None and not (tenant_wide and hint is None):
         reject.append(
             _issue(
                 IssueSeverity.error, "location.unknown", "No sé de qué sucursal es este reporte."
