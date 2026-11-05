@@ -212,18 +212,11 @@ def propose_recipes(
             issues.append(_changed_since_issue(d.name, filed.changed_since, batch.period.to))
             continue
         counts[filed.outcome] += 1
+        if filed.replaced:
+            issues.append(_replaced_note(d.name, kept_current=filed.change_id is None))
         if filed.change_id is None:
             continue
         ids.append(filed.change_id)
-        if filed.replaced:
-            issues.append(
-                _issue(
-                    IssueSeverity.info,
-                    "recipe.pending_replaced",
-                    f"Ya había un cambio pendiente para la receta de «{d.name}»; lo reemplacé "
-                    "por el de este archivo.",
-                )
-            )
         if location_id is not None and filed.other_location(location_id, several):
             chain.append(d.name)
     if chain:
@@ -236,6 +229,19 @@ def propose_recipes(
         already_pending=counts["already_pending"],
         held=len(batch.recipes) - sum(counts.values()) + parser_held,
         issues=tuple(issues),
+    )
+
+
+def _replaced_note(name: str, kept_current: bool) -> IssueIn:
+    instead = (
+        "lo descarté porque este archivo trae la receta actual."
+        if kept_current
+        else "lo reemplacé por el de este archivo."
+    )
+    return _issue(
+        IssueSeverity.info,
+        "recipe.pending_replaced",
+        f"Ya había un cambio pendiente para la receta de «{name}»; {instead}",
     )
 
 
@@ -522,12 +528,13 @@ def _match(
 
 
 def _diff(
-    batch_id: UUID, parser: str, d: _Dish, before: _Current | None, after: dict[str, Any]
+    batch_id: UUID, batch: NormalizedBatch, d: _Dish, before: _Current | None, after: dict[str, Any]
 ) -> dict[str, Any]:
     added, removed, changed = _match(before.lines if before else (), d.lines)
     return {
         "batch_id": str(batch_id),
-        "parser": parser,
+        "parser": batch.parser,
+        "report_date": batch.period.to.isoformat(),  # what _newer_pending compares
         "menu_item": {"id": str(d.menu_item_id), "name": d.name, "external_id": d.external_id},
         "before": before.as_json() if before else None,
         "after": after,
@@ -585,7 +592,11 @@ def _propose(
         and before.yield_qty == d.recipe.yield_qty
         and Counter(x.same() for x in before.lines) == Counter(x.same() for x in d.lines)
     ):
-        return _Filed("unchanged")
+        # The file confirms the recipe of record, so an older proposal for the dish is stale.
+        if _newer_pending(conn, tenant_id, d.menu_item_id, batch.period.to) is not None:
+            return _Filed("unchanged")
+        replaced = _supersede(conn, tenant_id, batch_id, d.menu_item_id, None, proposed_by)
+        return _Filed("unchanged", replaced=replaced)
     stale = _changed_after(before, batch) if batch.parser == mermia_recetas.PARSER else None
     if stale is not None:
         return _Filed("changed_since", changed_since=stale)
@@ -623,7 +634,7 @@ def _propose(
         "yield_qty": _qty(d.recipe.yield_qty),
         "lines": [x.as_json() for x in d.lines],
     }
-    diff = _diff(batch_id, batch.parser, d, before, after)
+    diff = _diff(batch_id, batch, d, before, after)
     row = conn.execute(
         """insert into public.pending_change
              (tenant_id, kind, target_type, target_id, base_version, payload, diff,
@@ -673,15 +684,13 @@ def _newer_pending(
 ) -> dt.date | None:
     """The report date of the latest live pending recipe.upsert of the dish that comes from a
     later report than `report_date` (None when there is none). The date is the end of the
-    period in the batch's slice_key."""
+    report's period, kept in the diff (a batch with no location has no dated slice_key)."""
     row = conn.execute(
-        """select max(split_part(b.slice_key, ':', 4)::date)
+        """select max((pc.diff ->> 'report_date')::date)
            from public.pending_change pc
-           join public.import_batch b
-             on b.tenant_id = pc.tenant_id and b.id::text = pc.diff ->> 'batch_id'
            where pc.tenant_id = %s and pc.kind = %s and pc.target_id = %s
              and pc.status = 'pending' and (pc.expires_at is null or pc.expires_at > now())
-             and split_part(b.slice_key, ':', 4)::date > %s""",
+             and (pc.diff ->> 'report_date')::date > %s""",
         (tenant_id, KIND.value, menu_item_id, report_date),
     ).fetchone()
     return None if row is None else row[0]
@@ -692,17 +701,18 @@ def _supersede(
     tenant_id: UUID,
     batch_id: UUID,
     menu_item_id: UUID,
-    change_id: UUID,
+    change_id: UUID | None,
     proposed_by: UUID | None,
 ) -> tuple[UUID | None, ...]:
     """The newest proposal wins: every other pending recipe.upsert of the dish expires (the
-    schema has no 'superseded' status yet; resolved_via says why). Gives the location of the
-    file each one came from (None when it came from no file)."""
+    schema has no 'superseded' status yet; resolved_via says why). `change_id` is None when the
+    newest file equals the recipe of record. Gives the location of the file each one came from
+    (None when it came from no file)."""
     rows = conn.execute(
         """update public.pending_change pc
            set status = 'expired', resolved_at = now(), resolved_via = %s
            where tenant_id = %s and kind = %s and target_id = %s and status = 'pending'
-             and (expires_at is null or expires_at > now()) and id <> %s
+             and (expires_at is null or expires_at > now()) and id is distinct from %s
            returning id, (select b.location_id from public.import_batch b
                           where b.tenant_id = pc.tenant_id
                             and b.id::text = pc.diff ->> 'batch_id')""",
@@ -716,7 +726,11 @@ def _supersede(
             "pending_change.supersede",
             ("pending_change", old_id),
             {"status": "pending"},
-            {"status": "expired", "resolved_via": SUPERSEDED, "superseded_by": str(change_id)},
+            {
+                "status": "expired",
+                "resolved_via": SUPERSEDED,
+                "superseded_by": None if change_id is None else str(change_id),
+            },
             old_id,
             batch_id,
         )
