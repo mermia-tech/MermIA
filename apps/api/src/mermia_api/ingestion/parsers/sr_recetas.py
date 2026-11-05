@@ -324,14 +324,13 @@ def _empty_recipes(
             if code is not None
             else [f"code:{c}" for c in by_name.get(norm(name), [])] or [f"name:{norm(name)}"]
         )
-        label = name or code or ""
         if any(k in grouped.names for k in keys) or keys[0] in warned:
             continue
         warned.add(keys[0])
         found.append(
             _warning(
                 "sr.recipe_empty",
-                f"En la fila {n}, «{label}» no trae ningún insumo, así que no tiene receta. "
+                f"En la fila {n}, «{name}» no trae ningún insumo, así que no tiene receta. "
                 "Revisa si falta capturarla en Soft Restaurant.",
                 n,
             )
@@ -459,9 +458,11 @@ def parse(wb: Workbook) -> NormalizedBatch:
     for n, cells in enumerate(sheet_rows[h + 1 :], start=h + 2):
         line = Line(cells, n, cols)
         if _is_footer(line):
+            # A product with no recipe has a Producto; text only in Clave (column A) is a text
+            # footer ("Impreso el ...", "Página 1 de 1", "Total") and stays silent.
             product = text(line.raw(PRODUCT))
-            if product is not None or text(line.raw(CODE)) is not None:
-                bare.append((n, text(line.raw(CODE)), product or ""))
+            if product is not None:
+                bare.append((n, text(line.raw(CODE)), product))
             continue
         row = _read(line)
         read.append((n, row))

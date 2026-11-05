@@ -277,6 +277,23 @@ def test_blank_rows_and_a_text_footer_are_skipped() -> None:
     footer = ["Impreso el 12/10/2026 08:30", None, None, None, None, None, None, None]
     batch = parse_file(report(TORTILLA, [], MEAT, [], footer))
     assert len(batch.recipes[0].lines) == 2
+    assert batch.issues == []
+
+
+@pytest.mark.parametrize(
+    "footer",
+    [
+        ["Impreso el 12/10/2026 08:30"],
+        ["Página 1 de 1"],
+        ["Total"],
+        ["Total", None, None, None, None, None, None, 15.18],
+    ],
+    ids=["printed-on", "page-number", "total", "total-with-cost"],
+)
+def test_a_footer_with_text_only_in_clave_is_silent(footer: list[Any]) -> None:
+    batch = parse_file(report(TORTILLA, MEAT, footer))
+    assert batch.issues == []
+    assert [len(r.lines) for r in batch.recipes] == [2]
 
 
 def test_a_line_without_a_product_or_an_ingredient_is_refused() -> None:
