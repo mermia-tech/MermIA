@@ -926,9 +926,16 @@ name = "mermia-api"
 version = "0.1.0"
 source = { editable = "apps/api" }
 dependencies = [
+    { name = "agno" },
+    { name = "anthropic" },
     { name = "fastapi" },
+    { name = "google-genai" },
     { name = "mermia-contracts" },
+    { name = "openai" },
+    { name = "openinference-instrumentation-agno" },
     { name = "openpyxl" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-sdk" },
     { name = "psycopg", extra = ["binary"] },
     { name = "uvicorn" },
 ]
@@ -941,9 +948,16 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "agno", specifier = "==3.1.6" },
+    { name = "anthropic" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "google-genai" },
     { name = "mermia-contracts", editable = "packages/contracts" },
+    { name = "openai" },
+    { name = "openinference-instrumentation-agno" },
     { name = "openpyxl", specifier = ">=3.1" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-sdk" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
     { name = "uvicorn", specifier = ">=0.34" },
 ]

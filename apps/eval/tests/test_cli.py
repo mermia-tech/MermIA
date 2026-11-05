@@ -1,5 +1,6 @@
 import dataclasses
 import json
+from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -37,7 +38,9 @@ def _err(model: str = LUNA) -> RunResult:
 
 def test_summarize_means_and_counts_errors() -> None:
     results = [_ok(), _ok(reply="Margen $99.99"), _err()]
-    (row,) = cli.summarize(results, CASE, {LUNA: Price(1.0, 0.1, 2.0)})
+    (row,) = cli.summarize(
+        results, CASE, {LUNA: Price(Decimal("1.0"), Decimal("0.1"), Decimal("2.0"))}
+    )
     assert (row["runs"], row["errors"]) == (3, 1)
     assert (row["tool"], row["args"], row["numbers"]) == (1.0, 1.0, 0.5)
     assert row["tokens_in"] == 1000 and row["seconds"] == 2.0

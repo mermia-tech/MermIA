@@ -10,6 +10,7 @@ from agno.run.base import RunStatus
 from agno.tools import Function
 from opentelemetry import trace
 
+from mermia_api.agent import llm
 from mermia_eval.cases import Case
 from mermia_eval.config import SYSTEM_PROMPT, Price, build_model
 from mermia_eval.score import ToolCall
@@ -71,17 +72,12 @@ def run_case(
 
 
 def cost_usd(result: RunResult, price: Price | None) -> float | None:
-    if price is None:
-        return None
-    cached = result.cached_tokens
-    # Anthropic input excludes the cache reads; OpenAI and Gemini include them.
-    uncached = (
-        result.input_tokens
-        if result.model.startswith("anthropic:")
-        else (result.input_tokens - cached)
+    cost = llm.cost_usd(
+        result.model,
+        price,
+        input=result.input_tokens,
+        cached=result.cached_tokens,
+        output=result.output_tokens,
+        reasoning=result.reasoning_tokens,
     )
-    # Google bills the thinking tokens as output; OpenAI's output count already includes them.
-    output = result.output_tokens + (
-        result.reasoning_tokens if result.model.startswith("google:") else 0
-    )
-    return (uncached * price.input + cached * price.cached + output * price.output) / 1e6
+    return None if cost is None else float(cost)

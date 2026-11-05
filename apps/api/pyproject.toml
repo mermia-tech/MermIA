@@ -4,10 +4,17 @@ version = "0.1.0"
 description = "MermIA backend: one FastAPI service (channels, agent, ingestion, confirm)."
 requires-python = ">=3.12"
 dependencies = [
+    "agno==3.1.6",
+    "anthropic",
     "fastapi>=0.115",
+    "google-genai",
     "uvicorn>=0.34",
     "mermia-contracts",
+    "openai",
+    "openinference-instrumentation-agno",
     "openpyxl>=3.1",
+    "opentelemetry-exporter-otlp-proto-http",
+    "opentelemetry-sdk",
     "psycopg[binary]>=3.2",
 ]
 

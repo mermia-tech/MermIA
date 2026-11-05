@@ -1,3 +1,4 @@
+from decimal import Decimal
 from types import SimpleNamespace
 from typing import Any
 
@@ -68,12 +69,17 @@ def _result(model: str, reasoning: int = 0) -> RunResult:
 
 def test_cost_splits_cached_for_openai_and_google() -> None:
     # input includes the cached tokens: 600k at 0.20 + 400k at 0.02 + 1M output at 1.20
-    assert cost_usd(_result(LUNA), Price(0.20, 0.02, 1.20)) == pytest.approx(0.12 + 0.008 + 1.20)
+    assert cost_usd(
+        _result(LUNA), Price(Decimal("0.20"), Decimal("0.02"), Decimal("1.20"))
+    ) == pytest.approx(0.12 + 0.008 + 1.20)
 
 
 def test_cost_adds_cached_for_anthropic() -> None:
     # Anthropic input excludes the cache reads: 1M at 0.10 + 400k at 0.01 + 1M output at 0.50
-    cost = cost_usd(_result("anthropic:claude-haiku-5-5"), Price(0.10, 0.01, 0.50))
+    cost = cost_usd(
+        _result("anthropic:claude-haiku-5-5"),
+        Price(Decimal("0.10"), Decimal("0.01"), Decimal("0.50")),
+    )
     assert cost == pytest.approx(0.10 + 0.004 + 0.50)
 
 
@@ -85,12 +91,16 @@ def test_cost_adds_thinking_tokens_for_google() -> None:
     result = RunResult(
         "google:gemini-3.5-flash-lite", [], [], "", 0, 1_000_000, 0, 500_000, 0, None, None
     )
-    assert cost_usd(result, Price(0.30, 0.03, 2.50)) == pytest.approx(1.5 * 2.50)
+    assert cost_usd(
+        result, Price(Decimal("0.30"), Decimal("0.03"), Decimal("2.50"))
+    ) == pytest.approx(1.5 * 2.50)
 
 
 def test_cost_ignores_reasoning_tokens_for_openai() -> None:
     result = RunResult(LUNA, [], [], "", 0, 1_000_000, 0, 500_000, 0, None, None)
-    assert cost_usd(result, Price(0.20, 0.02, 1.20)) == pytest.approx(1.20)
+    assert cost_usd(
+        result, Price(Decimal("0.20"), Decimal("0.02"), Decimal("1.20"))
+    ) == pytest.approx(1.20)
 
 
 def test_success_maps_reasoning_tokens() -> None:
