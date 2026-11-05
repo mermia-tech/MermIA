@@ -280,13 +280,13 @@ def parse(wb: Workbook) -> NormalizedBatch:
             continue
         line = _Line(cells, n, cols)
         if after_total:
-            # After Total only a text footer may follow ("Impreso el ..."). A Venta neta or a day
-            # date there means more days or another section, which would be loaded silently short.
-            if text(line.raw(NET)) is not None or _has_day_date(line):
+            # After Total only a text footer may follow ("Impreso el ..."), the same rule as before
+            # Total. Anything else means more days or another section, which would load short.
+            if not _is_text_footer(line) or _has_day_date(line):
                 raise MalformedReport(
                     f"Encontré más datos después de la fila «Total» (en la fila {n}). Envíame "
                     "el reporte con una sola tabla de días.",
-                    f"Venta neta after Total at row {n}",
+                    f"data after Total at row {n}",
                 )
             continue
         if norm(line.raw(DATE)).rstrip(" :") in TOTAL_LABELS:
