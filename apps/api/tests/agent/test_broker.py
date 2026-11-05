@@ -1,7 +1,7 @@
 """MR-27: the LLM broker (spec: Pipeline, Metering). The model is scripted; no network."""
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
@@ -11,9 +11,10 @@ from agno.models.message import Message
 from agno.run.base import RunStatus
 
 from mermia_api.agent.llm import PRICES, cost_usd
-from mermia_api.agent.llm_broker import MAX_OUTPUT_TOKENS, LlmBroker
+from mermia_api.agent.llm_broker import DAILY_QUESTIONS, MAX_OUTPUT_TOKENS, LlmBroker
 from mermia_api.agent.prompt import STATIC_PREFIX
-from mermia_api.agent.usage import MemoryStore
+from mermia_api.agent.usage import MemoryStore, UsageRow
+from mermia_api.agent.validator import Turn
 from mermia_contracts.agent import AgentRequest, AgentResponse, ChoicesMsg, TextMsg
 from mermia_contracts.db.models import MemberRole
 
@@ -287,3 +288,81 @@ def test_a_provider_failure_on_the_retry_gets_the_menu(
         ("retry", False),
         (None, True),
     ]
+
+
+# Daily cap and memory.
+
+
+def _seed_questions(store: MemoryStore, request: AgentRequest, n: int) -> None:
+    for i in range(n):
+        store.add(
+            UsageRow(
+                tenant_id=request.tenant_id,
+                user_id=uuid4(),  # the cap is per tenant, not per user
+                request_id=f"q{i}",
+                model=MODEL,
+                latency_ms=1,
+                tool_calls=0,
+                ts=NOW,
+            )
+        )
+
+
+def test_the_61st_question_of_the_day_gets_the_menu_without_a_model_call(
+    broker: LlmBroker, agents: Any, store: MemoryStore, el_guero: Any, fake_rpc: Any
+) -> None:
+    request = _text(el_guero)
+    _seed_questions(store, request, DAILY_QUESTIONS)
+    response = broker(request, el_guero, fake_rpc)
+    assert _is_menu(response) and agents.built == []
+    assert len(store.rows) == DAILY_QUESTIONS == 60
+
+
+def test_the_60th_question_goes_through(
+    broker: LlmBroker, agents: Any, reply: Any, store: MemoryStore, el_guero: Any, fake_rpc: Any
+) -> None:
+    request = _text(el_guero)
+    _seed_questions(store, request, DAILY_QUESTIONS - 1)
+    agents.script = [reply("Hola.")]
+    assert broker(request, el_guero, fake_rpc).route == "haiku"
+
+
+def test_a_follow_up_sees_the_earlier_turn(
+    broker: LlmBroker, agents: Any, reply: Any, store: MemoryStore, el_guero: Any, fake_rpc: Any
+) -> None:
+    request = _text(el_guero, "¿y Polanco?")
+    earlier = Turn(q="¿cuánto vendió Centro?", a=CLEAN, ts=NOW - timedelta(minutes=10))
+    store.save_turns(request.tenant_id, request.user_id, "whatsapp", [earlier])
+    agents.script = [reply("Hola.")]
+    broker(request, el_guero, fake_rpc)
+
+    (messages,) = agents.inputs
+    assert [(m.role, m.content) for m in messages[1:]] == [
+        ("user", "¿cuánto vendió Centro?"),
+        ("assistant", CLEAN),
+        ("user", "¿y Polanco?"),
+    ]
+
+
+def test_memory_expires_after_two_hours(
+    broker: LlmBroker, agents: Any, reply: Any, store: MemoryStore, el_guero: Any, fake_rpc: Any
+) -> None:
+    request = _text(el_guero, "¿y Polanco?")
+    old = Turn(q="¿cuánto vendió Centro?", a=CLEAN, ts=NOW - timedelta(hours=2, minutes=1))
+    store.save_turns(request.tenant_id, request.user_id, "whatsapp", [old])
+    agents.script = [reply("Hola.")]
+    broker(request, el_guero, fake_rpc)
+    (messages,) = agents.inputs
+    assert len(messages) == 2  # the tail and the question
+
+
+def test_a_figure_from_an_earlier_reply_passes_the_validator(
+    broker: LlmBroker, agents: Any, reply: Any, store: MemoryStore, el_guero: Any, fake_rpc: Any
+) -> None:
+    request = _text(el_guero, "¿y eso es bueno?")
+    earlier = Turn(q="¿cuánto vendió Centro?", a=CLEAN, ts=NOW - timedelta(minutes=10))
+    store.save_turns(request.tenant_id, request.user_id, "whatsapp", [earlier])
+    agents.script = [reply("Los $184,320.50 de Centro son la venta de la semana pasada.")]
+    response = broker(request, el_guero, fake_rpc)
+    assert response.route == "haiku"
+    assert [r.validator_result for r in store.rows] == ["pass"]

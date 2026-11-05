@@ -28,7 +28,7 @@ from mermia_api.agent.broker import RpcCall, fallback
 from mermia_api.agent.llm import PRICES, build_model, cost_usd
 from mermia_api.agent.prompt import STATIC_PREFIX, tail
 from mermia_api.agent.templates import MEXICO_CITY
-from mermia_api.agent.usage import UsageRow, UsageStore
+from mermia_api.agent.usage import UsageRow, UsageStore, fresh
 from mermia_api.agent.validator import validate
 from mermia_contracts.agent import AgentRequest, AgentResponse, TextInput, TextMsg
 from mermia_contracts.agent_tools import tool_definitions
@@ -37,6 +37,7 @@ from mermia_contracts.rpc import RPCS
 
 MAX_OUTPUT_TOKENS: Final = 400
 TOOL_CALL_LIMIT: Final = 4
+DAILY_QUESTIONS: Final = 60  # LLM questions per tenant per Mexico City day; then the menu
 REJECTED: Final = "No pude confirmar esa cifra. Prueba con una de estas:"
 _PENDING = json.dumps({"status": "pending_approval"})
 
@@ -116,15 +117,27 @@ class LlmBroker:
         if not isinstance(request.input, TextInput):  # pc: actions and media have no handler yet
             return fallback(locations)
         question = request.input.text
-        today = self._clock().astimezone(MEXICO_CITY).date()
+        now = self._clock()
+        today = now.astimezone(MEXICO_CITY).date()
+        if self._store.questions_today(request.tenant_id, today) >= DAILY_QUESTIONS:
+            return fallback(locations)
+        memory = fresh(self._store.turns(request.tenant_id, request.user_id, request.channel), now)
         context = tail(today=today, role=self._role_of(request), locations=locations)
-        messages = [Message(role="user", content=context), Message(role="user", content=question)]
+        messages = [
+            Message(role="user", content=context),
+            *(
+                m
+                for t in memory
+                for m in (Message(role="user", content=t.q), Message(role="assistant", content=t.a))
+            ),
+            Message(role="user", content=question),
+        ]
         request_id = str(uuid4())
         results: list[str] = []  # both runs' tool results are sources for the retry
 
         def unsourced(text: str) -> set[Decimal]:
             return validate(
-                text, tool_results=results, question=question, memory=[], dates=[str(today)]
+                text, tool_results=results, question=question, memory=memory, dates=[str(today)]
             )
 
         row, text, said = self._call(request, request_id, messages, rpc, results)
@@ -184,6 +197,7 @@ class LlmBroker:
             model=self._model,
             latency_ms=latency_ms,
             tool_calls=len(out.tools or []) if out is not None else 0,
+            ts=self._clock(),
             error=error,
         )
         if metrics is not None:
