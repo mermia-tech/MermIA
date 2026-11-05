@@ -13,9 +13,22 @@
 --   5. the target's version equals base_version (D2)              else conflict + audit
 --   6. the write, the status and the apply audit row in one block; if it raises, all of it rolls
 --      back and the change becomes failed + audit (42501 from apply_batch is forbidden_role).
--- Only an authorized approver causes a state change. A catalog write recomputes dish costs from
--- its effective date to today in the same transaction (D3). Business outcomes are returned as the
--- C5 ApplyResult shape {code, pending_change_id, status, message}, never raised.
+--      Transient errors (deadlock, serialization failure, lock timeout, cancel) are raised instead:
+--      the whole tap rolls back, the change stays pending and a retry can apply it.
+-- Only an authorized approver causes a state change. A price write recomputes today's dish costs
+-- in the same transaction, so the reply shows fresh numbers (D3). The older days, from the
+-- effective date (at most 400 days back) to yesterday, are recomputed after commit by
+-- app.backfill_dish_costs, in short chunks. Business outcomes are returned as the C5 ApplyResult
+-- shape {code, pending_change_id, status, message}, never raised.
+
+-- Indexes the version lookup and the costing engine need: these tables' indexes lead with
+-- tenant_id, but price_of_record, recipe_of_record, recipe_cost and pending_base_version filter by
+-- the ingredient, item or recipe alone (without them a 400-day recompute ran about 6x slower).
+create index ingredient_price_ingredient_date_idx on public.ingredient_price (ingredient_id, effective_from);
+create index menu_item_price_item_location_idx on public.menu_item_price (menu_item_id, location_id, effective_from);
+create index recipe_menu_item_idx on public.recipe (menu_item_id);
+create index recipe_produces_idx on public.recipe (produces_ingredient_id);
+create index recipe_line_recipe_only_idx on public.recipe_line (recipe_id);
 
 -- The version a proposal must carry in base_version (D2), and the one apply compares it with:
 --   ingredient_price.set   number of ingredient_price rows of the ingredient
@@ -124,18 +137,35 @@ begin
 end
 $$;
 
--- D3: rewrite dish_cost_snapshot from the change's effective date to today (at most 400 days);
--- nothing when the change starts in the future. Returns the snapshots written, or null.
-create function app.recompute_after_change(tenant uuid, effective_from date) returns int
+-- D3: the days a change effective from `effective_from` leaves to the backfill: from its date, at
+-- most 400 days back counting today, to yesterday. Empty (from_date > to_date) when it starts today
+-- or later.
+create function app.dish_cost_backfill_range(tenant uuid, effective_from date, out from_date date, out to_date date)
+language sql stable set search_path = ''
+as $$
+  select greatest(effective_from, t.today - 399), t.today - 1 from (select app.tenant_today(tenant) as today) t
+$$;
+
+-- D3, in the tap: rewrite today's dish_cost_snapshot (nothing when the change starts in the
+-- future). Returns {snapshots, backfill} for the apply audit row: the snapshots written today (or
+-- null) and the days left to app.backfill_dish_costs (or null), with `capped` when the 400-day
+-- limit cut the range short of `requested_from`.
+create function app.recompute_after_change(tenant uuid, effective_from date) returns jsonb
 language plpgsql set search_path = ''
 as $$
 declare
   today date := app.tenant_today(tenant);
+  r record;
 begin
   if effective_from > today then
-    return null;
+    return jsonb_build_object('snapshots', null, 'backfill', null);
   end if;
-  return app.compute_dish_costs(tenant, greatest(effective_from, today - 399), today);
+  select * into r from app.dish_cost_backfill_range(tenant, effective_from);
+  return jsonb_build_object(
+    'snapshots', app.compute_dish_costs(tenant, today, today),
+    'backfill', case when r.from_date <= r.to_date then
+      jsonb_build_object('from', r.from_date, 'to', r.to_date, 'requested_from', effective_from,
+                         'capped', effective_from < r.from_date) end);
 end
 $$;
 
@@ -166,8 +196,8 @@ begin
     'before', jsonb_build_object('unit_price_net', previous),
     -- D4: the unit the price is per, so a $/kg figure stored as $/g is visible on record
     'after', jsonb_build_object('ingredient_price_id', p.id, 'unit_price_net', p.unit_price_net, 'base_unit', unit,
-                                'effective_from', p.effective_from, 'source', p.source,
-                                'snapshots', app.recompute_after_change(pc.tenant_id, eff)));
+                                'effective_from', p.effective_from, 'source', p.source)
+             || app.recompute_after_change(pc.tenant_id, eff));
 end
 $$;
 
@@ -179,6 +209,7 @@ declare
   eff date := (pc.payload ->> 'effective_from')::date;
   gross bigint := (pc.payload ->> 'price_gross')::bigint;
   previous public.menu_item_price;
+  tax numeric;
   p public.menu_item_price;
 begin
   if loc is null or eff is null or not coalesce(gross > 0, false) then
@@ -190,14 +221,25 @@ begin
     and x.effective_from <= eff and (x.effective_to is null or x.effective_to >= eff)
   order by x.effective_from desc, x.created_at desc
   limit 1;
+  -- no tax rate on it (no price covers the date): the latest known one for the item there
+  tax := coalesce(previous.tax_rate,
+                  (select x.tax_rate from public.menu_item_price x
+                   where x.tenant_id = pc.tenant_id and x.menu_item_id = pc.target_id and x.location_id = loc
+                     and x.tax_rate is not null
+                   order by x.effective_from desc, x.created_at desc
+                   limit 1));
+  if tax is null then
+    raise exception 'no tax rate known for menu item % at location %: it has no earlier price there', pc.target_id, loc
+      using errcode = '22023';
+  end if;
   insert into public.menu_item_price (tenant_id, location_id, menu_item_id, price_gross, tax_rate, effective_from, source)
-  values (pc.tenant_id, loc, pc.target_id, gross, previous.tax_rate, eff, 'manual')
+  values (pc.tenant_id, loc, pc.target_id, gross, tax, eff, 'manual')
   returning * into p;
   return jsonb_build_object(
     'before', jsonb_build_object('price_gross', previous.price_gross),
     'after', jsonb_build_object('menu_item_price_id', p.id, 'price_gross', p.price_gross, 'location_id', p.location_id,
-                                'effective_from', p.effective_from, 'tax_rate', p.tax_rate,
-                                'snapshots', app.recompute_after_change(pc.tenant_id, eff)));
+                                'effective_from', p.effective_from, 'tax_rate', p.tax_rate)
+             || app.recompute_after_change(pc.tenant_id, eff));
 end
 $$;
 
@@ -286,8 +328,11 @@ begin
   end if;
   begin
     current_version := app.pending_base_version(pc.kind, pc.target_id, pc.payload);
-  exception when others then
-    return app.pending_change_fail(pc, m.user_id, sqlstate, sqlerrm);
+  exception
+    when deadlock_detected or serialization_failure or lock_not_available then
+      raise;  -- transient: the tap rolls back and the change stays pending for a retry
+    when others then
+      return app.pending_change_fail(pc, m.user_id, sqlstate, sqlerrm);
   end;
   if current_version is distinct from pc.base_version then
     perform app.pending_change_resolve(pc.id, 'conflict', m.user_id);
@@ -307,10 +352,56 @@ begin
     when insufficient_privilege then  -- apply_batch / rollback_batch refused the actor
       perform app.pending_change_log(pc, m.user_id, 'pending_change.deny', null, jsonb_build_object('reason', 'batch_actor'));
       return app.pending_change_result('forbidden_role', pc.id, pc.status);
-    when others then
+    when deadlock_detected or serialization_failure or lock_not_available then
+      raise;  -- transient: the tap rolls back and the change stays pending for a retry
+    when others then  -- (query_canceled is not caught by others: it escapes too)
       return app.pending_change_fail(pc, m.user_id, sqlstate, sqlerrm);
   end;
   return app.pending_change_result('applied', pc.id, 'applied');
+end
+$$;
+
+-- D3, after commit: recompute the older days of an applied price change, one chunk per call so
+-- the per-tenant dish_cost_snapshot lock (taken by compute_dish_costs) is held for a few seconds
+-- at most and a concurrent tap's today-recompute waits little. The confirmation service calls it
+-- in the background, one transaction per call (mermia_api.confirm.backfill), walking back from
+-- yesterday: `before` is the exclusive upper end (null: start at yesterday), `max_days` the chunk
+-- size. Returns {from, to, snapshots, next_before}: the days recomputed, the snapshots written and
+-- the `before` of the next call (null: done). {from: null, ...} when nothing is left to do (a batch,
+-- a price starting today or later). Idempotent: compute_dish_costs rewrites each day, so a rerun
+-- gives the same numbers. Raises P0002 for an unknown change and 55000 for one that is not applied.
+create function app.backfill_dish_costs(pending_change_id uuid, before date default null, max_days int default 7)
+returns jsonb
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  pc public.pending_change;
+  r record;
+  hi date;
+  lo date;
+  nothing constant jsonb := jsonb_build_object('from', null, 'to', null, 'snapshots', 0, 'next_before', null);
+begin
+  if max_days is null or max_days not between 1 and 31 then
+    raise exception 'max_days must be between 1 and 31' using errcode = '22023';
+  end if;
+  select * into pc from public.pending_change p where p.id = backfill_dish_costs.pending_change_id;
+  if not found then
+    raise exception 'pending change % not found', backfill_dish_costs.pending_change_id using errcode = 'P0002';
+  end if;
+  if pc.status <> 'applied' then
+    raise exception 'pending change % is %, not applied', pc.id, pc.status using errcode = '55000';
+  end if;
+  if pc.kind not in ('ingredient_price.set', 'menu_item_price.set') then
+    return nothing;
+  end if;
+  select * into r from app.dish_cost_backfill_range(pc.tenant_id, (pc.payload ->> 'effective_from')::date);
+  hi := least(r.to_date, before - 1);  -- least ignores a null before
+  if hi < r.from_date then
+    return nothing;
+  end if;
+  lo := greatest(r.from_date, hi - (max_days - 1));
+  return jsonb_build_object('from', lo, 'to', hi, 'snapshots', app.compute_dish_costs(pc.tenant_id, lo, hi),
+                            'next_before', case when lo > r.from_date then lo end);
 end
 $$;
 
@@ -320,10 +411,12 @@ revoke all on function app.tenant_today(uuid), app.pending_base_version(text, uu
   app.pending_change_resolve(uuid, app.pending_change_status, uuid),
   app.pending_change_fail(public.pending_change, uuid, text, text),
   app.pending_change_denial(public.pending_change, public.membership),
-  app.recompute_after_change(uuid, date), app.apply_ingredient_price(public.pending_change),
+  app.dish_cost_backfill_range(uuid, date), app.recompute_after_change(uuid, date),
+  app.apply_ingredient_price(public.pending_change),
   app.apply_menu_item_price(public.pending_change), app.apply_batch_change(public.pending_change, uuid),
-  app.pending_change_write(public.pending_change, uuid), app.apply_pending_change(uuid, uuid)
+  app.pending_change_write(public.pending_change, uuid), app.apply_pending_change(uuid, uuid),
+  app.backfill_dish_costs(uuid, date, int)
   from public, anon, authenticated;
 -- the proposer (confirmation service, importer) computes base_version with the same function
 grant execute on function app.tenant_today(uuid), app.pending_base_version(text, uuid, jsonb),
-  app.apply_pending_change(uuid, uuid) to service_role;
+  app.apply_pending_change(uuid, uuid), app.backfill_dish_costs(uuid, date, int) to service_role;

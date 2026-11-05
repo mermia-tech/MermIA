@@ -18,7 +18,7 @@
 
 - **D1 authorization.** Approve only if the kind is in the member's `can_approve`, the role is not `support`, and `required_role = 'owner'` requires the owner; the member's location scope must cover the target. MR-30 defaults stay (manager: imports only; default admin: no recipes; owner: everything). The recipe importer's `required_role = manager` stays.
 - **D2 version.** Price kinds: the count of that ingredient's `ingredient_price` rows / of the (menu_item, location) `menu_item_price` rows. Recipe: `recipe_version` of the recipe of record (or null). Import batch: `import_batch.version`. All computed by `app.pending_base_version(kind, target_id, payload) returns int`, granted to `service_role`; proposers must use it.
-- **D3 recompute.** Inside the apply transaction, after a catalog kind: `app.compute_dish_costs(tenant, greatest(effective_from, today - 399), today)`; skipped when `effective_from` is in the future. `compute_dish_costs` holds the per-tenant advisory lock.
+- **D3 recompute (revised 2026-11-05).** The tap recomputes **today only** (`app.compute_dish_costs(tenant, today, today)`) inside the apply transaction after a price kind, so the reply shows fresh numbers; skipped when `effective_from` is in the future. The older days, `greatest(effective_from, today - 399)` to yesterday, are recomputed **after commit**: `app.backfill_dish_costs(pending_change_id, before, max_days)` (service_role only, SECURITY DEFINER) recomputes one chunk of at most 7 days per call, walking back from yesterday, and `mermia_api.confirm.backfill.backfill_dish_costs(conn, pending_change_id)` loops over the chunks, one transaction each, so the per-tenant `dish_cost_snapshot` advisory lock is held for a couple of seconds at most. MR-37 calls it in the background after the apply commits. Idempotent and safe to rerun. The apply audit `after.backfill` records `{from, to, requested_from, capped}`; `capped` is true when the 400-day limit cut the range.
 - **D4 kg/g.** No hard guard. The audit `after` records `ingredient.base_unit`; MR-37 warns on jumps of 10x or more when it builds the diff.
 - **Split.** Part 1: the core, `ingredient_price.set`, `menu_item_price.set`, `import_batch.approve`, `import_batch.rollback`, the recompute and the Python wrapper. Part 2: `recipe.upsert`. In part 1, `recipe.upsert` returns `failed` (no new result code).
 
@@ -44,6 +44,11 @@
 ### Task 3: Python wrapper
 - [ ] `apps/api/src/mermia_api/confirm/apply.py`: `apply_pending_change(conn, args: ApplyPendingChangeArgs) -> ApplyResult`.
 - [ ] pytest `-m db` green; `gen_db_models --check` clean; `/check` green.
+
+## Follow-up fixes (review, 2026-11-05)
+- Indexes without the `tenant_id` prefix for the costing engine and `pending_base_version`: `ingredient_price(ingredient_id, effective_from)`, `menu_item_price(menu_item_id, location_id, effective_from)`, `recipe(menu_item_id)`, `recipe(produces_ingredient_id)`, `recipe_line(recipe_id)` (about 6x faster).
+- Transient errors (40P01, 40001, 55P03; 57014 already escapes) are re-raised, not marked `failed`: the change stays `pending` for a retry.
+- `menu_item_price.set` with no price covering the date takes the location's latest tax rate for the item; with none it ends `failed`.
 
 ## Known risks (noted in the PR, not fixed here)
 - A manual price loses to a same-day CFDI price in `app.price_of_record`.

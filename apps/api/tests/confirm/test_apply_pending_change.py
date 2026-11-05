@@ -18,6 +18,7 @@ import pytest
 from psycopg.types.json import Jsonb
 
 from mermia_api.confirm.apply import apply_pending_change
+from mermia_api.confirm.backfill import BackfillResult, backfill_dish_costs
 from mermia_contracts.db.models import PendingChangeStatus
 from mermia_contracts.pending import (
     TARGET_TYPE,
@@ -248,6 +249,69 @@ def test_stale_taps_get_a_clear_code(
         )
         == 0
     )
+
+
+def test_a_backdated_price_is_backfilled_in_short_chunks(conn: psycopg.Connection[Any]) -> None:
+    change = propose(conn, PendingKind.ingredient_price_set, CARNE, price("0.50", "2026-09-22"))
+    assert tap(conn, change, OWNER).code is ApplyCode.applied
+
+    first = backfill_dish_costs(conn, change)
+    again = backfill_dish_costs(conn, change)
+
+    # 2026-09-22 .. 2026-10-11 (today was done by the tap): 20 days in chunks of 7, 7 and 6
+    assert first.chunks == 3
+    assert first.snapshots > 0
+    assert again == first
+    cost = count(
+        conn,
+        "select cost from public.dish_cost_snapshot where menu_item_id = %s "
+        "and location_id = %s and date = '2026-09-23'",
+        PASTOR,
+        CENTRO,
+    )
+    assert cost > 0
+
+
+def test_nothing_to_backfill_for_a_batch(conn: psycopg.Connection[Any]) -> None:
+    batch = conn.execute(
+        """insert into public.import_batch
+             (tenant_id, source_id, location_id, parser, slice_key, status)
+           select tenant_id, source_id, location_id, parser, slice_key, 'needs_review'
+           from public.import_batch where id = %s returning id""",
+        (SEEDED_CENTRO,),
+    ).fetchone()
+    assert batch is not None
+    approve = propose(conn, PendingKind.import_batch_approve, batch[0], {})
+    assert tap(conn, approve, LUPITA).code is ApplyCode.applied
+
+    assert backfill_dish_costs(conn, approve) == BackfillResult(chunks=0, snapshots=0)
+
+
+def test_a_change_that_is_not_applied_is_not_backfilled(conn: psycopg.Connection[Any]) -> None:
+    change = propose(conn, PendingKind.ingredient_price_set, CARNE, price("0.50", "2026-09-22"))
+
+    with pytest.raises(psycopg.errors.ObjectNotInPrerequisiteState):
+        backfill_dish_costs(conn, change)
+
+
+def test_a_transient_error_escapes_and_leaves_the_change_pending(
+    conn: psycopg.Connection[Any],
+) -> None:
+    conn.execute(
+        """create function pg_temp.deadlock() returns trigger language plpgsql as $$
+           begin raise exception 'deadlock' using errcode = '40P01'; end $$;
+           create trigger zz_deadlock after insert on public.ingredient_price
+             for each row execute function pg_temp.deadlock()"""
+    )
+    change = propose(conn, PendingKind.ingredient_price_set, CARNE, price("0.30"))
+
+    with pytest.raises(psycopg.errors.DeadlockDetected):
+        tap(conn, change, OWNER)
+
+    status = conn.execute(
+        "select status::text from public.pending_change where id = %s", (change,)
+    ).fetchone()
+    assert status == ("pending",)
 
 
 def test_a_recipe_change_fails_until_part_2(conn: psycopg.Connection[Any]) -> None:

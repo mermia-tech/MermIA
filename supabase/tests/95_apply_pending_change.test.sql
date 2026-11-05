@@ -30,6 +30,12 @@ select is((select count(*) from pg_proc p where p.oid in ('app.apply_pending_cha
           0::bigint, 'clients cannot call them');
 select ok((select p.prosecdef and p.proconfig @> array['search_path=""'] from pg_proc p
            where p.oid = 'app.apply_pending_change(uuid, uuid)'::regprocedure), 'apply is a definer with an empty search_path');
+select ok(has_function_privilege('service_role', 'app.backfill_dish_costs(uuid, date, int)', 'execute'),
+          'the backend backfills dish costs after an apply');
+select ok(not has_function_privilege('authenticated', 'app.backfill_dish_costs(uuid, date, int)', 'execute')
+          and not has_function_privilege('anon', 'app.backfill_dish_costs(uuid, date, int)', 'execute'), 'clients cannot');
+select ok((select p.prosecdef and p.proconfig @> array['search_path=""'] from pg_proc p
+           where p.oid = 'app.backfill_dish_costs(uuid, date, int)'::regprocedure), 'the backfill is a definer with an empty search_path');
 
 -- people: MermIA support, a tenant admin, and the owner of another tenant ---------------------
 insert into public.app_user (id, name) values (:SUPPORT, 'Soporte'), (:ADMIN, 'Admin'), (:STRANGER, 'Otro dueño');
@@ -116,6 +122,57 @@ select is(pg_temp.tap('future', 'future', :OWNER) ->> 'code', 'applied', 'a futu
 select is((select count(*) from public.dish_cost_snapshot where tenant_id = :TENANT and date > '2026-10-12'), 0::bigint,
           'and no snapshot is computed past today');
 
+-- a backdated price: the tap recomputes today only, the backfill does the older days ----------
+select is(app.compute_dish_costs(:TENANT, '2026-10-01', '2026-10-11') > 0, true, 'snapshots exist for the days before');
+create temp table snap_before as
+select date, id, cost from public.dish_cost_snapshot where menu_item_id = :PASTOR and location_id = :CENTRO and date between '2026-10-01' and '2026-10-12';
+create function pg_temp.snap(d date) returns public.dish_cost_snapshot language sql stable as $$
+  select * from public.dish_cost_snapshot
+  where menu_item_id = 'f496f051-9f85-5f8a-a4b6-c1a814d37c73' and location_id = '705e8e51-376b-5785-adbb-405eff4e2a22' and date = d
+$$;
+
+select pg_temp.propose('backdated', 'ingredient_price.set', 'ingredient', :CARNE,
+                       '{"unit_price": "0.50", "effective_from": "2026-10-05", "source": "manual"}');
+select is(pg_temp.tap('backdated', 'backdated', :OWNER) ->> 'code', 'applied', 'a backdated price applies');
+select isnt((pg_temp.snap('2026-10-12')).id, (select id from snap_before where date = '2026-10-12'), 'the tap rewrites today''s snapshot');
+select is((pg_temp.snap('2026-10-06')).id, (select id from snap_before where date = '2026-10-06'), 'but not the older days');
+select is((select after -> 'backfill' from public.audit_log where pending_change_id = pg_temp.pc('backdated') and action = 'pending_change.apply'),
+          '{"from": "2026-10-05", "to": "2026-10-11", "capped": false, "requested_from": "2026-10-05"}'::jsonb,
+          'the apply audit row names the days left to the backfill');
+
+-- the backfill walks back from yesterday in chunks of at most max_days
+select is(app.backfill_dish_costs(pg_temp.pc('backdated'), null, 3) - 'snapshots',
+          '{"from": "2026-10-09", "to": "2026-10-11", "next_before": "2026-10-09"}'::jsonb, 'the first chunk ends yesterday');
+select is(app.backfill_dish_costs(pg_temp.pc('backdated'), '2026-10-09', 3) - 'snapshots',
+          '{"from": "2026-10-06", "to": "2026-10-08", "next_before": "2026-10-06"}'::jsonb, 'the next chunk goes on from there');
+select is(app.backfill_dish_costs(pg_temp.pc('backdated'), '2026-10-06', 3) - 'snapshots',
+          '{"from": "2026-10-05", "to": "2026-10-05", "next_before": null}'::jsonb, 'the last chunk stops at the effective date');
+select cmp_ok((pg_temp.snap('2026-10-06')).cost, '>', (select cost from snap_before where date = '2026-10-06'),
+              'the older days now use the backdated price');
+select is((pg_temp.snap('2026-10-04')).id, (select id from snap_before where date = '2026-10-04'), 'days before it are not touched');
+create temp table snap_after as select (pg_temp.snap('2026-10-06')).cost;
+select is((app.backfill_dish_costs(pg_temp.pc('backdated')) ->> 'snapshots')::int > 0, true, 'a rerun is safe');
+select is((pg_temp.snap('2026-10-06')).cost, (select cost from snap_after), 'and gives the same numbers');
+
+-- a price older than 400 days: the backfill stops at today - 399 and the audit row says so
+select pg_temp.propose('ancient', 'ingredient_price.set', 'ingredient', :CARNE,
+                       '{"unit_price": "0.10", "effective_from": "2025-01-01", "source": "manual"}');
+select is(pg_temp.tap('ancient', 'ancient', :OWNER) ->> 'code', 'applied', 'a price from long ago applies');
+select is((select after -> 'backfill' from public.audit_log where pending_change_id = pg_temp.pc('ancient') and action = 'pending_change.apply'),
+          '{"from": "2025-09-08", "to": "2026-10-11", "capped": true, "requested_from": "2025-01-01"}'::jsonb,
+          'the audit row notes the 400-day cap');
+select is(app.backfill_dish_costs(pg_temp.pc('ancient')) - 'snapshots',
+          '{"from": "2026-10-05", "to": "2026-10-11", "next_before": "2026-10-05"}'::jsonb, 'chunks are 7 days by default');
+
+-- nothing to backfill: a price starting today, a future price, a batch; refused: not applied, unknown
+select is(app.backfill_dish_costs(pg_temp.pc('price')),
+          '{"from": null, "to": null, "snapshots": 0, "next_before": null}'::jsonb, 'a price from today leaves nothing to backfill');
+select is((select after -> 'backfill' from public.audit_log where pending_change_id = pg_temp.pc('price') and action = 'pending_change.apply'),
+          'null'::jsonb, 'and its audit row says so');
+select is(app.backfill_dish_costs(pg_temp.pc('future')) ->> 'from', null, 'nor does a future price');
+select throws_ok(format('select app.backfill_dish_costs(%L, null, 0)', pg_temp.pc('backdated')), '22023', null, 'max_days must be at least 1');
+select throws_ok('select app.backfill_dish_costs(''eeeeeeee-0000-7000-8000-0000000000ff'')', 'P0002', null, 'an unknown change is refused');
+
 -- menu_item_price.set -------------------------------------------------------------------------
 select pg_temp.propose('menu', 'menu_item_price.set', 'menu_item', :PASTOR,
                        jsonb_build_object('price_gross', 9000, 'location_id', :CENTRO, 'effective_from', '2026-10-12'));
@@ -129,6 +186,45 @@ select is(pg_temp.audits('menu', 'pending_change.apply'), 1::bigint, 'one apply 
 select is((select after ->> 'menu_item_price_id' from public.audit_log where pending_change_id = pg_temp.pc('menu') and action = 'pending_change.apply'),
           (select id::text from public.menu_item_price where menu_item_id = :PASTOR and location_id = :CENTRO and effective_from = '2026-10-12'),
           'the audit row names the price row it wrote');
+
+select is(pg_temp.status('menu'), 'applied', 'the menu change is applied');
+
+-- no price covers the date: the tax rate comes from the location's latest price for the item
+insert into public.menu_item (id, tenant_id, name) values ('eeeeeeee-0000-7000-8000-0000000000c1', :TENANT, 'Gringa nueva');
+insert into public.menu_item_price (tenant_id, location_id, menu_item_id, price_gross, tax_rate, effective_from)
+values (:TENANT, :CENTRO, 'eeeeeeee-0000-7000-8000-0000000000c1', 5000, 0.08, '2026-11-01');
+select pg_temp.propose('new dish', 'menu_item_price.set', 'menu_item', 'eeeeeeee-0000-7000-8000-0000000000c1',
+                       jsonb_build_object('price_gross', 4800, 'location_id', :CENTRO, 'effective_from', '2026-10-12'));
+select is(pg_temp.tap('new dish', 'new dish', :OWNER) ->> 'code', 'applied', 'a menu price before any earlier price applies');
+select is((select tax_rate from public.menu_item_price
+           where menu_item_id = 'eeeeeeee-0000-7000-8000-0000000000c1' and effective_from = '2026-10-12'),
+          0.0800, 'with the tax rate of the location''s latest price for the item');
+-- no price for the item at that location at all: no tax rate to keep, so it fails
+select pg_temp.propose('no tax', 'menu_item_price.set', 'menu_item', 'eeeeeeee-0000-7000-8000-0000000000c1',
+                       jsonb_build_object('price_gross', 4800, 'location_id', :POLANCO, 'effective_from', '2026-10-12'));
+select is(pg_temp.tap('no tax', 'no tax', :OWNER) ->> 'code', 'failed', 'a menu price with no known tax rate fails');
+select is((select count(*) from public.menu_item_price where menu_item_id = 'eeeeeeee-0000-7000-8000-0000000000c1' and location_id = :POLANCO),
+          0::bigint, 'and writes nothing');
+select matches((select after ->> 'error' from public.audit_log where pending_change_id = pg_temp.pc('no tax') and action = 'pending_change.fail'),
+               'tax rate', 'the fail audit row says why');
+
+-- conflict: another price for the same item and location arrived after the proposal
+select pg_temp.propose('stale menu', 'menu_item_price.set', 'menu_item', :PASTOR,
+                       jsonb_build_object('price_gross', 9500, 'location_id', :CENTRO, 'effective_from', '2026-10-12'));
+insert into public.menu_item_price (tenant_id, location_id, menu_item_id, price_gross, tax_rate, effective_from)
+values (:TENANT, :CENTRO, :PASTOR, 9100, 0.16, '2026-10-12');
+select is(pg_temp.tap('stale menu', 'stale menu', :OWNER) ->> 'code', 'conflict', 'a menu price whose target moved is a conflict');
+select is((select count(*) from public.menu_item_price where menu_item_id = :PASTOR and price_gross = 9500), 0::bigint, 'no price row');
+select is(pg_temp.audits('stale menu', 'pending_change.conflict'), 1::bigint, 'with an audit row');
+
+-- a menu price whose location_id is not a uuid: the version lookup raises, so it fails
+insert into public.pending_change (tenant_id, kind, target_type, target_id, base_version, payload, proposed_by_user, proposed_via, expires_at)
+values (:TENANT, 'menu_item_price.set', 'menu_item', :PASTOR, 1,
+        '{"price_gross": 9000, "location_id": "Centro", "effective_from": "2026-10-12"}', :OWNER, 'agent', now() + interval '1 day');
+insert into pc select 'bad location', id from public.pending_change where payload ->> 'location_id' = 'Centro';
+select is(pg_temp.tap('bad location', 'bad location', :OWNER) ->> 'code', 'failed', 'a malformed location_id fails');
+select is(pg_temp.status('bad location'), 'failed', 'its status is failed');
+select is(pg_temp.audits('bad location', 'pending_change.fail'), 1::bigint, 'with a fail audit row');
 
 -- import_batch.approve and import_batch.rollback ---------------------------------------------
 select pg_temp.propose('approve', 'import_batch.approve', 'import_batch', 'eeeeeeee-0000-7000-8000-0000000000b1', '{}');
@@ -168,6 +264,17 @@ select pg_temp.propose('polanco menu', 'menu_item_price.set', 'menu_item', :PAST
                        jsonb_build_object('price_gross', 9900, 'location_id', :POLANCO, 'effective_from', '2026-10-12'));
 select is(pg_temp.tap('polanco menu', 'polanco menu', :LUPITA) ->> 'code', 'forbidden_role', 'a Centro manager cannot set a Polanco price');
 select is((select count(*) from public.menu_item_price where menu_item_id = :PASTOR and price_gross = 9900), 0::bigint, 'no price row');
+
+-- a Polanco-only dish: a Centro manager cannot price it even at Centro
+insert into public.menu_item (id, tenant_id, location_id, name) values ('eeeeeeee-0000-7000-8000-0000000000c2', :TENANT, :POLANCO, 'Especial Polanco');
+insert into public.menu_item_price (tenant_id, location_id, menu_item_id, price_gross, tax_rate, effective_from)
+values (:TENANT, :CENTRO, 'eeeeeeee-0000-7000-8000-0000000000c2', 7000, 0.16, '2026-10-01');
+select pg_temp.propose('polanco dish', 'menu_item_price.set', 'menu_item', 'eeeeeeee-0000-7000-8000-0000000000c2',
+                       jsonb_build_object('price_gross', 7500, 'location_id', :CENTRO, 'effective_from', '2026-10-12'));
+select is(pg_temp.tap('polanco dish', 'polanco dish', :LUPITA) ->> 'code', 'forbidden_role',
+          'the menu item''s own location counts too');
+select is(pg_temp.audits('polanco dish', 'pending_change.deny'), 1::bigint, 'the refusal is audit-logged');
+select is(pg_temp.status('polanco dish'), 'pending', 'the change stays pending');
 
 -- support proposes but never approves (09 section 5.1)
 select is(pg_temp.tap('support', 'lupita price', :SUPPORT) ->> 'code', 'forbidden_role', 'support is refused even with can_approve');
@@ -215,6 +322,33 @@ select is(pg_temp.tap('stale', 'stale', :OWNER) ->> 'code', 'conflict', 'a chang
 select is(pg_temp.status('stale'), 'conflict', 'its status is conflict');
 select is(pg_temp.audits('stale', 'pending_change.conflict'), 1::bigint, 'with an audit row');
 select is((select count(*) from public.ingredient_price where pending_change_id = pg_temp.pc('stale')), 0::bigint, 'no price row');
+
+-- conflict: the loader moved the batch after the proposal
+select pg_temp.propose('stale batch', 'import_batch.approve', 'import_batch', 'eeeeeeee-0000-7000-8000-0000000000b2', '{}');
+update public.import_batch set version = version + 1 where id = 'eeeeeeee-0000-7000-8000-0000000000b2';
+select is(pg_temp.tap('stale batch', 'stale batch', :OWNER) ->> 'code', 'conflict', 'a batch that moved is a conflict');
+select is((select status::text from public.import_batch where id = 'eeeeeeee-0000-7000-8000-0000000000b2'), 'needs_review', 'the batch is untouched');
+select is(pg_temp.audits('stale batch', 'pending_change.conflict'), 1::bigint, 'with an audit row');
+
+-- transient errors (deadlock, serialization, lock timeout) escape, so a retry can apply the change
+create function pg_temp.transient() returns trigger language plpgsql as $$
+begin
+  raise exception 'transient' using errcode = current_setting('test.errcode');
+end
+$$;
+create trigger zz_transient after insert on public.ingredient_price for each row execute function pg_temp.transient();
+select pg_temp.propose('transient', 'ingredient_price.set', 'ingredient', :CARNE,
+                       '{"unit_price": "0.60", "effective_from": "2026-10-12", "source": "manual"}');
+set local test.errcode = '40P01';
+select throws_ok(format('select app.apply_pending_change(%L, %L)', pg_temp.pc('transient'), :OWNER), '40P01', null, 'a deadlock escapes');
+set local test.errcode = '40001';
+select throws_ok(format('select app.apply_pending_change(%L, %L)', pg_temp.pc('transient'), :OWNER), '40001', null, 'a serialization failure escapes');
+set local test.errcode = '55P03';
+select throws_ok(format('select app.apply_pending_change(%L, %L)', pg_temp.pc('transient'), :OWNER), '55P03', null, 'a lock timeout escapes');
+select is(pg_temp.status('transient'), 'pending', 'the change stays pending');
+select is(pg_temp.audits('transient', 'pending_change.fail'), 0::bigint, 'with no fail audit row');
+drop trigger zz_transient on public.ingredient_price;
+select is(pg_temp.tap('transient retry', 'transient', :OWNER) ->> 'code', 'applied', 'and a retry applies it');
 
 -- failed: the write raises after inserting; everything it did rolls back
 create function pg_temp.boom() returns trigger language plpgsql as $$
