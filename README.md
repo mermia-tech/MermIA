@@ -54,6 +54,27 @@ Migrations are created with `supabase migration new <name>` and never edited onc
 A new table must call `app.finish_table(...)` in the same migration (RLS, privileges, text
 checks) and tag its unit columns with `app.tag(...)`; the catalog test fails otherwise.
 
+## Onboarding a tenant (concierge)
+
+One command creates a restaurant, its locations and its users with their roles, from a spec
+file (YAML or JSON; start from `apps/api/src/mermia_api/admin/example.yaml`, and keep real
+specs out of git because they hold phone numbers):
+
+```bash
+export MERMIA_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres   # the admin (postgres) URL
+uv run python -m mermia_api.admin pilot.yaml --dry-run   # report what would change, save nothing
+uv run python -m mermia_api.admin pilot.yaml             # apply, in one transaction
+```
+
+Each user gets an `app_user`, a verified WhatsApp identity (so the channel can resolve the
+sender) and a `membership`: `owner`, `admin` and `support` see every location by default; a
+`manager` lists theirs. Rerunning the same file changes nothing; edit it and rerun to update.
+Nothing is deleted, every change writes an `audit_log` row, and phone numbers are printed masked.
+`--auth-users` also links users that have an email to Supabase Auth (Phase 2 dashboard; needs
+`MERMIA_API_URL` and `MERMIA_SERVICE_ROLE_KEY`, loopback only unless `--allow-remote-auth`).
+A real run against the local database adds a second tenant that some seed tests do not expect;
+`supabase db reset` brings it back to the seed.
+
 ## Contracts package
 
 ```bash
