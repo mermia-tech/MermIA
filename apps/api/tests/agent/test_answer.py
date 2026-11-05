@@ -80,7 +80,7 @@ def test_everything_else_goes_to_the_broker_unchanged(
     request = _request(el_guero, input)
     response = answer(request, locations=el_guero, rpc=fake_rpc, broker=counting_broker)
     assert response.route == "haiku"  # what the counting broker answers
-    assert counting_broker.calls == [(request, el_guero)]
+    assert counting_broker.calls == [(request, el_guero, fake_rpc)]  # the caller's identity
     assert fake_rpc.calls == []
 
 
@@ -165,8 +165,8 @@ MENU = {
 }
 
 
-def test_the_stub_broker_offers_the_template_menu(el_guero: dict[UUID, str]) -> None:
-    response = StubBroker()(_text(el_guero, "¿qué vino me recomiendas?"), el_guero)
+def test_the_stub_broker_offers_the_template_menu(el_guero: dict[UUID, str], fake_rpc: Any) -> None:
+    response = StubBroker()(_text(el_guero, "¿qué vino me recomiendas?"), el_guero, fake_rpc)
     assert response.route == "fallback"
     (message,) = response.messages
     assert isinstance(message, ChoicesMsg)
@@ -175,9 +175,9 @@ def test_the_stub_broker_offers_the_template_menu(el_guero: dict[UUID, str]) -> 
     assert all(len(o.label) <= 24 for o in message.options)
 
 
-def test_a_one_location_user_is_not_offered_the_location_ranking() -> None:
+def test_a_one_location_user_is_not_offered_the_location_ranking(fake_rpc: Any) -> None:
     centro = {UUID("705e8e51-376b-5785-adbb-405eff4e2a22"): "Centro"}
-    response = StubBroker()(_text(centro, "¿qué vino me recomiendas?"), centro)
+    response = StubBroker()(_text(centro, "¿qué vino me recomiendas?"), centro, fake_rpc)
     (message,) = response.messages
     assert isinstance(message, ChoicesMsg)
     assert "tpl:compare_locations" not in [o.id for o in message.options]
