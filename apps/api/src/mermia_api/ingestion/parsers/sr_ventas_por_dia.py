@@ -19,8 +19,6 @@ pago", so the two never share a header.
 from __future__ import annotations
 
 import datetime as dt
-from collections.abc import Callable
-from dataclasses import dataclass
 from typing import Any
 
 from openpyxl.workbook.workbook import Workbook
@@ -28,6 +26,8 @@ from openpyxl.workbook.workbook import Workbook
 from mermia_api.ingestion.errors import MalformedReport
 from mermia_api.ingestion.parsers._sr_common import (
     SEARCH_ROWS,
+    Line,
+    columns,
     has_title,
     location_hint,
     period,
@@ -76,8 +76,6 @@ KNOWN = {
     "importe cancelado",
 }
 
-Columns = dict[str, tuple[int, str]]  # normalized name -> (index, header as given)
-
 
 def _header_at(sheet_rows: list[Row]) -> int | None:
     for i, row in enumerate(sheet_rows[:SEARCH_ROWS]):
@@ -100,22 +98,6 @@ def matches(wb: Workbook) -> bool:
     return _sheet_name(wb) is not None
 
 
-def _columns(header: Row) -> Columns:
-    cols: Columns = {}
-    for i, cell in enumerate(header):
-        name = norm(cell)
-        if name not in KNOWN:
-            continue
-        if name in cols:
-            raise MalformedReport(
-                f"El encabezado repite la columna «{text(cell)}». Envíame el reporte con una "
-                "columna de cada tipo.",
-                f"column {name!r} repeated in the header",
-            )
-        cols[name] = (i, text(cell) or name)
-    return cols
-
-
 def _count(value: Any, where: str) -> int:
     d = number(value, where)
     if d != d.to_integral_value() or not 0 <= d <= MAX_COUNT:
@@ -127,39 +109,7 @@ def _count(value: Any, where: str) -> int:
     return int(d)
 
 
-@dataclass(frozen=True)
-class _Line:
-    """One row below the header, read by column name."""
-
-    cells: Row
-    n: int  # the sheet's row number, as Excel shows it
-    cols: Columns
-
-    def has(self, name: str) -> bool:
-        return name in self.cols
-
-    def raw(self, name: str) -> Any:
-        if name not in self.cols:
-            return None
-        i = self.cols[name][0]
-        return self.cells[i] if i < len(self.cells) else None
-
-    def where(self, name: str) -> str:
-        return f"la fila {self.n} ({self.cols[name][1]})"
-
-    def read[T](self, name: str, conv: Callable[[Any, str], T]) -> T | None:
-        """The cell converted, or None when the column is missing or the cell is blank."""
-        value = self.raw(name)
-        return None if text(value) is None else conv(value, self.where(name))
-
-    def cents(self, name: str) -> int | None:
-        return self.read(name, centavos)
-
-    def count(self, name: str) -> int | None:
-        return self.read(name, _count)
-
-
-def _business_date(line: _Line) -> dt.date:
+def _business_date(line: Line) -> dt.date:
     value = line.raw(DATE)
     if isinstance(value, dt.datetime):  # an Excel date cell
         return value.date()
@@ -171,14 +121,14 @@ def _business_date(line: _Line) -> dt.date:
     return sr_date(s, f"de la fila {line.n}")
 
 
-def _is_text_footer(line: _Line) -> bool:
+def _is_text_footer(line: Line) -> bool:
     """A row with text only in Fecha ("Impreso el ...", "Página 1 de 1"). A row with any other
     cell filled is a day row, refused when it cannot be read, never dropped."""
     i = line.cols[DATE][0]
     return all(text(c) is None for j, c in enumerate(line.cells) if j != i)
 
 
-def _has_day_date(line: _Line) -> bool:
+def _has_day_date(line: Line) -> bool:
     """Whether the Fecha cell is a day (a text footer such as "Impreso el ..." is not)."""
     try:
         _business_date(line)
@@ -191,7 +141,7 @@ def _warning(code: str, message_es: str, n: int) -> IssueIn:
     return IssueIn(severity=IssueSeverity.warning, code=code, message_es=message_es, row_ref=str(n))
 
 
-def _checks(line: _Line, day: DailySalesIn) -> list[IssueIn]:
+def _checks(line: Line, day: DailySalesIn) -> list[IssueIn]:
     """Warnings, never a rejection: SR may round or leave a category out (MR-5 decides)."""
     issues: list[IssueIn] = []
     sales = [s for s in SALES if line.has(s)]
@@ -222,7 +172,7 @@ def _checks(line: _Line, day: DailySalesIn) -> list[IssueIn]:
     return issues
 
 
-def _day(line: _Line) -> DailySalesIn:
+def _day(line: Line) -> DailySalesIn:
     net = line.cents(NET)
     if net is None:
         raise MalformedReport(
@@ -233,11 +183,11 @@ def _day(line: _Line) -> DailySalesIn:
         business_date=_business_date(line),
         net_sales=net,
         tax=line.cents("iva"),
-        tickets=line.count("cuentas"),
-        guests=line.count("personas"),
+        tickets=line.read("cuentas", _count),
+        guests=line.read("personas", _count),
         discounts=line.cents(DISCOUNTS),
         cancellations_amount=line.cents("importe cancelado"),
-        cancellations_count=line.count("cancelaciones"),
+        cancellations_count=line.read("cancelaciones", _count),
         payment_mix={m: c for m, c in mix.items() if c is not None},
         tips=line.cents("propinas"),
     )
@@ -268,7 +218,7 @@ def parse(wb: Workbook) -> NormalizedBatch:
     sheet_rows = read_table(wb, sheet_name, h, MAX_ROWS)
     title = sheet_rows[:h]
     batch_period = period(title)
-    cols = _columns(sheet_rows[h])
+    cols = columns(sheet_rows[h], KNOWN)
 
     days: list[DailySalesIn] = []
     issues: list[IssueIn] = []
@@ -278,7 +228,7 @@ def parse(wb: Workbook) -> NormalizedBatch:
     for n, cells in enumerate(sheet_rows[h + 1 :], start=h + 2):
         if all(text(c) is None for c in cells):
             continue
-        line = _Line(cells, n, cols)
+        line = Line(cells, n, cols)
         if after_total:
             # After Total only a text footer may follow ("Impreso el ..."), the same rule as before
             # Total. Anything else means more days or another section, which would load short.

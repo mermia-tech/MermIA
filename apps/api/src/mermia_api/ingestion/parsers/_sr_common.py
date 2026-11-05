@@ -9,16 +9,20 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+from collections.abc import Callable, Collection, Mapping
+from dataclasses import dataclass
 from decimal import Decimal
+from typing import Any
 
 from openpyxl.workbook.workbook import Workbook
 
 from mermia_api.ingestion.errors import MalformedReport
-from mermia_api.ingestion.xlsx import Row, norm, rows, text
+from mermia_api.ingestion.xlsx import Row, centavos, norm, rows, text
 from mermia_contracts.batch import Period
 
 SEARCH_ROWS = 15  # the header sits in the title block at the top of the sheet
 DATE = r"(\d{1,2})/(\d{1,2})/(\d{4})"
+Columns = dict[str, tuple[int, str]]  # normalized name -> (index, header as given)
 PERIOD = re.compile(r"del\s+(\d{1,2}/\d{1,2}/\d{4})\s+al\s+(\d{1,2}/\d{1,2}/\d{4})")
 
 
@@ -85,3 +89,53 @@ def read_table(wb: Workbook, sheet: str, header_at: int, max_rows: int) -> list[
             f"more than {max_rows} rows below the header",
         )
     return sheet_rows
+
+
+def columns(
+    header: Row, known: Collection[str], aliases: Mapping[str, str] | None = None
+) -> Columns:
+    """The header's known columns by normalized name; a known column given twice (under any of
+    its `aliases`, normalized name -> known name) is refused."""
+    cols: Columns = {}
+    for i, cell in enumerate(header):
+        name = norm(cell)
+        name = (aliases or {}).get(name, name)
+        if name not in known:
+            continue
+        if name in cols:
+            raise MalformedReport(
+                f"El encabezado repite la columna «{text(cell)}». Envíame el reporte con una "
+                "columna de cada tipo.",
+                f"column {name!r} repeated in the header",
+            )
+        cols[name] = (i, text(cell) or name)
+    return cols
+
+
+@dataclass(frozen=True)
+class Line:
+    """One row below the header, read by column name."""
+
+    cells: Row
+    n: int  # the sheet's row number, as Excel shows it
+    cols: Columns
+
+    def has(self, name: str) -> bool:
+        return name in self.cols
+
+    def raw(self, name: str) -> Any:
+        if name not in self.cols:
+            return None
+        i = self.cols[name][0]
+        return self.cells[i] if i < len(self.cells) else None
+
+    def where(self, name: str) -> str:
+        return f"la fila {self.n} ({self.cols[name][1]})"
+
+    def read[T](self, name: str, conv: Callable[[Any, str], T]) -> T | None:
+        """The cell converted, or None when the column is missing or the cell is blank."""
+        value = self.raw(name)
+        return None if text(value) is None else conv(value, self.where(name))
+
+    def cents(self, name: str) -> int | None:
+        return self.read(name, centavos)
