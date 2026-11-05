@@ -166,7 +166,7 @@ The work is built in vertical slices: the first slice takes one intent end to en
 **Files:** Modify `router.py`, `templates.py`; tests in `test_router.py`, `test_templates.py`.
 
 **Steps:**
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
   - **Matches:**
     - "¿cómo me fue la semana pasada contra la antepasada?" and "la semana pasada vs la anterior" give `last_week` vs `prev_week` with `net_sales`.
     - "ticket promedio" gives `avg_ticket`.
@@ -178,8 +178,15 @@ The work is built in vertical slices: the first slice takes one intent end to en
     - From `compare_periods.json`, the exact expected string with the `a`, `b`, `abs_change` and `pct_change` texts.
     - A null `pct_change` leaves its line out.
     - `missing_days` adds its message.
-- [ ] **Step 2: Run, FAIL. Step 3: Implement. Step 4: Run, PASS, mypy clean.**
-- [ ] **Step 5: Commit** `MR-26: compare last week against the week before`.
+- [x] **Step 2: Run, FAIL. Step 3: Implement. Step 4: Run, PASS, mypy clean.**
+- [x] **Step 5: Commit** `MR-26: compare last week against the week before`.
+
+**Result (2026-11-04):**
+- Red: 8 failed (router matches, both templates, the no_data reply). The negatives already passed.
+- Green: `uv run pytest apps/api` gives 173 passed and 16 skipped; mypy and ruff are clean.
+- Eval matches are unchanged (`sales_yesterday`, `sales_last_week`). `sales_avg_ticket` and `sales_vs_previous_week` fall through, as optional cases may.
+- Deviation from the plan: the positive "¿cómo me fue la semana pasada contra la antepasada?" names no metric. The spec says no metric means no match, so the test uses "¿cuánto vendí…?" and "la semana pasada contra la anterior" (no metric) is a negative.
+- The router now picks one intent: the specific intents (`_SPECIFIC`) win over the sales total, and two specific intents give None.
 
 **Acceptance:** the sweep is still green, `sales_month_vs_last` still gives `None`, and the hand-written matches hold.
 **Dependencies:** Task 2. **Scope:** S.
@@ -191,7 +198,7 @@ This is the largest parser, so it gets its own task.
 **Files:** Modify `router.py`, `templates.py`; tests as above.
 
 **Steps:**
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
   - Add `top_dishes_top5_month_units` and `top_dishes_top3_revenue_30d` to `MUST_MATCH`.
   - **Matches:**
     - N as a number word ("los tres platillos") or as a digit, right before "platillo(s)".
@@ -209,8 +216,18 @@ This is the largest parser, so it gets its own task.
     - The ranked list of `name` and `value.text` from `get_top_dishes.json` equals the exact string.
     - Empty `rows` give "No hay ventas registradas en {periodo}."
     - `uncosted_sales` adds its message.
-- [ ] **Steps 2-4:** FAIL, implement, PASS + mypy.
-- [ ] **Step 5: Commit** `MR-26: top and bottom dishes intent`.
+- [x] **Steps 2-4:** FAIL, implement, PASS + mypy.
+- [x] **Step 5: Commit** `MR-26: top and bottom dishes intent`.
+
+**Result (2026-11-04):**
+- Red: 15 failed.
+- A first green attempt missed registering `_top_dishes` in `_SPECIFIC` (the formatter had reshaped the tuple). The positive tests caught it.
+- A test bug: the singular test took row 2, whose `rank` is 2 in the data; it now takes row 1.
+- Green: `uv run pytest apps/api` gives 197 passed and 16 skipped; mypy and ruff are clean.
+- Optional eval cases now matching, with their expected args: `top_dishes_top_margin`, `top_dishes_worst_seller`. `top_dishes_least_profitable` falls through (two measures).
+- "venden" alone is not a measure ("los platillos que más venden" could mean units or money), so it gives None.
+- The empty reply reads "No hay ventas registradas {periodo} {dónde}." instead of the spec's draft "en {periodo}", which reads badly with "ayer". The wording is approved in the PR.
+- `con`, `cual` and `cuales` were added to the filler words.
 
 **Acceptance:** the sweep is green, and the PR records which of the 3 optional `top_dishes_*` cases match.
 **Dependencies:** Task 2 (independent of Task 3). **Scope:** S.
@@ -220,7 +237,7 @@ This is the largest parser, so it gets its own task.
 **Files:** Modify `router.py`, `templates.py`; tests as above.
 
 **Steps:**
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
   - Add `cost_margin_food_cost_yesterday` and `out_of_scope_data_status` to `MUST_MATCH`.
   - **Food cost:**
     - `group_by` is left at its default.
@@ -233,8 +250,16 @@ This is the largest parser, so it gets its own task.
     - "food cost" with no period;
     - "¿cuántos empleados tengo?";
     - two intents ("ventas y food cost de ayer").
-- [ ] **Steps 2-4:** FAIL, implement, PASS + mypy.
-- [ ] **Step 5: Commit** `MR-26: food cost and data status intents`.
+- [x] **Steps 2-4:** FAIL, implement, PASS + mypy.
+- [x] **Step 5: Commit** `MR-26: food cost and data status intents`.
+
+**Result (2026-11-04):**
+- Red: 12 failed.
+- Green: `uv run pytest apps/api` gives 215 passed and 16 skipped; mypy and ruff are clean.
+- Eval matches: the 2 new MUST_MATCH cases match.
+- Data status needs the word "datos" plus a trigger, and takes no period.
+- `no_data` without a period answers "Todavía no tengo datos."
+- Dates use one helper in America/Mexico_City, with a `shortcut:` comment.
 
 **Acceptance:** the sweep is green, both MUST_MATCH cases match, the coverage is always in the food cost reply, and the two-intent message gives `None`.
 **Dependencies:** Task 2. **Scope:** S.
@@ -244,7 +269,7 @@ This is the largest parser, so it gets its own task.
 **Files:** Modify `router.py`, `templates.py`; tests as above.
 
 **Steps:**
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
   - Add `locations_centro_vs_polanco_last_week`, `locations_this_month_sales` and `ops_payment_split` to `MUST_MATCH`.
   - **Compare locations:**
     - A one-location user gets `None`.
@@ -261,8 +286,15 @@ This is the largest parser, so it gets its own task.
   - **`None`:**
     - "¿quién de mis meseros vende más este mes?";
     - "¿qué día de la semana me deja más?".
-- [ ] **Steps 2-4:** FAIL, implement, PASS + mypy.
-- [ ] **Step 5: Commit** `MR-26: compare locations and payment methods intents`.
+- [x] **Steps 2-4:** FAIL, implement, PASS + mypy.
+- [x] **Step 5: Commit** `MR-26: compare locations and payment methods intents`.
+
+**Result (2026-11-04):**
+- Red: 14 failed.
+- Green: `uv run pytest apps/api` gives 238 passed and 16 skipped; mypy and ruff are clean.
+- All 9 MUST_MATCH cases now match: 11 of 40 eval cases match, the other 2 are optional.
+- Compare locations wins over food cost, through one explicit rule in `route()`. It needs two or more locations, and never sends `location_ids`.
+- Behind-the-best rows read "(-$23,399.70 vs. Centro)", using `diff_vs_best.text` as given.
 
 **Acceptance:** the sweep is green and all 9 MUST_MATCH cases match.
 **Dependencies:** Task 2. **Scope:** S.
@@ -272,20 +304,29 @@ This is the largest parser, so it gets its own task.
 **Files:** Modify `router.py` (menu table: intent → fixed arguments), `broker.py` (menu), `__init__.py` (`tpl:` handling); test `test_answer.py`.
 
 **Steps:**
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
   - The stub's reply is one `choices` message with the 8 options from the spec. The locations option is left out for a one-location user. Ids are `tpl:<intent>`. Every label fits in 24 characters, including "Semana vs anterior".
   - Each `tpl:<intent>` runs its fixed arguments and returns `route="template"`.
   - An unknown `tpl:foo`, and `tpl:compare_locations` from a one-location user, go to the broker.
-- [ ] **Steps 2-4:** FAIL, implement, PASS + mypy.
-- [ ] **Step 5: Commit** `MR-26: fallback menu and template taps`.
+- [x] **Steps 2-4:** FAIL, implement, PASS + mypy.
+- [x] **Step 5: Commit** `MR-26: fallback menu and template taps`.
+
+**Result (2026-11-04):**
+- Red: 10 failed.
+- Green: `uv run pytest apps/api` gives 249 passed and 16 skipped; mypy and ruff are clean.
+- The menu table (`MENU`, `menu(locations)`) lives in `router.py`. The stub broker and `answer()` both read it, so a button and its tap cannot drift apart.
+- The Task 2 stub test now expects the `choices` message.
 
 **Acceptance:** every menu option is answered by a template, and no button is left without an answer.
 **Dependencies:** Tasks 3-6 (the menu needs every intent). **Scope:** S.
 
 ### Checkpoint B: after Tasks 3-7
-- [ ] `.claude/skills/check/check.sh` green.
-- [ ] Go through the spec's acceptance criteria one by one and tick them.
-- [ ] List which of the 6 optional eval cases match.
+- [x] `.claude/skills/check/check.sh` green (2026-11-04: ruff, format, mypy, pytest, pgTAP all PASS).
+- [x] Go through the spec's acceptance criteria one by one and tick them. All hold. One contradiction inside the spec was resolved by the product owner:
+  - The acceptance list says a payment filter on a sales question ("¿cuánto vendí ayer en efectivo?") gives no match.
+  - The spec's trigger table makes "efectivo" a payment-methods trigger that wins over the sales total, so that message gets the payment breakdown, which includes the cash figure.
+  - Decision: keep the code and fix the spec (acceptance list and D6).
+- [x] List which of the 6 optional eval cases match: `top_dishes_top_margin` and `top_dishes_worst_seller` match with their expected args. `sales_avg_ticket`, `sales_vs_previous_week`, `top_dishes_least_profitable` and `locations_worst_food_cost` fall through.
 
 ### Task 8: PRs (no new code)
 
@@ -349,3 +390,42 @@ Not covered, by design (out of scope in the spec): the LLM broker loop and valid
 
 - **Checkpoint 0:** the `Broker` and `render` signatures, with the owner of MR-27. This is the only coordination step before Task 2.
 - **Checkpoint A:** the word lists and the first exact reply, reviewed by the human.
+
+## Verification (2026-11-04, branch at `e173a5c`)
+
+### Commands and results
+
+| Check | Command | Result |
+|---|---|---|
+| Agent unit tests | `uv run pytest apps/api/tests/agent -q` | 210 passed |
+| Full regression (no services) | `uv run pytest -q` | 1545 passed, 71 skipped |
+| DB regression | `MERMIA_DB_URL=… uv run pytest -m db -q` | 42 passed, 26 skipped |
+| All checks | `.claude/skills/check/check.sh` | ruff, format, mypy, pytest, pgTAP PASS |
+| Integration, Mock RPC over HTTP | ad-hoc script, `TestClient(mermia_mock_rpc.app)` + `answer()` on the 40 eval questions and the 8 menu taps | 11 template, 29 fallback; every `must_contain` figure is in its template reply; all 8 taps answer `template` |
+| Integration, real SQL RPCs | ad-hoc script on local Supabase (main migrations: the 4 MR-17 RPCs), claims as in `70_rpcs.test.sql` | real shapes validate and render; a Polanco manager sees only Polanco, and "en Centro" falls through |
+| Mutation checks | 8 mutants on a scratch copy | 7 caught by at least one test, 1 not (D4) |
+| Router speed | `timeit` | about 41 µs per call |
+
+### Not run
+- **Browser tests:** not applicable; there is no UI in this ticket.
+- **Real SQL for `get_food_cost_pct`, `compare_locations` and `get_sales_breakdown`:** they are only in open PR #77, and the local DB has `main`'s migrations. They were checked against the mock and the C3 examples only.
+- **WhatsApp channel and LLM broker:** out of scope.
+
+### Defects found
+
+| # | Severity | Defect | Cause | Recommended next step |
+|---|---|---|---|---|
+| D3 | High | "ventas de ayer a las tres" and "ventas de ayer de las dos a las cinco" answer the whole day's total | Number words (uno…diez) are global filler words, so an hour vanishes like a filler | Remove the number words from `FILLER`. Keep them only as N before "platillo(s)" (already in `NUMBERS`) and inside the "cuál de mis dos locales/sucursales" triggers. Add both phrases as negatives; "dime en mis dos sucursales los platillos…" then gives None, and its test becomes a negative |
+| D2 | Medium | A margin ranking with no costed dishes answers "No tengo datos de este mes todavía." (real SQL: `no_data`, "No costed dish sales for the period"), which suggests a missing upload | `no_data()` has one generic text per RPC | For `get_top_dishes` with `margin` or `margin_pct`: "Todavía no tengo costos de tus platillos para calcular la ganancia {periodo}." Add a test |
+| D1 | Low | "No tengo datos de el mes pasado" and "Tu food cost de el mes pasado" | "de" + "el mes pasado" is not contracted | One helper that gives "del mes pasado"; tests for both replies |
+| D4 | Low | Removing the write-verb check fails no test | Every write verb is also outside the closed vocabulary, so the closed vocabulary already rejects it | Delete `WRITE_VERBS` and the rule (the spec rule is still met), or keep it as defense in depth and note why it has no test of its own |
+
+### Fixes applied (2026-11-04, not committed yet)
+- **D3:** number words are no longer filler.
+  - New negatives: "a las tres", "de las dos a las cinco".
+  - "dime en mis dos sucursales los platillos…" moved from the positives to the negatives.
+  - Eval matches are still 11 of 40.
+- **D2:** `no_data` from a margin ranking now answers "Todavía no tengo costos de tus platillos para calcular la ganancia {de periodo}." A units ranking keeps the generic reply. Confirmed against real SQL.
+- **D1:** one helper, `_of(period)`, used in all 5 places that wrote "de {periodo}": no_data, the margin no_data, food cost, compare locations and payments. Confirmed against real SQL.
+- **Tests:** `uv run pytest apps/api/tests/agent` gives 219 passed, and `check.sh` passes all five checks.
+- **D4:** kept as defense in depth (product owner's decision). A comment in `router.py` explains why no test fails without it.

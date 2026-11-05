@@ -16,7 +16,17 @@ CASES = sorted((Path(__file__).parents[4] / "apps" / "eval" / "cases").glob("*.j
 CENTRO = "705e8e51-376b-5785-adbb-405eff4e2a22"
 POLANCO = "fdda5e3b-6bcd-5c48-a6de-f524be37463e"
 
-MUST_MATCH = {"sales_yesterday", "sales_last_week"}
+MUST_MATCH = {
+    "sales_yesterday",
+    "sales_last_week",
+    "top_dishes_top5_month_units",
+    "top_dishes_top3_revenue_30d",
+    "cost_margin_food_cost_yesterday",
+    "out_of_scope_data_status",
+    "locations_centro_vs_polanco_last_week",
+    "locations_this_month_sales",
+    "ops_payment_split",
+}
 
 MUST_NOT_MATCH = {
     "adversarial_forecast_december",
@@ -155,6 +165,8 @@ def test_the_longest_location_name_wins() -> None:
         "cuánto vendí ayer en Centro y Polanco",  # two locations
         "cuánto vendí ayer en Satélite",  # a location it does not know
         "cuánto me vendieron mis meseros este mes",  # "mes" is not inside "meseros"
+        "ventas de ayer a las tres",  # an hour, not the whole day
+        "ventas de ayer de las dos a las cinco",
     ],
 )
 def test_not_sure_means_no_match(text: str, el_guero: dict[UUID, str]) -> None:
@@ -177,6 +189,238 @@ def test_match_args_validate(text: str, el_guero: dict[UUID, str]) -> None:
     match = route(text, el_guero)
     assert match is not None
     RPCS[match.rpc].args.model_validate(match.args)
+
+
+@pytest.mark.parametrize(
+    ("text", "metric"),
+    [
+        ("¿cuánto vendí la semana pasada contra la antepasada?", "net_sales"),
+        ("ventas de la semana pasada vs la anterior", "net_sales"),
+        ("ventas de la semana pasada comparado con la semana anterior", "net_sales"),
+        ("ticket promedio de la semana pasada contra la antepasada", "avg_ticket"),
+    ],
+)
+def test_last_week_against_the_week_before(
+    text: str, metric: str, el_guero: dict[UUID, str]
+) -> None:
+    match = route(text, el_guero)
+    assert match is not None
+    assert match.intent == "compare_periods"
+    assert match.rpc == "compare_periods"
+    assert match.args == {"metric": metric, "period_a": "last_week", "period_b": "prev_week"}
+
+
+def test_compare_periods_takes_a_location(el_guero: dict[UUID, str]) -> None:
+    match = route("ventas de la semana pasada vs la anterior en Centro", el_guero)
+    assert match is not None
+    assert match.args["location_id"] == CENTRO
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "ventas de este mes contra el mes pasado",  # part of a month against a whole month
+        "ventas de esta semana vs la pasada",  # part of a week against a whole week
+        "ventas de ayer contra antier",
+        "propinas de la semana pasada contra la antepasada",  # a metric it does not know
+        "la semana pasada contra la anterior",  # no metric
+        "ventas y ticket promedio de la semana pasada vs la anterior",  # two metrics
+        "ventas de la semana pasada contra la anterior en Centro y Polanco",
+    ],
+)
+def test_compare_periods_not_sure_means_no_match(text: str, el_guero: dict[UUID, str]) -> None:
+    assert route(text, el_guero) is None
+
+
+@pytest.mark.parametrize(
+    ("text", "args"),
+    [
+        (
+            "¿cuáles son los 5 platillos más vendidos este mes?",
+            {"period": "this_month", "metric": "units", "order": "desc", "limit": 5},
+        ),
+        (
+            "dime los tres platillos que más dinero me venden en los últimos 30 días",
+            {"period": "last_30d", "metric": "revenue", "order": "desc", "limit": 3},
+        ),
+        (
+            "¿cuál es el platillo menos vendido del mes pasado?",
+            {"period": "last_month", "metric": "units", "order": "asc", "limit": 1},
+        ),
+        (
+            "los platillos más vendidos de la semana pasada",
+            {"period": "last_week", "metric": "units", "order": "desc", "limit": 5},
+        ),
+        (
+            "¿cuál es el platillo que más ganancia en pesos me deja este mes?",
+            {"period": "this_month", "metric": "margin", "order": "desc", "limit": 1},
+        ),
+        (
+            "los 3 platillos con menor porcentaje de ganancia este mes",
+            {"period": "this_month", "metric": "margin_pct", "order": "asc", "limit": 3},
+        ),
+        (
+            "top 10 platillos más vendidos este mes",
+            {"period": "this_month", "metric": "units", "order": "desc", "limit": 10},
+        ),
+        (
+            "los 5 platillos más vendidos este mes en Centro",
+            {
+                "period": "this_month",
+                "metric": "units",
+                "order": "desc",
+                "limit": 5,
+                "location_id": CENTRO,
+            },
+        ),
+    ],
+)
+def test_top_dishes(text: str, args: dict[str, Any], el_guero: dict[UUID, str]) -> None:
+    match = route(text, el_guero)
+    assert match is not None
+    assert (match.intent, match.rpc, match.args) == ("top_dishes", "get_top_dishes", args)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "mis platillos estrella de este mes",  # menu engineering
+        "¿cuál es el platillo más rentable este mes?",  # no measure it knows
+        "los 15 platillos más vendidos este mes",  # more than 10
+        "los platillos de este mes",  # no measure
+        "¿qué platillo me deja el menor porcentaje de ganancia este mes?",  # two measures
+        "platillos más y menos vendidos este mes",  # two orders
+        "los platillos que más venden este mes",  # units or money?
+        "los 5 platillos más vendidos",  # no period
+        "los platillos más vendidos este mes contra el mes pasado",  # two intents
+        "dime en mis dos sucursales los platillos más vendidos este mes",  # "dos" is not N
+    ],
+)
+def test_top_dishes_not_sure_means_no_match(text: str, el_guero: dict[UUID, str]) -> None:
+    assert route(text, el_guero) is None
+
+
+@pytest.mark.parametrize(
+    ("text", "args"),
+    [
+        (
+            "¿cuánto fue mi food cost de ayer en Centro?",
+            {"period": "yesterday", "location_id": CENTRO},
+        ),
+        ("food cost de la semana pasada", {"period": "last_week"}),
+        ("¿cuál es mi costo de alimentos de este mes?", {"period": "this_month"}),
+    ],
+)
+def test_food_cost(text: str, args: dict[str, Any], el_guero: dict[UUID, str]) -> None:
+    match = route(text, el_guero)
+    assert match is not None
+    assert (match.intent, match.rpc, match.args) == ("food_cost", "get_food_cost_pct", args)
+
+
+@pytest.mark.parametrize("text", ["¿ya están al día mis datos?", "¿mis datos están actualizados?"])
+def test_data_status(text: str, el_guero: dict[UUID, str]) -> None:
+    match = route(text, el_guero)
+    assert match is not None
+    assert (match.intent, match.rpc, match.args) == ("data_status", "get_data_status", {})
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "food cost",  # no period
+        "food cost de ayer en Centro y Polanco",
+        "¿cuántos empleados tengo?",
+        "ventas y food cost de ayer",  # two intents
+        "¿mis datos de ayer están al día?",  # data status takes no period
+        "¿ya está al día?",  # about what?
+    ],
+)
+def test_food_cost_and_data_status_not_sure_means_no_match(
+    text: str, el_guero: dict[UUID, str]
+) -> None:
+    assert route(text, el_guero) is None
+
+
+@pytest.mark.parametrize(
+    ("text", "args"),
+    [
+        (
+            "cuánto vendió cada local la semana pasada",
+            {"metric": "net_sales", "period": "last_week"},
+        ),
+        (
+            "¿cuál de mis sucursales vendió más este mes?",
+            {"metric": "net_sales", "period": "this_month"},
+        ),
+        (
+            "food cost por sucursal la semana pasada",
+            {"metric": "food_cost_pct", "period": "last_week"},
+        ),
+        (
+            "ventas de ayer por sucursal, Centro y Polanco",
+            {"metric": "net_sales", "period": "yesterday"},
+        ),
+    ],
+)
+def test_compare_locations(text: str, args: dict[str, Any], el_guero: dict[UUID, str]) -> None:
+    match = route(text, el_guero)
+    assert match is not None
+    assert (match.intent, match.rpc, match.args) == ("compare_locations", "compare_locations", args)
+
+
+@pytest.mark.parametrize(
+    ("text", "args"),
+    [
+        (
+            "¿cuánto entró ayer por tarjeta, efectivo y transferencia?",
+            {"period": "yesterday", "by": "payment_method"},
+        ),
+        (
+            "formas de pago de la semana pasada en Polanco",
+            {"period": "last_week", "by": "payment_method", "location_id": POLANCO},
+        ),
+    ],
+)
+def test_payment_methods(text: str, args: dict[str, Any], el_guero: dict[UUID, str]) -> None:
+    match = route(text, el_guero)
+    assert match is not None
+    assert (match.intent, match.rpc, match.args) == (
+        "payment_methods",
+        "get_sales_breakdown",
+        args,
+    )
+
+
+def test_compare_locations_needs_two_locations() -> None:
+    assert route("cuánto vendió cada local la semana pasada", {UUID(CENTRO): "Centro"}) is None
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "cada local la semana pasada",  # no metric
+        "ventas y food cost por sucursal la semana pasada",  # two metrics
+        "ventas por sucursal",  # no period
+        "¿quién de mis meseros vende más este mes?",  # staff breakdown
+        "¿qué día de la semana me deja más?",  # weekday breakdown
+        "formas de pago",  # no period
+        "formas de pago de ayer en Centro y Polanco",
+        "formas de pago por sucursal de ayer",  # two intents
+    ],
+)
+def test_locations_and_payments_not_sure_means_no_match(
+    text: str, el_guero: dict[UUID, str]
+) -> None:
+    assert route(text, el_guero) is None
+
+
+def test_a_payment_method_on_a_sales_question_gets_the_breakdown(
+    el_guero: dict[UUID, str],
+) -> None:
+    # the breakdown holds that exact figure (spec D6, decided at Checkpoint B)
+    match = route("¿cuánto vendí ayer en efectivo?", el_guero)
+    assert match is not None
+    assert match.args == {"period": "yesterday", "by": "payment_method"}
 
 
 def test_a_location_name_without_letters_does_not_hang() -> None:
@@ -208,7 +452,6 @@ def test_two_locations_with_the_same_name_are_not_told_apart() -> None:
         "qué entró ayer",
         "¿por qué las ventas de ayer?",
         # a per-location or partial-location question is not the combined total
-        "ventas de ayer por sucursales",
         "en cuántas sucursales vendí ayer",
         "en qué sucursales vendí ayer",
         "ventas de ayer en centro y en todas las sucursales",
@@ -225,3 +468,27 @@ def test_location_names_match_like_the_text(name: str) -> None:
     match = route(f"cuánto vendí ayer en {name}", {UUID(CENTRO): "Centro", other: name})
     assert match is not None
     assert match.args == {"period": "yesterday", "location_id": str(other)}
+
+
+@pytest.mark.parametrize(
+    "text", ["ventas de ayer por sucursales", "ventas de la semana pasada por locales"]
+)
+def test_per_location_plural_compares_locations(text: str, el_guero: dict[UUID, str]) -> None:
+    match = route(text, el_guero)
+    assert match is not None and match.intent == "compare_locations"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "cuánto vendí ayer en total y con tarjeta",  # a total and a breakdown
+        "cuánto vendí ayer en Centro y en total",  # one location and all of them
+    ],
+)
+def test_en_total_falls_through(text: str, el_guero: dict[UUID, str]) -> None:
+    assert route(text, el_guero) is None
+
+
+def test_ventas_totales_still_matches(el_guero: dict[UUID, str]) -> None:
+    match = route("dame las ventas totales del mes pasado", el_guero)
+    assert match is not None and match.args == {"period": "last_month"}

@@ -11,7 +11,7 @@ import pytest
 
 from mermia_api.agent import answer
 from mermia_api.agent.broker import StubBroker
-from mermia_contracts.agent import AgentRequest, AgentResponse, TextMsg
+from mermia_contracts.agent import AgentRequest, AgentResponse, ChoicesMsg, TextMsg
 from mermia_contracts.rpc import RpcEnvelope
 
 UNAVAILABLE = "No pude consultar eso ahora, inténtalo en un momento."
@@ -147,10 +147,74 @@ def test_data_that_does_not_fit_gets_the_fallback_reply(
     assert _reply_text(response) == UNAVAILABLE
 
 
-def test_the_stub_broker_answers_fallback(el_guero: dict[UUID, str]) -> None:
+MENU = {
+    "tpl:sales_yesterday": ("get_sales_summary", {"period": "yesterday"}),
+    "tpl:sales_period": ("get_sales_summary", {"period": "last_week"}),
+    "tpl:compare_periods": (
+        "compare_periods",
+        {"metric": "net_sales", "period_a": "last_week", "period_b": "prev_week"},
+    ),
+    "tpl:top_dishes": (
+        "get_top_dishes",
+        {"period": "this_month", "metric": "units", "order": "desc", "limit": 5},
+    ),
+    "tpl:food_cost": ("get_food_cost_pct", {"period": "yesterday"}),
+    "tpl:compare_locations": ("compare_locations", {"metric": "net_sales", "period": "last_week"}),
+    "tpl:payment_methods": ("get_sales_breakdown", {"period": "yesterday", "by": "payment_method"}),
+    "tpl:data_status": ("get_data_status", {}),
+}
+
+
+def test_the_stub_broker_offers_the_template_menu(el_guero: dict[UUID, str]) -> None:
     response = StubBroker()(_text(el_guero, "¿qué vino me recomiendas?"), el_guero)
     assert response.route == "fallback"
-    assert _reply_text(response).startswith("Todavía no sé responder eso.")
+    (message,) = response.messages
+    assert isinstance(message, ChoicesMsg)
+    assert message.text == "Todavía no sé responder eso. Prueba con una de estas:"
+    assert [o.id for o in message.options] == list(MENU)
+    assert all(len(o.label) <= 24 for o in message.options)
+
+
+def test_a_one_location_user_is_not_offered_the_location_ranking() -> None:
+    centro = {UUID("705e8e51-376b-5785-adbb-405eff4e2a22"): "Centro"}
+    response = StubBroker()(_text(centro, "¿qué vino me recomiendas?"), centro)
+    (message,) = response.messages
+    assert isinstance(message, ChoicesMsg)
+    assert "tpl:compare_locations" not in [o.id for o in message.options]
+
+
+@pytest.mark.parametrize(("action_id", "call"), MENU.items())
+def test_each_menu_tap_runs_its_template(
+    action_id: str,
+    call: tuple[str, dict[str, Any]],
+    el_guero: dict[UUID, str],
+    fake_rpc: Any,
+    counting_broker: Any,
+) -> None:
+    request = _request(el_guero, {"type": "action", "action_id": action_id})
+    response = answer(request, locations=el_guero, rpc=fake_rpc, broker=counting_broker)
+    assert response.route == "template"
+    assert fake_rpc.calls == [call]
+    assert counting_broker.calls == []
+
+
+def test_an_unknown_menu_tap_goes_to_the_broker(
+    el_guero: dict[UUID, str], fake_rpc: Any, counting_broker: Any
+) -> None:
+    request = _request(el_guero, {"type": "action", "action_id": "tpl:foo"})
+    answer(request, locations=el_guero, rpc=fake_rpc, broker=counting_broker)
+    assert len(counting_broker.calls) == 1
+    assert fake_rpc.calls == []
+
+
+def test_a_location_ranking_tap_from_a_one_location_user_goes_to_the_broker(
+    fake_rpc: Any, counting_broker: Any
+) -> None:
+    centro = {UUID("705e8e51-376b-5785-adbb-405eff4e2a22"): "Centro"}
+    request = _request(centro, {"type": "action", "action_id": "tpl:compare_locations"})
+    answer(request, locations=centro, rpc=fake_rpc, broker=counting_broker)
+    assert len(counting_broker.calls) == 1
+    assert fake_rpc.calls == []
 
 
 def test_the_template_path_loads_no_llm_sdk() -> None:
@@ -162,3 +226,53 @@ def test_the_template_path_loads_no_llm_sdk() -> None:
         "assert not loaded, loaded\n"
     )
     subprocess.run([sys.executable, "-c", code], check=True)
+
+
+def test_no_data_on_a_comparison_names_the_weeks(
+    el_guero: dict[UUID, str], fake_rpc: Any, counting_broker: Any
+) -> None:
+    fake_rpc.answers["compare_periods"] = _error("no_data")
+    response = answer(
+        _text(el_guero, "ventas de la semana pasada vs la anterior"),
+        locations=el_guero,
+        rpc=fake_rpc,
+        broker=counting_broker,
+    )
+    assert response.route == "template"
+    assert _reply_text(response) == "No tengo datos completos para comparar esas semanas."
+
+
+def test_no_data_without_a_period(
+    el_guero: dict[UUID, str], fake_rpc: Any, counting_broker: Any
+) -> None:
+    fake_rpc.answers["get_data_status"] = _error("no_data")
+    response = answer(
+        _text(el_guero, "¿ya están al día mis datos?"),
+        locations=el_guero,
+        rpc=fake_rpc,
+        broker=counting_broker,
+    )
+    assert response.route == "template"
+    assert _reply_text(response) == "Todavía no tengo datos."
+
+
+@pytest.mark.parametrize(
+    ("text", "reply"),
+    [
+        (
+            "¿cuál es el platillo que más ganancia en pesos me deja este mes?",
+            "Todavía no tengo costos de tus platillos para calcular la ganancia de este mes.",
+        ),
+        ("los 5 platillos más vendidos este mes", "No tengo datos de este mes todavía."),
+    ],
+)
+def test_no_data_on_a_margin_ranking_means_no_costs(
+    text: str, reply: str, el_guero: dict[UUID, str], fake_rpc: Any, counting_broker: Any
+) -> None:
+    # real SQL: no_data "No costed dish sales for the period" when no dish has a cost yet
+    fake_rpc.answers["get_top_dishes"] = _error("no_data")
+    response = answer(
+        _text(el_guero, text), locations=el_guero, rpc=fake_rpc, broker=counting_broker
+    )
+    assert response.route == "template"
+    assert _reply_text(response) == reply

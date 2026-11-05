@@ -10,7 +10,8 @@ from collections.abc import Mapping
 from typing import Protocol
 from uuid import UUID
 
-from mermia_contracts.agent import AgentRequest, AgentResponse, TextMsg
+from mermia_api.agent.router import menu
+from mermia_contracts.agent import AgentRequest, AgentResponse, Choice, ChoicesMsg
 
 
 class Broker(Protocol):
@@ -18,9 +19,12 @@ class Broker(Protocol):
 
 
 class StubBroker:
-    """Stands in for the LLM broker until MR-27: a fixed reply, never a figure."""
+    """Stands in for the LLM broker until MR-27: a fixed reply and the template menu, never a
+    figure. With MR-27 the menu shows only when the LLM is unavailable or over its cap."""
 
     def __call__(self, request: AgentRequest, locations: Mapping[UUID, str]) -> AgentResponse:
+        options = [Choice(id=i, label=label) for i, (label, _) in menu(locations).items()]
+        text = "Todavía no sé responder eso. Prueba con una de estas:"
         return AgentResponse(
-            messages=[TextMsg(kind="text", text="Todavía no sé responder eso.")], route="fallback"
+            messages=[ChoicesMsg(kind="choices", text=text, options=options)], route="fallback"
         )
