@@ -17,8 +17,8 @@
 --      the whole tap rolls back, the change stays pending and a retry can apply it.
 -- Only an authorized approver causes a state change. A price write recomputes today's dish costs
 -- in the same transaction, so the reply shows fresh numbers (D3). The older days, from the
--- effective date (at most 400 days back) to yesterday, are recomputed after commit by
--- app.backfill_dish_costs, in short chunks. Business outcomes are returned as the C5 ApplyResult
+-- effective date (at most 400 days back) to yesterday, are recorded in dish_cost_backfill in the
+-- same commit and recomputed after it by app.backfill_dish_costs, in short chunks. Business outcomes are returned as the C5 ApplyResult
 -- shape {code, pending_change_id, status, message}, never raised.
 
 -- Indexes the version lookup and the costing engine need: these tables' indexes lead with
@@ -29,6 +29,33 @@ create index menu_item_price_item_location_idx on public.menu_item_price (menu_i
 create index recipe_menu_item_idx on public.recipe (menu_item_id);
 create index recipe_produces_idx on public.recipe (produces_ingredient_id);
 create index recipe_line_recipe_only_idx on public.recipe_line (recipe_id);
+
+-- D3: the durable record of an after-commit backfill. The apply writes it in the tap's transaction
+-- when a price change leaves older days to recompute; a price from today or later and a batch get
+-- no record. Each backfill chunk moves next_before (the exclusive upper end of the days left) back
+-- to the chunk's first day in its own commit, and sets done_at when it reaches from_date. A crash
+-- or deploy mid-backfill leaves the record unfinished, so the backend resumes it later
+-- (mermia_api.confirm.backfill.resume_unfinished_backfills). Backend-only (class X). No unit
+-- columns to tag.
+create table public.dish_cost_backfill (
+  id uuid primary key default app.uuid_v7(),
+  tenant_id uuid not null references public.tenant (id) on delete restrict,
+  pending_change_id uuid not null unique,
+  from_date date not null,
+  to_date date not null,
+  next_before date not null,
+  done_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  version int not null default 1,  -- touch_row bumps it on every chunk
+  unique (tenant_id, id),
+  foreign key (tenant_id, pending_change_id) references public.pending_change (tenant_id, id) on delete restrict,
+  check (from_date <= to_date),
+  check (next_before between from_date and to_date + 1),
+  check (done_at is null or next_before = from_date)
+);
+create index dish_cost_backfill_unfinished_idx on public.dish_cost_backfill (created_at) where done_at is null;
+select app.finish_table('public.dish_cost_backfill', 'backend');
 
 -- The version a proposal must carry in base_version (D2), and the one apply compares it with:
 --   ingredient_price.set   number of ingredient_price rows of the ingredient
@@ -167,6 +194,16 @@ begin
       jsonb_build_object('from', r.from_date, 'to', r.to_date, 'requested_from', effective_from,
                          'capped', effective_from < r.from_date) end);
 end
+$$;
+
+-- D3, in the tap: record the days recompute_after_change left to the backfill (`backfill` is its
+-- {from, to, ...} or null), so a backfill cut short can be resumed.
+create function app.dish_cost_backfill_start(pc public.pending_change, backfill jsonb) returns void
+language sql set search_path = ''
+as $$
+  insert into public.dish_cost_backfill (tenant_id, pending_change_id, from_date, to_date, next_before)
+  select pc.tenant_id, pc.id, (backfill ->> 'from')::date, (backfill ->> 'to')::date, (backfill ->> 'to')::date + 1
+  where jsonb_typeof(backfill) = 'object'
 $$;
 
 -- The writes, one per kind. Each returns {before, after} for the apply audit row and raises on
@@ -344,6 +381,7 @@ begin
   -- 6. the write, the status and the audit row commit together or not at all
   begin
     written := app.pending_change_write(pc, m.user_id);
+    perform app.dish_cost_backfill_start(pc, written -> 'after' -> 'backfill');
     perform app.pending_change_resolve(pc.id, 'applied', m.user_id);
     perform app.pending_change_log(pc, m.user_id, 'pending_change.apply',
                                    jsonb_build_object('version', pc.base_version) || coalesce(written -> 'before', '{}'),
@@ -361,47 +399,53 @@ begin
 end
 $$;
 
--- D3, after commit: recompute the older days of an applied price change, one chunk per call so
--- the per-tenant dish_cost_snapshot lock (taken by compute_dish_costs) is held for a few seconds
--- at most and a concurrent tap's today-recompute waits little. The confirmation service calls it
--- in the background, one transaction per call (mermia_api.confirm.backfill), walking back from
--- yesterday: `before` is the exclusive upper end (null: start at yesterday), `max_days` the chunk
--- size. Returns {from, to, snapshots, next_before}: the days recomputed, the snapshots written and
--- the `before` of the next call (null: done). {from: null, ...} when nothing is left to do (a batch,
--- a price starting today or later). Idempotent: compute_dish_costs rewrites each day, so a rerun
--- gives the same numbers. Raises P0002 for an unknown change and 55000 for one that is not applied.
-create function app.backfill_dish_costs(pending_change_id uuid, before date default null, max_days int default 7)
+-- D3, after commit: recompute the next chunk of the older days of an applied price change, so the
+-- per-tenant dish_cost_snapshot lock (taken by compute_dish_costs) is held for a few seconds at most
+-- and a concurrent tap's today-recompute waits little. The confirmation service calls it in the
+-- background, one transaction per call (mermia_api.confirm.backfill). It walks back from the
+-- record's next_before (yesterday + 1 at first) by at most `max_days` days and moves the record in
+-- the same commit, so a crash between calls loses nothing and a rerun resumes where it stopped.
+-- The record's row lock serializes two runners of the same backfill. Returns {from, to, snapshots,
+-- next_before}: the days recomputed, the snapshots written and where the next call starts (null:
+-- done). {from: null, ...} when nothing is left (done, or no record: a batch, a price starting
+-- today or later). Raises P0002 for an unknown change and 55000 for one that is not applied.
+-- SECURITY INVOKER: service_role holds every grant it needs; EXECUTE is for service_role only.
+create function app.backfill_dish_costs(pending_change_id uuid, max_days int default 7)
 returns jsonb
-language plpgsql security definer set search_path = ''
+language plpgsql security invoker set search_path = ''
 as $$
 declare
-  pc public.pending_change;
-  r record;
+  b public.dish_cost_backfill;
+  st app.pending_change_status;
   hi date;
   lo date;
+  n int;
   nothing constant jsonb := jsonb_build_object('from', null, 'to', null, 'snapshots', 0, 'next_before', null);
 begin
   if max_days is null or max_days not between 1 and 31 then
     raise exception 'max_days must be between 1 and 31' using errcode = '22023';
   end if;
-  select * into pc from public.pending_change p where p.id = backfill_dish_costs.pending_change_id;
+  select * into b from public.dish_cost_backfill x where x.pending_change_id = backfill_dish_costs.pending_change_id for update;
   if not found then
-    raise exception 'pending change % not found', backfill_dish_costs.pending_change_id using errcode = 'P0002';
-  end if;
-  if pc.status <> 'applied' then
-    raise exception 'pending change % is %, not applied', pc.id, pc.status using errcode = '55000';
-  end if;
-  if pc.kind not in ('ingredient_price.set', 'menu_item_price.set') then
+    select p.status into st from public.pending_change p where p.id = backfill_dish_costs.pending_change_id;
+    if not found then
+      raise exception 'pending change % not found', backfill_dish_costs.pending_change_id using errcode = 'P0002';
+    end if;
+    if st <> 'applied' then
+      raise exception 'pending change % is %, not applied', backfill_dish_costs.pending_change_id, st using errcode = '55000';
+    end if;
     return nothing;
   end if;
-  select * into r from app.dish_cost_backfill_range(pc.tenant_id, (pc.payload ->> 'effective_from')::date);
-  hi := least(r.to_date, before - 1);  -- least ignores a null before
-  if hi < r.from_date then
+  if b.done_at is not null then
     return nothing;
   end if;
-  lo := greatest(r.from_date, hi - (max_days - 1));
-  return jsonb_build_object('from', lo, 'to', hi, 'snapshots', app.compute_dish_costs(pc.tenant_id, lo, hi),
-                            'next_before', case when lo > r.from_date then lo end);
+  hi := b.next_before - 1;  -- an unfinished record has next_before > from_date, so hi >= from_date
+  lo := greatest(b.from_date, hi - (max_days - 1));
+  n := app.compute_dish_costs(b.tenant_id, lo, hi);
+  update public.dish_cost_backfill x
+  set next_before = lo, done_at = case when lo = b.from_date then now() end
+  where x.id = b.id;
+  return jsonb_build_object('from', lo, 'to', hi, 'snapshots', n, 'next_before', case when lo > b.from_date then lo end);
 end
 $$;
 
@@ -412,11 +456,12 @@ revoke all on function app.tenant_today(uuid), app.pending_base_version(text, uu
   app.pending_change_fail(public.pending_change, uuid, text, text),
   app.pending_change_denial(public.pending_change, public.membership),
   app.dish_cost_backfill_range(uuid, date), app.recompute_after_change(uuid, date),
+  app.dish_cost_backfill_start(public.pending_change, jsonb),
   app.apply_ingredient_price(public.pending_change),
   app.apply_menu_item_price(public.pending_change), app.apply_batch_change(public.pending_change, uuid),
   app.pending_change_write(public.pending_change, uuid), app.apply_pending_change(uuid, uuid),
-  app.backfill_dish_costs(uuid, date, int)
+  app.backfill_dish_costs(uuid, int)
   from public, anon, authenticated;
 -- the proposer (confirmation service, importer) computes base_version with the same function
 grant execute on function app.tenant_today(uuid), app.pending_base_version(text, uuid, jsonb),
-  app.apply_pending_change(uuid, uuid), app.backfill_dish_costs(uuid, date, int) to service_role;
+  app.apply_pending_change(uuid, uuid), app.backfill_dish_costs(uuid, int) to service_role;

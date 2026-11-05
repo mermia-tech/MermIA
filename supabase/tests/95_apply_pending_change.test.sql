@@ -30,12 +30,15 @@ select is((select count(*) from pg_proc p where p.oid in ('app.apply_pending_cha
           0::bigint, 'clients cannot call them');
 select ok((select p.prosecdef and p.proconfig @> array['search_path=""'] from pg_proc p
            where p.oid = 'app.apply_pending_change(uuid, uuid)'::regprocedure), 'apply is a definer with an empty search_path');
-select ok(has_function_privilege('service_role', 'app.backfill_dish_costs(uuid, date, int)', 'execute'),
+select ok(has_function_privilege('service_role', 'app.backfill_dish_costs(uuid, int)', 'execute'),
           'the backend backfills dish costs after an apply');
-select ok(not has_function_privilege('authenticated', 'app.backfill_dish_costs(uuid, date, int)', 'execute')
-          and not has_function_privilege('anon', 'app.backfill_dish_costs(uuid, date, int)', 'execute'), 'clients cannot');
-select ok((select p.prosecdef and p.proconfig @> array['search_path=""'] from pg_proc p
-           where p.oid = 'app.backfill_dish_costs(uuid, date, int)'::regprocedure), 'the backfill is a definer with an empty search_path');
+select ok(not has_function_privilege('authenticated', 'app.backfill_dish_costs(uuid, int)', 'execute')
+          and not has_function_privilege('anon', 'app.backfill_dish_costs(uuid, int)', 'execute'), 'clients cannot');
+select ok((select not p.prosecdef and p.proconfig @> array['search_path=""'] from pg_proc p
+           where p.oid = 'app.backfill_dish_costs(uuid, int)'::regprocedure),
+          'the backfill runs as the caller (service_role has the grants it needs) with an empty search_path');
+select is((select obj_description('public.dish_cost_backfill'::regclass, 'pg_class')), 'rls_class=X',
+          'the backfill record is backend-only (class X)');
 
 -- people: MermIA support, a tenant admin, and the owner of another tenant ---------------------
 insert into public.app_user (id, name) values (:SUPPORT, 'Soporte'), (:ADMIN, 'Admin'), (:STRANGER, 'Otro dueño');
@@ -139,20 +142,33 @@ select is((pg_temp.snap('2026-10-06')).id, (select id from snap_before where dat
 select is((select after -> 'backfill' from public.audit_log where pending_change_id = pg_temp.pc('backdated') and action = 'pending_change.apply'),
           '{"from": "2026-10-05", "to": "2026-10-11", "capped": false, "requested_from": "2026-10-05"}'::jsonb,
           'the apply audit row names the days left to the backfill');
+-- the durable record (from, to, next_before, done): written by the apply, in the same commit
+create function pg_temp.backfill(change text) returns text language sql stable as $$
+  select row(b.from_date, b.to_date, b.next_before, b.done_at is not null)::text
+  from public.dish_cost_backfill b where b.pending_change_id = pg_temp.pc(change)
+$$;
+select is(pg_temp.backfill('backdated'), '(2026-10-05,2026-10-11,2026-10-12,f)', 'the apply records the backfill it leaves');
+select is((select tenant_id from public.dish_cost_backfill where pending_change_id = pg_temp.pc('backdated')), :TENANT::uuid,
+          'for the change''s tenant');
 
--- the backfill walks back from yesterday in chunks of at most max_days
-select is(app.backfill_dish_costs(pg_temp.pc('backdated'), null, 3) - 'snapshots',
+-- the backfill walks back from yesterday in chunks of at most max_days; each chunk moves the record
+select is(app.backfill_dish_costs(pg_temp.pc('backdated'), 3) - 'snapshots',
           '{"from": "2026-10-09", "to": "2026-10-11", "next_before": "2026-10-09"}'::jsonb, 'the first chunk ends yesterday');
-select is(app.backfill_dish_costs(pg_temp.pc('backdated'), '2026-10-09', 3) - 'snapshots',
-          '{"from": "2026-10-06", "to": "2026-10-08", "next_before": "2026-10-06"}'::jsonb, 'the next chunk goes on from there');
-select is(app.backfill_dish_costs(pg_temp.pc('backdated'), '2026-10-06', 3) - 'snapshots',
+select is(pg_temp.backfill('backdated'), '(2026-10-05,2026-10-11,2026-10-09,f)', 'and records where to go on');
+select is(app.backfill_dish_costs(pg_temp.pc('backdated'), 3) - 'snapshots',
+          '{"from": "2026-10-06", "to": "2026-10-08", "next_before": "2026-10-06"}'::jsonb, 'the next call resumes from the record');
+select is(app.backfill_dish_costs(pg_temp.pc('backdated'), 3) - 'snapshots',
           '{"from": "2026-10-05", "to": "2026-10-05", "next_before": null}'::jsonb, 'the last chunk stops at the effective date');
+select is(pg_temp.backfill('backdated'), '(2026-10-05,2026-10-11,2026-10-05,t)', 'and marks the backfill done');
 select cmp_ok((pg_temp.snap('2026-10-06')).cost, '>', (select cost from snap_before where date = '2026-10-06'),
               'the older days now use the backdated price');
 select is((pg_temp.snap('2026-10-04')).id, (select id from snap_before where date = '2026-10-04'), 'days before it are not touched');
-create temp table snap_after as select (pg_temp.snap('2026-10-06')).cost;
-select is((app.backfill_dish_costs(pg_temp.pc('backdated')) ->> 'snapshots')::int > 0, true, 'a rerun is safe');
-select is((pg_temp.snap('2026-10-06')).cost, (select cost from snap_after), 'and gives the same numbers');
+create temp table snap_after as select (pg_temp.snap('2026-10-06')).id;
+select is(app.backfill_dish_costs(pg_temp.pc('backdated')),
+          '{"from": null, "to": null, "snapshots": 0, "next_before": null}'::jsonb, 'a rerun of a done backfill does nothing');
+select is((pg_temp.snap('2026-10-06')).id, (select id from snap_after), 'and rewrites no snapshot');
+select throws_ok('update public.dish_cost_backfill set done_at = null, next_before = to_date + 2', '23514', null,
+                 'the record cannot point past its range');
 
 -- a price older than 400 days: the backfill stops at today - 399 and the audit row says so
 select pg_temp.propose('ancient', 'ingredient_price.set', 'ingredient', :CARNE,
@@ -161,16 +177,26 @@ select is(pg_temp.tap('ancient', 'ancient', :OWNER) ->> 'code', 'applied', 'a pr
 select is((select after -> 'backfill' from public.audit_log where pending_change_id = pg_temp.pc('ancient') and action = 'pending_change.apply'),
           '{"from": "2025-09-08", "to": "2026-10-11", "capped": true, "requested_from": "2025-01-01"}'::jsonb,
           'the audit row notes the 400-day cap');
-select is(app.backfill_dish_costs(pg_temp.pc('ancient')) - 'snapshots',
-          '{"from": "2026-10-05", "to": "2026-10-11", "next_before": "2026-10-05"}'::jsonb, 'chunks are 7 days by default');
+select is(pg_temp.backfill('ancient'), '(2025-09-08,2026-10-11,2026-10-12,f)', 'the record holds the capped range');
+-- N2: the backfill runs as the caller; service_role, the confirmation service, has what it needs
+select pg_temp.pc('ancient') as ancient \gset
+set local role service_role;
+select is(app.backfill_dish_costs(:'ancient') - 'snapshots',
+          '{"from": "2026-10-05", "to": "2026-10-11", "next_before": "2026-10-05"}'::jsonb, 'chunks are 7 days by default, as service_role');
+reset role;
+select is(pg_temp.backfill('ancient'), '(2025-09-08,2026-10-11,2026-10-05,f)', 'an unfinished backfill stays on record');
+select throws_ok(format('update public.dish_cost_backfill set done_at = now() where pending_change_id = %L', pg_temp.pc('ancient')),
+                 '23514', null, 'it cannot be marked done before it reaches its first day');
 
--- nothing to backfill: a price starting today, a future price, a batch; refused: not applied, unknown
+-- nothing to backfill: a price starting today, a future price, a batch get no record; refused: not applied, unknown
 select is(app.backfill_dish_costs(pg_temp.pc('price')),
           '{"from": null, "to": null, "snapshots": 0, "next_before": null}'::jsonb, 'a price from today leaves nothing to backfill');
 select is((select after -> 'backfill' from public.audit_log where pending_change_id = pg_temp.pc('price') and action = 'pending_change.apply'),
           'null'::jsonb, 'and its audit row says so');
 select is(app.backfill_dish_costs(pg_temp.pc('future')) ->> 'from', null, 'nor does a future price');
-select throws_ok(format('select app.backfill_dish_costs(%L, null, 0)', pg_temp.pc('backdated')), '22023', null, 'max_days must be at least 1');
+select is((select count(*) from public.dish_cost_backfill where pending_change_id in (pg_temp.pc('price'), pg_temp.pc('future'))),
+          0::bigint, 'neither gets a backfill record');
+select throws_ok(format('select app.backfill_dish_costs(%L, 0)', pg_temp.pc('backdated')), '22023', null, 'max_days must be at least 1');
 select throws_ok('select app.backfill_dish_costs(''eeeeeeee-0000-7000-8000-0000000000ff'')', 'P0002', null, 'an unknown change is refused');
 
 -- menu_item_price.set -------------------------------------------------------------------------
@@ -365,6 +391,17 @@ select is((select count(*) from public.ingredient_price where pending_change_id 
 select is(pg_temp.audits('boom', 'pending_change.apply'), 0::bigint, 'no apply audit row survives');
 select is(pg_temp.audits('boom', 'pending_change.fail'), 1::bigint, 'one fail audit row');
 drop trigger zz_boom on public.ingredient_price;
+
+-- a backfill record exists only for an applied price change that left older days
+select is((select count(*) from public.dish_cost_backfill where pending_change_id in (pg_temp.pc('approve'), pg_temp.pc('rollback'))),
+          0::bigint, 'batch changes get no backfill record');
+select pg_temp.propose('boom backdated', 'ingredient_price.set', 'ingredient', :CARNE,
+                       '{"unit_price": "0.70", "effective_from": "2026-10-01", "source": "manual"}');
+create trigger zz_boom after insert on public.dish_cost_backfill for each row execute function pg_temp.boom();
+select is(pg_temp.tap('boom backdated', 'boom backdated', :OWNER) ->> 'code', 'failed', 'a backfill record that cannot be written fails the apply');
+select is((select count(*) from public.ingredient_price where pending_change_id = pg_temp.pc('boom backdated')), 0::bigint,
+          'with the price write rolled back: the record and the apply commit together');
+drop trigger zz_boom on public.dish_cost_backfill;
 
 -- recipe.upsert is part 2: it fails cleanly for now
 select pg_temp.propose('recipe', 'recipe.upsert', 'menu_item', :PASTOR,

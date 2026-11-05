@@ -66,7 +66,7 @@ select is((
   select count(*) from expected e full join actual a on a.name = e.name where e.labels is distinct from a.labels),
   0::bigint, 'enums in app match spec 5.3 (24 types, ordered labels)');
 
--- the 40 tables and their access class (spec 7.2.2) -------------------------------------------------------------
+-- the 41 tables and their access class (spec 7.2.2) -------------------------------------------------------------
 create temp table expected_class (tbl text primary key, cls text not null);
 insert into expected_class values
   ('tenant','rls_class=T'),('supplier','rls_class=T'),('ingredient','rls_class=T'),('ingredient_alias','rls_class=T'),
@@ -85,13 +85,14 @@ insert into expected_class values
   ('pending_change','rls_class=F'),('audit_log','rls_class=F'),
   ('app_user','rls_class=X'),('channel_identity','rls_class=X'),('consent_log','rls_class=X'),
   ('membership','rls_class=X'),('raw_file','rls_class=X'),('report_run','rls_class=X'),
-  ('external_ref','rls_class=X'),('conversation','rls_class=X'),('llm_usage','rls_class=X'),('message_log','rls_class=X');
+  ('external_ref','rls_class=X'),('conversation','rls_class=X'),('llm_usage','rls_class=X'),('message_log','rls_class=X'),
+  ('dish_cost_backfill','rls_class=X');
 
-select is((select count(*) from expected_class), 40::bigint, 'the expected list has 40 tables');
+select is((select count(*) from expected_class), 41::bigint, 'the expected list has 41 tables');
 select is((select count(*) from pg_class c full join expected_class e on e.tbl = c.relname
            where (c.relnamespace = 'public'::regnamespace and c.relkind = 'r' and e.tbl is null)
               or (e.tbl is not null and c.oid is null)),
-          0::bigint, 'public holds exactly the 40 domain tables');
+          0::bigint, 'public holds exactly the 41 domain tables');
 select is((select count(*) from pg_class c join expected_class e on e.tbl = c.relname
            where c.relnamespace = 'public'::regnamespace and obj_description(c.oid, 'pg_class') is distinct from e.cls),
           0::bigint, 'every table carries the access class of spec 7.2.2');

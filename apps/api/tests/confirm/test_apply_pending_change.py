@@ -18,7 +18,12 @@ import pytest
 from psycopg.types.json import Jsonb
 
 from mermia_api.confirm.apply import apply_pending_change
-from mermia_api.confirm.backfill import BackfillResult, backfill_dish_costs
+from mermia_api.confirm.backfill import (
+    BackfillResult,
+    backfill_dish_costs,
+    resume_unfinished_backfills,
+    unfinished_backfills,
+)
 from mermia_contracts.db.models import PendingChangeStatus
 from mermia_contracts.pending import (
     TARGET_TYPE,
@@ -255,13 +260,16 @@ def test_a_backdated_price_is_backfilled_in_short_chunks(conn: psycopg.Connectio
     change = propose(conn, PendingKind.ingredient_price_set, CARNE, price("0.50", "2026-09-22"))
     assert tap(conn, change, OWNER).code is ApplyCode.applied
 
+    assert change in unfinished_backfills(conn)
+
     first = backfill_dish_costs(conn, change)
     again = backfill_dish_costs(conn, change)
 
     # 2026-09-22 .. 2026-10-11 (today was done by the tap): 20 days in chunks of 7, 7 and 6
     assert first.chunks == 3
     assert first.snapshots > 0
-    assert again == first
+    assert again == BackfillResult(chunks=0, snapshots=0)  # done: a rerun does nothing
+    assert change not in unfinished_backfills(conn)
     cost = count(
         conn,
         "select cost from public.dish_cost_snapshot where menu_item_id = %s "
@@ -285,6 +293,63 @@ def test_nothing_to_backfill_for_a_batch(conn: psycopg.Connection[Any]) -> None:
     assert tap(conn, approve, LUPITA).code is ApplyCode.applied
 
     assert backfill_dish_costs(conn, approve) == BackfillResult(chunks=0, snapshots=0)
+    assert backfill_record(conn, approve) is None
+
+
+def backfill_record(conn: psycopg.Connection[Any], change: UUID) -> tuple[Any, ...] | None:
+    return conn.execute(
+        "select from_date, to_date, next_before, done_at is not null "
+        "from public.dish_cost_backfill where pending_change_id = %s",
+        (change,),
+    ).fetchone()
+
+
+def test_a_backfill_cut_short_resumes_where_it_stopped(conn: psycopg.Connection[Any]) -> None:
+    change = propose(conn, PendingKind.ingredient_price_set, CARNE, price("0.50", "2026-09-22"))
+    assert tap(conn, change, OWNER).code is ApplyCode.applied
+    # one chunk commits, then the process dies (a deploy): the record keeps its place
+    conn.execute("select app.backfill_dish_costs(%s)", (change,))
+    assert backfill_record(conn, change) == (
+        dt.date(2026, 9, 22),
+        dt.date(2026, 10, 11),
+        dt.date(2026, 10, 5),
+        False,
+    )
+
+    resumed = resume_unfinished_backfills(conn)
+
+    # the 13 days left, 2026-09-22 .. 2026-10-04, in chunks of 7 and 6
+    assert resumed.done[change].chunks == 2
+    assert change not in resumed.failed
+    assert backfill_record(conn, change) == (
+        dt.date(2026, 9, 22),
+        dt.date(2026, 10, 11),
+        dt.date(2026, 9, 22),
+        True,
+    )
+    assert change not in unfinished_backfills(conn)
+
+
+def test_a_failing_backfill_is_reported_and_left_unfinished(conn: psycopg.Connection[Any]) -> None:
+    change = propose(conn, PendingKind.ingredient_price_set, CARNE, price("0.50", "2026-09-22"))
+    assert tap(conn, change, OWNER).code is ApplyCode.applied
+    conn.execute(
+        """create function pg_temp.boom() returns trigger language plpgsql as $$
+             begin raise exception 'boom' using errcode = 'P0001'; end $$;
+           create trigger zz_boom after insert on public.dish_cost_snapshot
+             for each row execute function pg_temp.boom()"""
+    )
+
+    resumed = resume_unfinished_backfills(conn)
+
+    assert "boom" in resumed.failed[change]
+    assert change not in resumed.done
+    assert backfill_record(conn, change) == (
+        dt.date(2026, 9, 22),
+        dt.date(2026, 10, 11),
+        dt.date(2026, 10, 12),
+        False,
+    )
 
 
 def test_a_change_that_is_not_applied_is_not_backfilled(conn: psycopg.Connection[Any]) -> None:

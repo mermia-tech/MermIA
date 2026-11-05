@@ -32,7 +32,7 @@ from pg_class c cross join roles r cross join ops o
 where c.relnamespace = 'public'::regnamespace and c.relkind = 'r';
 select diag(format('NOT DENIED: %s %s on %s -> %s', r, op, tbl, outcome))
 from denial where outcome is distinct from format('ERR 42501 permission denied for table %s', tbl);
-select is((select count(*) from denial), 320::bigint, '40 tables x 2 client roles x 4 write operations were attempted');
+select is((select count(*) from denial), 328::bigint, '41 tables x 2 client roles x 4 write operations were attempted');
 select is((select count(*) from denial where outcome is distinct from format('ERR 42501 permission denied for table %s', tbl)),
           0::bigint, 'every client write is refused at the privilege layer (permission denied for table)');
 
