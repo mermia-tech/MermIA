@@ -4,7 +4,8 @@ Runs in the backend on a service-role connection (it writes facts, which clients
 tenant always comes from the source row, never from the caller. One call is one transaction:
 
 1. Duplicate: the same raw file, or the same content for the same slice, returns the earlier
-   batch and writes nothing ("ya lo había recibido", 09 section 2.6).
+   batch and writes nothing ("ya lo había recibido", 09 section 2.6). A catalog file counts as
+   one only while a proposal it filed is still pending.
 2. Checks the contract leaves to the loader (MR-10 spec 8.2, 03 B.5):
    - rejected: an unsupported grain, rows outside the period, totals that differ from the rows,
      no location, a value the database refuses;
@@ -14,6 +15,11 @@ tenant always comes from the source row, never from the caller. One call is one 
    rejected, its rows. New menu items and categories are created; existing ones are never
    changed by an import (the report does not know an item's kind, for example).
 4. A clean batch is applied at once by app.apply_batch (the manager gets "Deshacer").
+
+A catalog batch (recipes, MR-25) is never applied: the sales checks of step 2 do not apply to it,
+and instead of staging rows each recipe that differs from the recipe of record becomes a
+recipe.upsert pending change (ingestion/recipes.py). Its status is parsed when at least one
+recipe was proposed or found unchanged, and rejected when every recipe was held.
 """
 
 from __future__ import annotations
@@ -28,11 +34,13 @@ from uuid import UUID
 import psycopg
 from psycopg.types.json import Jsonb
 
+from mermia_api.ingestion.items import find_item
+from mermia_api.ingestion.recipes import NO_PROPOSALS, propose_recipes
 from mermia_contracts.batch import Grain, IssueIn, NormalizedBatch
 from mermia_contracts.db.models import IssueSeverity
 from mermia_contracts.keys import normalize_name, slice_key
 
-SUPPORTED = {Grain.item_daily: "item_sales", Grain.daily: "daily_sales"}
+SUPPORTED = {Grain.item_daily: "item_sales", Grain.daily: "daily_sales", Grain.catalog: "recipes"}
 ROW_LISTS = ("menu_items", "item_sales", "daily_sales", "tickets", "purchases", "recipes")
 OPEN = ("parsed", "needs_review", "applied")  # statuses a duplicate is found among
 SLICE = r"^[^:]+:[^:]+:\d{4}-\d{2}-\d{2}:\d{4}-\d{2}-\d{2}$"  # as mermia_contracts.keys builds it
@@ -41,9 +49,12 @@ SLICE = r"^[^:]+:[^:]+:\d{4}-\d{2}-\d{2}:\d{4}-\d{2}-\d{2}$"  # as mermia_contra
 @dataclass(frozen=True)
 class LoadResult:
     batch_id: UUID
-    status: str  # applied, needs_review or rejected (or the earlier batch's, for a duplicate)
+    status: (
+        str  # applied, parsed, needs_review or rejected (or the earlier batch's, if a duplicate)
+    )
     duplicate: bool
     issues: tuple[IssueIn, ...]
+    pending_change_ids: tuple[UUID, ...] = ()  # the recipe.upsert changes a catalog batch filed
 
 
 def _issue(severity: IssueSeverity, code: str, message_es: str) -> IssueIn:
@@ -62,11 +73,14 @@ def load(
     raw_file_id: UUID | None = None,
     expected_day: dt.date | None = None,
     auto_apply: bool = True,
+    proposed_by: UUID | None = None,
 ) -> LoadResult:
     """Validates, stages and (when clean) applies one batch. `expected_day` is the business date a
-    daily upload should cover (yesterday); None skips that check (history loads, MR-35)."""
+    daily upload should cover (yesterday); None skips that check (history loads, MR-35).
+    `proposed_by` is the app_user who sent a catalog file: the proposer of its pending changes
+    (None: the system)."""
     with conn.transaction():
-        return _load(conn, batch, source_id, raw_file_id, expected_day, auto_apply)
+        return _load(conn, batch, source_id, raw_file_id, expected_day, auto_apply, proposed_by)
 
 
 def approve(conn: psycopg.Connection[Any], batch_id: UUID, actor_user_id: UUID) -> str:
@@ -96,6 +110,7 @@ def _load(
     raw_file_id: UUID | None,
     expected_day: dt.date | None,
     auto_apply: bool,
+    proposed_by: UUID | None,
 ) -> LoadResult:
     src = conn.execute(
         "select tenant_id, location_id, kind::text from public.source where id = %s", (source_id,)
@@ -116,14 +131,26 @@ def _load(
         "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
         (f"{tenant_id}:{key or digest}",),
     )
+    catalog = batch.grain == Grain.catalog
+    if catalog:  # recipes are tenant-wide: two locations must not file the same proposal at once
+        conn.execute(
+            "select pg_advisory_xact_lock(hashtextextended(%s, 0))", (f"{tenant_id}:recipes",)
+        )
 
+    # a catalog file is a duplicate only while a proposal it filed still waits for a decision:
+    # sent again after they were rejected, expired or superseded, it proposes again
     earlier = conn.execute(
-        """select id, status::text from public.import_batch
+        """select id, status::text from public.import_batch ib
            where tenant_id = %s and status::text = any(%s)
              and ((%s::uuid is not null and raw_file_id = %s)
                   or (slice_key = %s and stats ->> 'content_sha256' = %s))
+             and (not %s or exists (
+                   select 1 from public.pending_change pc
+                   where pc.tenant_id = ib.tenant_id and pc.diff ->> 'batch_id' = ib.id::text
+                     and pc.status = 'pending'
+                     and (pc.expires_at is null or pc.expires_at > now())))
            order by created_at limit 1""",
-        (tenant_id, list(OPEN), raw_file_id, raw_file_id, key, digest),
+        (tenant_id, list(OPEN), raw_file_id, raw_file_id, key, digest, catalog),
     ).fetchone()
     if earlier is not None:
         return LoadResult(earlier[0], earlier[1], True, ())
@@ -137,6 +164,113 @@ def _load(
             )
         )
     _check_rows(batch, reject)
+    if batch.grain != Grain.catalog:
+        _sales_rules(conn, batch, tenant_id, location_id, expected_day, review)
+
+    status = "rejected" if reject else "needs_review" if review else "parsed"
+    batch_id = _insert_batch(
+        conn, tenant_id, source_id, raw_file_id, location_id, key, status, batch, digest
+    )
+    if catalog:  # review issues (another location's name) only inform
+        return _load_catalog(
+            conn, tenant_id, location_id, batch_id, batch, issues, reject, review, proposed_by
+        )
+    if status != "rejected":
+        try:
+            with conn.transaction():  # a savepoint: a refused value rejects the batch, not the call
+                _insert_rows(conn, tenant_id, location_id, source_id, batch_id, batch)
+        except psycopg.errors.IntegrityError as e:
+            reject.append(
+                _issue(
+                    IssueSeverity.error,
+                    "batch.db_refused",
+                    "Un valor del archivo no es válido; no lo cargué.",
+                )
+            )
+            status = "rejected"
+            conn.execute(
+                """update public.import_batch set status = 'rejected', stats = stats || %s
+                   where id = %s""",
+                (Jsonb({"db_error": e.diag.message_primary}), batch_id),
+            )
+    all_issues = [*issues, *reject, *review]
+    _insert_issues(conn, tenant_id, batch_id, all_issues)
+    if status == "parsed" and auto_apply:
+        row = conn.execute("select (app.apply_batch(%s)).status::text", (batch_id,)).fetchone()
+        assert row is not None
+        status = str(row[0])
+    return LoadResult(batch_id, status, False, tuple(all_issues))
+
+
+def _insert_issues(
+    conn: psycopg.Connection[Any], tenant_id: UUID, batch_id: UUID, issues: list[IssueIn]
+) -> None:
+    for i in issues:
+        conn.execute(
+            """insert into public.import_issue
+                 (tenant_id, batch_id, severity, code, message_es, row_ref)
+               values (%s, %s, %s, %s, %s, %s)""",
+            (tenant_id, batch_id, i.severity.value, i.code, i.message_es, i.row_ref),
+        )
+
+
+def _load_catalog(
+    conn: psycopg.Connection[Any],
+    tenant_id: UUID,
+    location_id: UUID | None,
+    batch_id: UUID,
+    batch: NormalizedBatch,
+    issues: list[IssueIn],
+    reject: list[IssueIn],
+    review: list[IssueIn],
+    proposed_by: UUID | None,
+) -> LoadResult:
+    """Files the batch's recipe.upsert pending changes. Never stages rows or calls apply_batch.
+    Review issues (a location hint naming another location) only inform: recipes are tenant-wide
+    and every change waits for approval anyway."""
+    found = NO_PROPOSALS
+    if not reject and location_id is not None:
+        try:
+            with conn.transaction():  # a savepoint: a refused value rejects the batch, not the call
+                found = propose_recipes(conn, tenant_id, location_id, batch_id, batch, proposed_by)
+        except psycopg.errors.IntegrityError as e:
+            reject.append(
+                _issue(
+                    IssueSeverity.error,
+                    "batch.db_refused",
+                    "Un valor del archivo no es válido; no lo cargué.",
+                )
+            )
+            conn.execute(
+                "update public.import_batch set stats = stats || %s where id = %s",
+                (Jsonb({"db_error": e.diag.message_primary}), batch_id),
+            )
+    kept = found.proposed + found.unchanged + found.already_pending
+    status = "parsed" if kept and not reject else "rejected"
+    stats = {
+        "proposed": found.proposed,
+        "unchanged": found.unchanged,
+        "already_pending": found.already_pending,
+        "held": found.held,
+    }
+    conn.execute(
+        "update public.import_batch set status = %s, stats = stats || %s where id = %s",
+        (status, Jsonb(stats), batch_id),
+    )
+    all_issues = [*issues, *reject, *review, *found.issues]
+    _insert_issues(conn, tenant_id, batch_id, all_issues)
+    return LoadResult(batch_id, status, False, tuple(all_issues), found.pending_change_ids)
+
+
+def _sales_rules(
+    conn: psycopg.Connection[Any],
+    batch: NormalizedBatch,
+    tenant_id: UUID,
+    location_id: UUID | None,
+    expected_day: dt.date | None,
+    review: list[IssueIn],
+) -> None:
+    """What sends a sales batch to needs_review instead of applying it at once."""
     # any applied batch of the same report, location and overlapping days: the views take the
     # latest applied batch per day, so this upload would replace numbers already in use
     if (
@@ -189,7 +323,7 @@ def _load(
         )
     if location_id is not None:
         for m in batch.menu_items:
-            if _find_item(conn, tenant_id, location_id, m.external_id, m.name)[1] == "code":
+            if find_item(conn, tenant_id, location_id, m.external_id, m.name)[1] == "code":
                 review.append(
                     _issue(
                         IssueSeverity.warning,
@@ -206,42 +340,6 @@ def _load(
                 "El archivo tiene errores que conviene revisar antes de usarlo.",
             )
         )
-
-    status = "rejected" if reject else "needs_review" if review else "parsed"
-    batch_id = _insert_batch(
-        conn, tenant_id, source_id, raw_file_id, location_id, key, status, batch, digest
-    )
-    if status != "rejected":
-        try:
-            with conn.transaction():  # a savepoint: a refused value rejects the batch, not the call
-                _insert_rows(conn, tenant_id, location_id, source_id, batch_id, batch)
-        except psycopg.errors.IntegrityError as e:
-            reject.append(
-                _issue(
-                    IssueSeverity.error,
-                    "batch.db_refused",
-                    "Un valor del archivo no es válido; no lo cargué.",
-                )
-            )
-            status = "rejected"
-            conn.execute(
-                """update public.import_batch set status = 'rejected', stats = stats || %s
-                   where id = %s""",
-                (Jsonb({"db_error": e.diag.message_primary}), batch_id),
-            )
-    all_issues = [*issues, *reject, *review]
-    for i in all_issues:
-        conn.execute(
-            """insert into public.import_issue
-                 (tenant_id, batch_id, severity, code, message_es, row_ref)
-               values (%s, %s, %s, %s, %s, %s)""",
-            (tenant_id, batch_id, i.severity.value, i.code, i.message_es, i.row_ref),
-        )
-    if status == "parsed" and auto_apply:
-        row = conn.execute("select (app.apply_batch(%s)).status::text", (batch_id,)).fetchone()
-        assert row is not None
-        status = str(row[0])
-    return LoadResult(batch_id, status, False, tuple(all_issues))
 
 
 def _location(
@@ -292,7 +390,8 @@ def _check_rows(batch: NormalizedBatch, reject: list[IssueIn]) -> None:
             )
         )
         return
-    extra = [n for n in ROW_LISTS if n not in (rows_name, "menu_items") and getattr(batch, n)]
+    allowed = (rows_name,) if batch.grain == Grain.catalog else (rows_name, "menu_items")
+    extra = [n for n in ROW_LISTS if n not in allowed and getattr(batch, n)]
     if extra:
         reject.append(
             _issue(
@@ -316,6 +415,8 @@ def _check_rows(batch: NormalizedBatch, reject: list[IssueIn]) -> None:
                     "cubre varios días.",
                 )
             )
+    elif batch.grain == Grain.catalog:  # a catalog has no money, units or dated rows
+        lines, net, units, outside = len(batch.recipes), 0, None, 0
     else:
         lines = len(batch.daily_sales)
         net = sum(x.net_sales for x in batch.daily_sales)
@@ -502,45 +603,6 @@ def _category(
     return UUID(str(row[0]))
 
 
-def _find_item(
-    conn: psycopg.Connection[Any],
-    tenant_id: UUID,
-    location_id: UUID | None,
-    external_id: str | None,
-    name: str,
-) -> tuple[UUID | None, str | None]:
-    """The catalog item an import line means, and how it matched: "code+name", "name", or
-    "code" (same SR code, another name). SR codes are per install, so in a chain a code alone
-    may be another location's dish: a "code" match is not used, the line gets its own item."""
-    row = conn.execute(
-        """select id, (%s::text is not null and external_id = %s),
-                  normalized_name = %s
-           from public.menu_item
-           where tenant_id = %s and (location_id is null or location_id = %s)
-             and ((%s::text is not null and external_id = %s) or normalized_name = %s)
-           order by (normalized_name = %s) desc, (external_id = %s) desc nulls last,
-                    location_id nulls last
-           limit 1""",
-        (
-            external_id,
-            external_id,
-            normalize_name(name),
-            tenant_id,
-            location_id,
-            external_id,
-            external_id,
-            normalize_name(name),
-            normalize_name(name),
-            external_id,
-        ),
-    ).fetchone()
-    if row is None:
-        return None, None
-    by_code, by_name = bool(row[1]), bool(row[2])
-    how = "code+name" if by_code and by_name else "name" if by_name else "code"
-    return UUID(str(row[0])), how
-
-
 def _usable_item(
     conn: psycopg.Connection[Any],
     tenant_id: UUID,
@@ -548,5 +610,5 @@ def _usable_item(
     external_id: str | None,
     name: str,
 ) -> UUID | None:
-    found, how = _find_item(conn, tenant_id, location_id, external_id, name)
+    found, how = find_item(conn, tenant_id, location_id, external_id, name)
     return found if how != "code" else None
