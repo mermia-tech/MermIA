@@ -284,24 +284,28 @@ def _sales_rules(
 ) -> None:
     """What sends a sales batch to needs_review instead of applying it at once."""
     # any applied batch of the same report, location and overlapping days: the views take the
-    # latest applied batch per day, so this upload would replace numbers already in use
+    # latest applied batch per day, so this upload would replace numbers already in use. The date
+    # casts sit inside CASE: Postgres may evaluate where-clauses in any order, and a key without
+    # dates (unsliced:<digest>) would raise InvalidDatetimeFormat (MR-80)
     if (
         location_id is not None
         and conn.execute(
             """select 1 from public.import_batch
-               where tenant_id = %s and location_id = %s and status = 'applied'
-                 and slice_key ~ %s
-                 and split_part(slice_key, ':', 2) = %s
-                 and split_part(slice_key, ':', 3)::date <= %s
-                 and split_part(slice_key, ':', 4)::date >= %s""",
-            (
-                tenant_id,
-                location_id,
-                SLICE,
-                batch.parser.split("@", 1)[0],
-                batch.period.to,
-                batch.period.from_,
-            ),
+               where tenant_id = %(tenant)s and location_id = %(location)s
+                 and status = 'applied'
+                 and split_part(slice_key, ':', 2) = %(report)s
+                 and case when slice_key ~ %(slice)s
+                          then split_part(slice_key, ':', 3)::date end <= %(to)s
+                 and case when slice_key ~ %(slice)s
+                          then split_part(slice_key, ':', 4)::date end >= %(from)s""",
+            {
+                "tenant": tenant_id,
+                "location": location_id,
+                "slice": SLICE,
+                "report": batch.parser.split("@", 1)[0],
+                "to": batch.period.to,
+                "from": batch.period.from_,
+            },
         ).fetchone()
     ):
         review.append(
