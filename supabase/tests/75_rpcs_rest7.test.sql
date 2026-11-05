@@ -471,5 +471,86 @@ rollback to savepoint retired;
 select isnt(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data,price_moves}', '[]',
           'L8: the live dishes'' ingredients still move');
 
+-- PR #77 review 1: with no location asked, the freshest location wins over a stale one
+savepoint fresh_location;
+update public.menu_item_price set price_gross = 6500 where menu_item_id = :'PASTOR' and location_id = :'POLANCO';
+update public.dish_cost_snapshot set cost = 1840, price_net = 5603, margin = 3763 where menu_item_id = :'PASTOR';
+delete from public.dish_cost_snapshot where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date > '2026-10-05';
+select is(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L)', 'tacos al pastor')) #>> '{data,location_id}', :'POLANCO',
+          'R1: same numbers at both locations, Centro stale since 10-05: Polanco, the fresh one');
+select is(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L)', 'tacos al pastor')) -> 'flags', '[]', 'R1: and not stale');
+select is(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L)', 'tacos al pastor')) #> '{meta,period_resolved}',
+          '{"from": "2026-10-12", "to": "2026-10-12"}', 'R1: as of today''s snapshot');
+update public.dish_cost_snapshot set confidence = 'confirmed';
+select is(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L)', 'tacos al pastor')) #>> '{data,confidence}', 'confirmed',
+          'R1: staleness alone does not make the locations disagree: Polanco, confirmed');
+rollback to savepoint fresh_location;
+
+-- PR #77 review 2: the day's tax rate is the price row in effect that day (newest start, then newest row)
+savepoint rate_rows;
+insert into public.menu_item_price (tenant_id, location_id, menu_item_id, price_gross, tax_rate, effective_from, effective_to)
+values (:'TENANT', :'CENTRO', :'PASTOR', 6500, 0.08, '2026-10-11', '2026-10-11'),
+       (:'TENANT', :'CENTRO', :'PASTOR', 6500, 0.00, '2026-10-01', null);
+select is((select jsonb_object_agg(r.day, round(r.net_ex_iva / r.net, 6)) from app.item_cost_rows(array[:'CENTRO']::uuid[], '2026-10-10', '2026-10-11') r
+           where r.menu_item_id = :'PASTOR'),
+          '{"2026-10-10": 1.000000, "2026-10-11": 0.925926}', 'R2: each day nets IVA at the rate of the price row in effect');
+rollback to savepoint rate_rows;
+
+-- PR #77 review 3: get_top_dishes margins and compare_periods food cost carry their confidence
+savepoint top_confirmed;
+update public.dish_cost_snapshot set confidence = 'confirmed';
+select ok(pg_temp.rpc(:OWNER, format('api.get_top_dishes(%L, %L, location_id => %L)', '"yesterday"', 'margin', :'CENTRO')) -> 'flags'
+            @> '[{"code": "cost_confirmed"}]', 'R3: all confirmed: top dishes by margin say cost_confirmed');
+select ok(pg_temp.rpc(:OWNER, format('api.compare_periods(%L, %L, %L, %L)', 'food_cost_pct', '"yesterday"', '"last_week"', :'CENTRO')) -> 'flags'
+            @> '[{"code": "cost_confirmed"}]', 'R3: and compare_periods food cost cost_confirmed');
+update public.dish_cost_snapshot set confidence = 'estimated' where date = '2026-10-05';
+select ok(pg_temp.rpc(:OWNER, format('api.compare_periods(%L, %L, %L, %L)', 'food_cost_pct', '"yesterday"', '"last_week"', :'CENTRO')) -> 'flags'
+            @> '[{"code": "cost_estimated"}]', 'R3: one estimated snapshot in either period: cost_estimated');
+rollback to savepoint top_confirmed;
+
+-- PR #77 review 4: two staff with the same first name are told apart by a last-name initial
+savepoint same_first_name;
+insert into public.staff (id, tenant_id, location_id, display_name)
+values ('eeeeeeee-0000-7000-8000-000000000501', :'TENANT', :'CENTRO', 'Luis Martínez'),
+       ('eeeeeeee-0000-7000-8000-000000000502', :'TENANT', :'CENTRO', 'Luis  Romero');
+insert into public.import_batch (id, tenant_id, source_id, location_id, parser, slice_key, status, applied_at)
+select 'eeeeeeee-0000-7000-8000-000000000601', s.tenant_id, s.id, s.location_id, 'sr.erp_push@v1', 'mr24-luis', 'applied', '2026-10-12T09:00:00-06:00'
+from public.source s where s.location_id = :'CENTRO' limit 1;
+insert into public.sale_ticket (id, tenant_id, location_id, source_id, external_id, batch_id, business_date, opened_at, closed_at, channel, staff_id, subtotal, discount, tax, total, status)
+select x.id::uuid, b.tenant_id, b.location_id, b.source_id, x.ext, b.id, '2026-10-12', '2026-10-12T13:00:00-06:00', '2026-10-12T13:30:00-06:00', 'dine_in',
+       x.staff::uuid, round(x.total / 1.16), x.disc, x.total - round(x.total / 1.16), x.total, x.status::app.ticket_status
+from public.import_batch b,
+     (values ('eeeeeeee-0000-7000-8000-0000000006a1', 'L-1', 'eeeeeeee-0000-7000-8000-000000000501', 13000, 500, 'paid'),
+             ('eeeeeeee-0000-7000-8000-0000000006a2', 'L-2', 'eeeeeeee-0000-7000-8000-000000000502', 6000, 300, 'paid'),
+             ('eeeeeeee-0000-7000-8000-0000000006a3', 'L-3', 'eeeeeeee-0000-7000-8000-000000000501', 2000, 0, 'cancelled'),
+             ('eeeeeeee-0000-7000-8000-0000000006a4', 'L-4', 'eeeeeeee-0000-7000-8000-000000000502', 1500, 0, 'cancelled')) x(id, ext, staff, total, disc, status)
+where b.id = 'eeeeeeee-0000-7000-8000-000000000601';
+insert into public.sale_ticket (id, tenant_id, location_id, source_id, external_id, batch_id, business_date, opened_at, closed_at, channel, staff_id, subtotal, discount, tax, total, status)
+select 'eeeeeeee-0000-7000-8000-0000000006a5', b.tenant_id, b.location_id, b.source_id, 'L-5', b.id, '2026-10-12', '2026-10-12T14:00:00-06:00', '2026-10-12T14:30:00-06:00', 'dine_in',
+       (select st.id from public.staff st where st.display_name = 'Pepe' and st.location_id = :'CENTRO'), 3448, 0, 552, 4000, 'paid'
+from public.import_batch b where b.id = 'eeeeeeee-0000-7000-8000-000000000601';
+select is((select jsonb_agg(x ->> 'key') from jsonb_array_elements(
+             pg_temp.rpc(:OWNER, format('api.get_sales_breakdown(%L, %L, %L)', '"today"', 'staff', :'CENTRO')) #> '{data,rows}') x),
+          '["Luis M.", "Luis R.", "Pepe"]', 'R4: sales by staff: one row per waiter, the two Luis told apart, Pepe by first name');
+select is((select jsonb_agg(x ->> 'name') from jsonb_array_elements(
+             pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, location_id => %L)', '"today"', :'CENTRO')) #> '{data,by_staff}') x),
+          '["Luis M.", "Luis R."]', 'R4: cancellations by staff too');
+select is((select jsonb_agg(x ->> 'name') from jsonb_array_elements(
+             pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, %L, %L)', '"today"', 'discounts', :'CENTRO')) #> '{data,by_staff}') x),
+          '["Luis M.", "Luis R."]', 'R4: and discounts by staff');
+select ok(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, location_id => %L)', '"today"', :'CENTRO'))::text !~* 'mart|romero',
+          'R4: never a full last name');
+rollback to savepoint same_first_name;
+
+-- (outside any savepoint, so pgTAP's count keeps the savepoint tests above)
+select ok(pg_temp.rpc(:OWNER, format('api.get_top_dishes(%L, %L, location_id => %L)', '"yesterday"', 'margin_pct', :'CENTRO')) -> 'flags'
+            @> '[{"code": "cost_estimated"}]', 'R3: top dishes by margin say cost_estimated');
+select ok(not (pg_temp.rpc(:OWNER, format('api.get_top_dishes(%L, %L, location_id => %L)', '"yesterday"', 'units', :'CENTRO')) -> 'flags'
+            @> '[{"code": "cost_estimated"}]'), 'R3: units are not a cost figure: no confidence flag');
+select ok(pg_temp.rpc(:OWNER, format('api.compare_periods(%L, %L, %L, %L)', 'food_cost_pct', '"yesterday"', '"last_week"', :'CENTRO')) -> 'flags'
+            @> '[{"code": "cost_estimated"}]', 'R3: compare_periods food cost says cost_estimated');
+select ok(not (pg_temp.rpc(:OWNER, format('api.compare_periods(%L, %L, %L, %L)', 'net_sales', '"yesterday"', '"last_week"', :'CENTRO')) -> 'flags'
+            @> '[{"code": "cost_estimated"}]'), 'R3: net sales carry no confidence flag');
+
 select * from finish();
 rollback;

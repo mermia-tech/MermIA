@@ -71,7 +71,7 @@ CALLS: list[tuple[str, dict[str, Any], dict[str, Any]]] = [
     ("get_cost_alerts", {"since": "last_30d"}, OTHER_TENANT),
 ]
 
-JSONB_ARGS = {"period", "since"}
+JSONB_ARGS = {"period", "since", "period_a", "period_b"}
 CASTS = {"location_id": "uuid", "location_ids": "uuid[]"}
 
 
@@ -123,6 +123,11 @@ def test_every_cost_answer_carries_its_confidence(db_url: str) -> None:
         ("compare_locations", {"metric": "food_cost_pct", "period": "last_week"}),
         ("get_menu_engineering", {"period": "last_30d"}),
         ("get_cost_alerts", {"since": "last_30d"}),
+        ("get_top_dishes", {"period": "last_30d", "metric": "margin"}),
+        (
+            "compare_periods",
+            {"metric": "food_cost_pct", "period_a": "yesterday", "period_b": "last_week"},
+        ),
     ]:
         flags = [f["code"] for f in call(db_url, rpc, args, OWNER)["flags"]]
         assert sum(code in {"cost_confirmed", "cost_estimated"} for code in flags) == 1, rpc

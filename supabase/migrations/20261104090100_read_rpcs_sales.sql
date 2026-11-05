@@ -33,12 +33,25 @@ as $$
     and t.location_id = any (locs) and t.business_date between d_from and d_to
 $$;
 
--- A staff member as the agent may see them: first name only (09 section 4.2).
-create function app.first_name(staff uuid) returns text
+-- Staff as the agent may see them (09 section 4.2): the first name only, never the full name.
+-- When two of the staff in one answer share a first name, each gets its last-name initial
+-- ("Luis M.", "Luis R."), so their rows can be told apart. No staff (or none visible) is
+-- "Sin asignar". One row per id in `ids` (null included).
+create function app.staff_names(ids uuid[]) returns table (staff_id uuid, name text)
 language sql stable set search_path = ''
 as $$
-  select coalesce((select nullif(split_part(btrim(s.display_name), ' ', 1), '') from public.staff s where s.id = staff),
-                  'Sin asignar')
+  with n as (
+    select u.id, w[1] as first, left(w[2], 1) as initial
+    from (select distinct u.id from unnest(ids) u(id)) u
+    left join public.staff s on s.id = u.id
+    cross join lateral (select regexp_split_to_array(btrim(s.display_name), '\s+') as w) x
+  ), f as (
+    select n.id, coalesce(nullif(n.first, ''), 'Sin asignar') as first, nullif(n.initial, '') as initial from n
+  )
+  select f.id,
+         case when f.id is not null and f.initial is not null and count(*) over (partition by f.first) > 1
+              then f.first || ' ' || upper(f.initial) || '.' else f.first end
+  from f
 $$;
 
 -- Breakdown rows (key, net_sales, tickets, order) for one dimension. `tickets` is null when a
@@ -71,8 +84,12 @@ begin
     from parts group by parts.k;
   elsif dim = 'staff' then
     return query
-    select app.first_name(pt.staff_id), sum(pt.total)::bigint, count(*), 0
-    from app.paid_tickets(locs, f, t) pt group by pt.staff_id;
+    with g as (
+      select pt.staff_id, sum(pt.total)::bigint as net_sales, count(*) as tickets
+      from app.paid_tickets(locs, f, t) pt group by pt.staff_id
+    )
+    select n.name, g.net_sales, g.tickets, 0
+    from g join app.staff_names(array(select g.staff_id from g)) n on n.staff_id is not distinct from g.staff_id;
   elsif dim = 'channel' then
     return query
     select coalesce(pt.channel::text, 'unknown'), sum(pt.total)::bigint, count(*), 0
@@ -240,8 +257,10 @@ as $$
   select 'item', m.name, sum(lines.n)::bigint, sum(lines.net)::bigint
   from lines join public.menu_item m on m.id = lines.menu_item_id group by m.id, m.name
   union all
-  select 'staff', app.first_name(tickets.staff_id), count(*), sum(tickets.total)::bigint
-  from tickets group by tickets.staff_id
+  select 'staff', n.name, count(*), sum(tickets.total)::bigint
+  from tickets join app.staff_names(array(select tickets.staff_id from tickets)) n
+    on n.staff_id is not distinct from tickets.staff_id
+  group by tickets.staff_id, n.name
 $$;
 
 create function app.discount_detail(locs uuid[], f date, t date)
@@ -264,6 +283,13 @@ as $$
     from app.v_item_sales_daily v
     join d on d.location_id = v.location_id and d.business_date = v.business_date
     where v.grain = 'aggregate' and v.discount > 0
+  ), sd as (
+    -- paid tickets with a discount (ticket-level or on a line), for the staff detail
+    select y.* from (
+      select pt.staff_id, pt.discount + coalesce((
+        select sum(l.discount) from public.sale_line l where l.ticket_id = pt.id and not l.is_void), 0) as discount
+      from pt
+    ) y where y.discount > 0
   )
   select 'item', m.name, count(*), sum(x.discount)::bigint
   from x join public.menu_item m on m.id = x.menu_item_id
@@ -271,14 +297,9 @@ as $$
   union all
   select 'item_day', null, count(*), null from x where x.by_day having count(*) > 0
   union all
-  select 'staff', app.first_name(x.staff_id), count(*), sum(x.discount)::bigint
-  from (
-    select pt.staff_id, pt.discount + coalesce((
-      select sum(l.discount) from public.sale_line l where l.ticket_id = pt.id and not l.is_void), 0) as discount
-    from pt
-  ) x
-  where x.discount > 0
-  group by x.staff_id
+  select 'staff', n.name, count(*), sum(sd.discount)::bigint
+  from sd join app.staff_names(array(select sd.staff_id from sd)) n on n.staff_id is not distinct from sd.staff_id
+  group by sd.staff_id, n.name
   union all
   select 'ticket', null, count(*), sum(pt.discount)::bigint
   from pt where pt.discount > 0
@@ -446,7 +467,7 @@ $$;
 -- Privileges --------------------------------------------------------------------------------
 grant select on app.v_daily_payment_mix to authenticated;
 grant execute on function
-  app.paid_tickets(uuid[], date, date), app.first_name(uuid), app.breakdown_rows(text, uuid[], date, date),
+  app.paid_tickets(uuid[], date, date), app.staff_names(uuid[]), app.breakdown_rows(text, uuid[], date, date),
   app.cancellation_days(text, uuid[], date, date), app.cancellation_detail(uuid[], date, date),
   app.discount_detail(uuid[], date, date)
   to authenticated;

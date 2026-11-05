@@ -80,18 +80,32 @@ as $$ select net / (1 + coalesce(tax_rate, 0.16)) $$;
 
 -- Items sold over [f, t] with the dish cost snapshot of that day and its confidence (as
 -- app.item_rows, plus the confidence and the net without IVA at the day's menu price rate).
+-- The rate is app.menu_price_row's rule, as one join over the price rows (one lookup per row
+-- made the MR-17 RPCs about 4x slower, PR #77 review).
 create function app.item_cost_rows(locs uuid[], f date, t date)
 returns table (location_id uuid, day date, menu_item_id uuid, units numeric, net bigint, discount bigint,
                cost bigint, confidence app.cost_confidence, net_ex_iva numeric)
 language sql stable set search_path = ''
 as $$
-  select v.location_id, v.business_date, v.menu_item_id, v.units, v.net, v.discount, c.cost, c.confidence,
-         app.net_ex_iva(v.net, (select r.tax_rate from app.menu_price_row(v.menu_item_id, v.location_id, v.business_date) r))
-  from app.v_item_sales_daily v
-  left join public.dish_cost_snapshot c
-    on c.tenant_id = v.tenant_id and c.menu_item_id = v.menu_item_id
-   and c.location_id = v.location_id and c.date = v.business_date
-  where v.location_id = any (locs) and v.business_date between f and t
+  with v as (
+    select v.location_id, v.business_date, v.menu_item_id, v.units, v.net, v.discount, c.cost, c.confidence
+    from app.v_item_sales_daily v
+    left join public.dish_cost_snapshot c
+      on c.tenant_id = v.tenant_id and c.menu_item_id = v.menu_item_id
+     and c.location_id = v.location_id and c.date = v.business_date
+    where v.location_id = any (locs) and v.business_date between f and t
+  ), rate as (
+    select distinct on (v.location_id, v.business_date, v.menu_item_id)
+           v.location_id, v.business_date, v.menu_item_id, coalesce(p.tax_rate, 0.16) as tax_rate
+    from v join public.menu_item_price p
+      on p.menu_item_id = v.menu_item_id and p.location_id = v.location_id
+     and p.effective_from <= v.business_date and (p.effective_to is null or p.effective_to >= v.business_date)
+    order by v.location_id, v.business_date, v.menu_item_id, p.effective_from desc, p.created_at desc
+  )
+  select v.location_id, v.business_date, v.menu_item_id, v.units, v.net, v.discount, v.cost, v.confidence,
+         app.net_ex_iva(v.net, rate.tax_rate)
+  from v left join rate
+    on rate.location_id = v.location_id and rate.business_date = v.business_date and rate.menu_item_id = v.menu_item_id
 $$;
 
 -- Top 3 cost drivers of a dish on a day: each top-level recipe line's share of the recipe cost
@@ -136,8 +150,9 @@ $$;
 -- before today (meta.period_resolved is its day). It is stale when it is older than the latest
 -- snapshot of any dish at that location, or than 30 days: the engine stopped costing the dish (a
 -- price or the recipe went missing), so the answer says `estimated` and flags `stale_cost`. With
--- no location asked, a single location with a snapshot is used, or the first when every location
--- agrees on cost and price; otherwise the answer is `needs_location` (D24). A recipe changed
+-- no location asked, a single location with a snapshot is used, or, when every location agrees on
+-- cost, price and the snapshot's confidence, the freshest one (a current snapshot before a stale
+-- one, then the latest day); otherwise the answer is `needs_location` (D24). A recipe changed
 -- since the snapshot that now nests too deep loses its cost drivers, not the answer.
 create function api.get_dish_margin(dish text, location_id uuid default null) returns jsonb
 language plpgsql stable security invoker set search_path = ''
@@ -215,10 +230,11 @@ begin
     return app.rpc_error('not_found', 'dish not found', locs);
   end if;
 
+  -- freshest first (PR #77 review): a stale location never wins over a current one
   select jsonb_agg(to_jsonb(x) - 'latest' || jsonb_build_object(
-           'stale', x.stale,
+           'stale', x.stale, 'snapshot_confidence', x.confidence,
            'confidence', case when x.stale then 'estimated'::app.cost_confidence else x.confidence end)
-         order by x.name, x.location_id) into opts
+         order by x.stale, x.date desc, x.name, x.location_id) into opts
   from (
     select y.*, (y.date < y.latest or y.date < today - 30) as stale
     from (
@@ -238,11 +254,12 @@ begin
     return app.rpc_error('no_data', 'the dish has no cost: its recipe or a price is missing', locs);
   end if;
   if jsonb_array_length(opts) > 1 and (
-      select count(distinct (o ->> 'cost', o ->> 'price_net', o ->> 'price_gross', o ->> 'confidence'))
+      select count(distinct (o ->> 'cost', o ->> 'price_net', o ->> 'price_gross', o ->> 'snapshot_confidence'))
       from jsonb_array_elements(opts) o) > 1 then
     return app.rpc_ok(
       jsonb_build_object('match', 'needs_location', 'menu_item_id', item_id, 'name', item_name,
-        'locations', (select jsonb_agg(jsonb_build_object('location_id', o -> 'location_id', 'name', o -> 'name'))
+        'locations', (select jsonb_agg(jsonb_build_object('location_id', o -> 'location_id', 'name', o -> 'name')
+                                       order by o ->> 'name', o ->> 'location_id')
                       from jsonb_array_elements(opts) o)),
       locs, '[]', 100);
   end if;

@@ -246,7 +246,7 @@ select is(pg_temp.rpc(:OWNER, format('api.get_top_dishes(%L, %L, location_id => 
           (select to_jsonb((a.net - round(a.net * 16 / 116.0)) - a.units * 1840) from public.item_sales_agg a join public.menu_item m on m.id = a.menu_item_id
            where m.external_id = 'P001' and a.location_id = :'CENTRO' and a.period_from = '2026-10-11'),
           'margin = net without IVA - units x cost');
-select is(pg_temp.rpc(:OWNER, format('api.get_top_dishes(%L, %L, location_id => %L)', '"yesterday"', 'margin', :'CENTRO')) #>> '{flags,0,code}', 'uncosted_sales',
+select ok(pg_temp.rpc(:OWNER, format('api.get_top_dishes(%L, %L, location_id => %L)', '"yesterday"', 'margin', :'CENTRO')) -> 'flags' @> '[{"code": "uncosted_sales"}]',
           'dishes without a cost are flagged, not ranked');
 
 -- get_data_status -------------------------------------------------------------------------
