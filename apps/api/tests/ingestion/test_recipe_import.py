@@ -190,6 +190,7 @@ def test_an_edit_to_pastor_gives_one_pending_change_with_its_diff_and_audit_row(
 
     diff = change["diff"]
     assert (diff["batch_id"], diff["parser"]) == (str(r.batch_id), "sr.recetas@v1")
+    assert diff["report_date"] == "2026-10-12"
     assert diff["menu_item"] == {"id": str(PASTOR_ITEM), "name": PASTOR, "external_id": "P001"}
     assert diff["added"] == ["Chile serrano"]
     assert diff["removed"] == ["Limón"]
@@ -759,3 +760,57 @@ def test_the_chain_warning_follows_the_location_the_current_recipe_came_from(
     )
     r = load(conn, edited_pastor(sample), source_id=source)
     assert ("recipe.chain_location_differs" in codes(r)) is warned
+
+
+# --- review on #74: unsliced batches, a file equal to the recipe of record ------------------
+
+
+def test_an_unsliced_batch_in_the_tenant_does_not_break_the_newer_pending_check(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
+) -> None:
+    first = load(conn, edited_pastor(sample), source_id=source)
+    conn.execute(  # the loader writes this slice_key for a batch with no location
+        """insert into public.import_batch (tenant_id, source_id, parser, slice_key, status)
+           values (%s, %s, 'sr.recetas@v1', 'unsliced:abc', 'rejected')""",
+        (TENANT, source),
+    )
+    later = load(conn, next_day(less_meat(sample)), source_id=source)
+    assert statuses(conn, first, later) == [("expired", "superseded"), ("pending", None)]
+
+
+def test_a_file_equal_to_the_recipe_of_record_supersedes_an_older_pending_change(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
+) -> None:
+    first = load(conn, edited_pastor(sample), source_id=source, proposed_by=LUPITA)
+    later = load(conn, next_day(sample), source_id=source, proposed_by=LUPITA)
+    (old,) = first.pending_change_ids
+    assert later.pending_change_ids == ()
+    assert stats(conn, later.batch_id)["unchanged"] == 15
+    assert pastor_states(conn) == [("expired", "superseded")]
+    audit = conn.execute(
+        """select actor_user_id, action, entity_type, entity_id, batch_id, before, after
+           from public.audit_log where pending_change_id = %s and action <> %s""",
+        (old, "pending_change.propose"),
+    ).fetchall()
+    assert audit == [
+        (
+            LUPITA,
+            "pending_change.supersede",
+            "pending_change",
+            old,
+            later.batch_id,
+            {"status": "pending"},
+            {"status": "expired", "resolved_via": "superseded", "superseded_by": None},
+        )
+    ]
+    (note,) = [i for i in later.issues if i.code == "recipe.pending_replaced"]
+    assert PASTOR in note.message_es
+
+
+def test_a_file_equal_to_the_recipe_of_record_keeps_a_newer_pending_change(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
+) -> None:
+    load(conn, next_day(edited_pastor(sample)), source_id=source)
+    older = load(conn, sample, source_id=source)
+    assert older.pending_change_ids == () and "recipe.pending_replaced" not in codes(older)
+    assert pastor_states(conn) == [("pending", None)]
