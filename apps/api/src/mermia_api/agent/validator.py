@@ -57,8 +57,9 @@ SPANISH_DATE = re.compile(
 SLASH_DATE = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
 LIST_MARKER = re.compile(r"(?m)^[ \t]*\d{1,2}[.)][ \t]+")
 TIME = re.compile(r"\b\d{1,2}:\d{2}\b")
-# A question number is a source only when bare: no "$", separator or decimals, and no %, "mil"
-# or "pesos" after it.
+# A question number is a source only when bare: no "$", separator or decimals, no "MXN" before
+# it and no %, "mil" or "pesos" after it; and never for a figure the reply shows as money.
+_MONEY_BEFORE = re.compile(r"(?:mxn|usd)\s*$", re.IGNORECASE)
 _MONEY_AFTER = re.compile(r"\s*(?:%|mil\b|pesos\b|mxn\b)", re.IGNORECASE)
 
 
@@ -72,10 +73,7 @@ class Turn:
 
 
 def numbers(text: str) -> set[Decimal]:
-    return {
-        Decimal(sign.replace("\u2212", "-") + digits.replace(",", ""))
-        for sign, digits in NUMBER.findall(text)
-    }
+    return {_value(m) for m in NUMBER.finditer(text)}
 
 
 def tool_numbers(result: str) -> set[Decimal]:
@@ -132,14 +130,30 @@ def strip_dates(reply: str, dates: set[str]) -> str:
     return SLASH_DATE.sub(slash, SPANISH_DATE.sub(spanish, reply))
 
 
+def _money(text: str, m: re.Match[str]) -> bool:
+    return (
+        "$" in m.group(0)
+        or bool(_MONEY_BEFORE.search(text, 0, m.start()))
+        or bool(_MONEY_AFTER.match(text, m.end()))
+    )
+
+
+def _value(m: re.Match[str]) -> Decimal:
+    return Decimal(m.group(1).replace("\u2212", "-") + m.group(2).replace(",", ""))
+
+
 def _bare_numbers(question: str) -> set[Decimal]:
     return {
-        Decimal(m.group(2))
+        _value(m)
         for m in NUMBER.finditer(question)
-        if m.group(2).isdigit()
-        and "$" not in m.group(0)
-        and not _MONEY_AFTER.match(question, m.end())
+        if m.group(2).isdigit() and not _money(question, m)
     }
+
+
+def _memory_numbers(answer: str) -> set[Decimal]:
+    """Figures of an earlier reply, without its dates, times and list markers."""
+    text = SLASH_DATE.sub(" ", SPANISH_DATE.sub(" ", DATETIME.sub(" ", answer)))
+    return numbers(LIST_MARKER.sub("", TIME.sub(" ", text)))
 
 
 def validate(
@@ -151,11 +165,15 @@ def validate(
     dates: Iterable[str] = (),
 ) -> set[Decimal]:
     """The figures in `reply` with no source; empty means the reply may be sent. `dates` are
-    the dates the agent was told (today), which are not figures."""
-    tool_dates = {d for r in tool_results for d in DATE.findall(r)}
-    text = TIME.sub(" ", strip_dates(reply, set(dates) | tool_dates))
-    shown = numbers(LIST_MARKER.sub("", text))
-    known = _bare_numbers(question).union(
-        *(tool_numbers(r) for r in tool_results), *(numbers(t.a) for t in memory)
+    the dates the agent was told (today), which are not figures. A date an earlier reply wrote
+    may be repeated."""
+    known_dates = {d for r in [*tool_results, *(t.a for t in memory)] for d in DATE.findall(r)}
+    said = {m.group().lower() for t in memory for m in SPANISH_DATE.finditer(t.a)}
+    text = strip_dates(reply, set(dates) | known_dates)
+    text = SPANISH_DATE.sub(lambda m: " " if m.group().lower() in said else m.group(), text)
+    text = LIST_MARKER.sub("", TIME.sub(" ", text))
+    money = {_value(m) for m in NUMBER.finditer(text) if _money(text, m)}
+    known = set().union(
+        *(tool_numbers(r) for r in tool_results), *(_memory_numbers(t.a) for t in memory)
     )
-    return shown - known
+    return numbers(text) - known - (_bare_numbers(question) - money)

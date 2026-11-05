@@ -97,6 +97,13 @@ def test_money_shaped_question_numbers_are_not_sources() -> None:
         assert check(f"Sí, {figure}.", question=question) != set(), question
 
 
+def test_an_unformatted_money_guess_from_the_question_is_rejected() -> None:
+    # "50000" is bare in the question, but the reply shows it as money.
+    assert check("Sí, vendiste $50,000.", question="¿vendí 50000 ayer?") == {Decimal("50000")}
+    assert check("Sí, MXN 500.", question="¿vendí MXN 500?") == {Decimal("500")}
+    assert check("Sí, 500 pesos.", question="¿vendí 500?") == {Decimal("500")}
+
+
 def test_top_n_from_the_question_passes() -> None:
     assert check("Tus 5 platillos más vendidos…", question="¿cuáles son mis top 5?") == set()
 
@@ -104,6 +111,20 @@ def test_top_n_from_the_question_passes() -> None:
 def test_a_figure_only_in_an_earlier_question_is_rejected() -> None:
     memory = [Turn(q="¿vendí 40 platos?", a="Vendiste 212 tickets.", ts=TS)]
     assert check("Sí, 40 platos.", question="¿y luego?", memory=memory) == {Decimal("40")}
+
+
+def test_dates_times_and_list_markers_in_memory_are_not_sources() -> None:
+    memory = [
+        Turn(q="¿y?", a="Hoy es 2026-11-05. Del 5 al 11 de octubre, a las 9:30:\n1. Centro", ts=TS)
+    ]
+    shown = validate("Vendiste $11, $30 y $1.", tool_results=[], question="¿y?", memory=memory)
+    assert shown == {Decimal("11"), Decimal("30"), Decimal("1")}
+
+
+def test_a_date_from_memory_can_be_repeated() -> None:
+    memory = [Turn(q="¿cuánto?", a="Del 5 al 11 de octubre vendiste $18,450 (2026-10-11).", ts=TS)]
+    reply = "Del 5 al 11 de octubre vendiste $18,450; corte al 2026-10-11."
+    assert validate(reply, tool_results=[], question="¿y?", memory=memory) == set()
 
 
 # Dates, times and list markers.

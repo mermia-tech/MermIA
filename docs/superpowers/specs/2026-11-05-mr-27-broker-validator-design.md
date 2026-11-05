@@ -57,8 +57,8 @@ A pure function: `validate(reply, *, tool_results, question, memory) -> set[Deci
   - list markers ("1. ", "2) ").
 - **Known figures:**
   - the numbers in tool results (display text and plain values; not the `raw` centavos, UUIDs or dates);
-  - the bare numbers in the question: no `$`, no thousands separator, no decimals, and no `%`, "mil", "pesos" or "MXN" after them (so "30 días" and "top 5" count; "$50,000", "50,000", "40 mil" and "15%" do not);
-  - the numbers in the agent's replies in the memory turns. The owner's earlier questions are not a source.
+  - the bare numbers in the question: no `$`, no thousands separator, no decimals, no "MXN" before them and no `%`, "mil", "pesos" or "MXN" after them (so "30 días" and "top 5" count; "$50,000", "50,000", "MXN 500", "40 mil" and "15%" do not). A bare question number never sources a figure the reply shows as money: "¿vendí 50000?" → "Sí, $50,000" is rejected (review fix);
+  - the numbers in the agent's replies in the memory turns, without their dates, times and list markers (so "del 5 al 11 de octubre" in memory does not source "$11"; the same date may be repeated). The owner's earlier questions are not a source.
 - **Known limit:** the validator checks that a figure exists in a source, not that it is attached to the right measure. "Vendiste $212" passes when 212 is the ticket count, and small integers can match by chance. The prompt and the eval's args and tone scores cover attribution; a test documents this limit.
 - **Reuse:** this is the MR-20 numbers scorer (`apps/eval/src/mermia_eval/score.py`: `_numbers`, `_tool_numbers`, `_strip_dates`, `_LIST_MARKER`), without the `must_contain` / `must_not_contain` parts. Where it lives is open question Q2.
 
