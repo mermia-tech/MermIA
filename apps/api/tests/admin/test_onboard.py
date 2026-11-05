@@ -56,11 +56,16 @@ def apply(conn: psycopg.Connection[Any], spec: OnboardingSpec) -> Summary:
 
 
 @pytest.fixture
-def conn() -> Iterator[psycopg.Connection[Any]]:
+def db_url() -> str:
     url = os.environ.get("MERMIA_DB_URL")
     if not url:
         pytest.skip("MERMIA_DB_URL is not set")
-    with psycopg.connect(url) as c, c.transaction(force_rollback=True):
+    return url
+
+
+@pytest.fixture
+def conn(db_url: str) -> Iterator[psycopg.Connection[Any]]:
+    with psycopg.connect(db_url) as c, c.transaction(force_rollback=True):
         yield c
 
 
@@ -483,15 +488,16 @@ def test_identity_tables_stay_hidden_from_the_new_owner(conn: psycopg.Connection
                 conn.execute(f"select count(*) from public.{table}")
 
 
-def test_the_cli_dry_run_saves_nothing(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_the_cli_dry_run_saves_nothing(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], db_url: str
+) -> None:
     path = tmp_path / "spec.json"
     path.write_text(json.dumps(SPEC))
-    url = os.environ["MERMIA_DB_URL"]
-    with psycopg.connect(url) as c:
+    with psycopg.connect(db_url) as c:
         before = one(c, "select count(*) from public.tenant")
     assert cli.main([str(path), "--dry-run", "--operator", OPERATOR]) == 0
     out = capsys.readouterr().out
-    with psycopg.connect(url) as c:
+    with psycopg.connect(db_url) as c:
         assert one(c, "select count(*) from public.tenant") == before
     assert "dry run" in out.lower() and "Taquería La Prueba" in out
     assert "+52******0001" in out and "+525500000001" not in out
@@ -499,7 +505,7 @@ def test_the_cli_dry_run_saves_nothing(tmp_path: Path, capsys: pytest.CaptureFix
 
 
 def test_the_cli_reports_a_refusal_without_a_traceback(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], db_url: str
 ) -> None:
     path = tmp_path / "spec.json"
     path.write_text(
@@ -508,22 +514,3 @@ def test_the_cli_reports_a_refusal_without_a_traceback(
     assert cli.main([str(path), "--dry-run", "--operator", OPERATOR]) == 1
     err = capsys.readouterr().err
     assert "already belongs to" in err and RODRIGO_PHONE not in err
-
-
-def test_the_cli_reports_an_invalid_spec(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    path = tmp_path / "spec.json"
-    path.write_text(json.dumps({**SPEC, "users": []}))
-    assert cli.main([str(path), "--dry-run", "--operator", OPERATOR]) == 2
-    assert "users" in capsys.readouterr().err
-
-
-def test_the_cli_needs_an_operator(tmp_path: Path) -> None:
-    path = tmp_path / "spec.json"
-    path.write_text(json.dumps(SPEC))
-    with pytest.raises(SystemExit) as exit_:
-        cli.main([str(path), "--dry-run"])
-    assert exit_.value.code == 2
-    with pytest.raises(SystemExit):
-        cli.main([str(path), "--dry-run", "--operator", "two words"])

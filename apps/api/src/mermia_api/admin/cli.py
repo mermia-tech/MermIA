@@ -88,9 +88,6 @@ def run(args: argparse.Namespace, spec: OnboardingSpec) -> Summary:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
-    if not args.db_url:
-        print("set MERMIA_DB_URL or pass --db-url", file=sys.stderr)
-        return EXIT_USAGE
     try:
         spec = load_spec(args.spec)
     except ValidationError as e:
@@ -98,6 +95,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return EXIT_USAGE
     except (OSError, ValueError) as e:
         print(f"{args.spec.name}: {e}", file=sys.stderr)
+        return EXIT_USAGE
+    if not args.db_url:
+        print("set MERMIA_DB_URL or pass --db-url", file=sys.stderr)
         return EXIT_USAGE
     try:
         summary = run(args, spec)
