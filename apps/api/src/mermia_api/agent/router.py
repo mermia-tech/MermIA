@@ -136,7 +136,14 @@ def route(text: str, locations: Mapping[UUID, str]) -> Match | None:
     names = {location_id: " ".join(_normalized(name)) for location_id, name in locations.items()}
     count = Counter(names.values())
     by_name = {name: location_id for location_id, name in names.items() if count[name] == 1}
-    named = {by_name[name] for name in _take(words, by_name)}
+    # a name that is also a write verb ("Baja") is a location only right after "en" or "de":
+    # "baja el food cost" orders a change
+    verb_names = {name for name in by_name if name in WRITE_VERBS}
+    at = [i for i, w in enumerate(words) if w in verb_names and i and words[i - 1] in ("en", "de")]
+    named = {by_name[words[i]] for i in at}
+    for i in reversed(at):
+        del words[i]
+    named |= {by_name[name] for name in _take(words, by_name.keys() - verb_names)}
     if WRITE_VERBS.intersection(words):  # after the names: a location may be called "Baja"
         return None
     periods = {PERIODS[phrase] for phrase in _take(words, PERIODS)}

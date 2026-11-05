@@ -492,3 +492,25 @@ def test_en_total_falls_through(text: str, el_guero: dict[UUID, str]) -> None:
 def test_ventas_totales_still_matches(el_guero: dict[UUID, str]) -> None:
     match = route("dame las ventas totales del mes pasado", el_guero)
     assert match is not None and match.args == {"period": "last_month"}
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "baja el food cost de ayer",
+        "porfa baja el food cost de ayer",
+        "ventas de ayer, Centro y Baja",
+    ],
+)
+def test_a_location_named_like_a_write_verb_does_not_hide_the_verb(text: str) -> None:
+    # "Baja" is a location name only right after "en" or "de" (review follow-up on #79)
+    locations = {uuid4(): "Baja", UUID(POLANCO): "Polanco", UUID(CENTRO): "Centro"}
+    assert route(text, locations) is None
+
+
+def test_a_location_named_like_a_write_verb_still_matches_after_en_or_de() -> None:
+    baja = uuid4()
+    locations = {baja: "Baja", UUID(POLANCO): "Polanco"}
+    for text in ("cuánto vendí ayer en Baja", "ventas de Baja de ayer"):
+        match = route(text, locations)
+        assert match is not None and match.args["location_id"] == str(baja), text
