@@ -66,3 +66,74 @@ class CountingBroker:
 @pytest.fixture
 def counting_broker() -> CountingBroker:
     return CountingBroker()
+
+
+class ScriptedAgents:
+    """An `agent_factory` for LlmBroker: each `run` plays the next step of `script`. A step is
+    an exception to raise or a function of the tools (by name) that returns a run output; the
+    `reply` fixture builds those. Records what each agent was built with and its input."""
+
+    def __init__(self) -> None:
+        self.script: list[Any] = []
+        self.built: list[dict[str, Any]] = []
+        self.inputs: list[Any] = []
+
+    def __call__(self, **kwargs: Any) -> Any:
+        self.built.append(kwargs)
+        tools = {f.name: f for f in kwargs.get("tools", [])}
+        factory = self
+
+        class Agent:
+            def run(self, input: Any) -> Any:
+                factory.inputs.append(input)
+                step = factory.script.pop(0)
+                if isinstance(step, Exception):
+                    raise step
+                return step(tools)
+
+        return Agent()
+
+
+@pytest.fixture
+def agents() -> ScriptedAgents:
+    return ScriptedAgents()
+
+
+@pytest.fixture
+def reply() -> Any:
+    """reply(text, calls=[(tool, args)], ...) -> a script step: it runs each tool call through
+    the broker's tools, then answers `text` with the given status and usage."""
+    from types import SimpleNamespace
+
+    from agno.metrics import RunMetrics
+    from agno.run.base import RunStatus
+
+    def make(
+        text: str,
+        calls: list[tuple[str, dict[str, Any]]] = (),  # type: ignore[assignment]
+        status: RunStatus = RunStatus.completed,
+        input_tokens: int = 1000,
+        output_tokens: int = 50,
+        cached: int = 800,
+    ) -> Any:
+        def step(tools: dict[str, Any]) -> Any:
+            executed = [
+                SimpleNamespace(tool_name=n, tool_args=a, result=tools[n].entrypoint(**a))
+                for n, a in calls
+            ]
+            metrics = RunMetrics(
+                input_tokens=input_tokens, output_tokens=output_tokens, cache_read_tokens=cached
+            )
+            return SimpleNamespace(
+                content=text, status=status, tools=executed, metrics=metrics, messages=[]
+            )
+
+        return step
+
+    return make
+
+
+@pytest.fixture
+def other_rpc(example: Any) -> FakeRpc:
+    """A second user's RPC caller, for tests that two requests never share one."""
+    return FakeRpc(example)
