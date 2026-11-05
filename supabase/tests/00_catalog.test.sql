@@ -12,7 +12,12 @@ select set_eq($$select p.proname::text from pg_proc p where p.pronamespace = 'ap
               array['current_tenant_id', 'can_see_location', 'has_all_locations', 'has_location_list', 'location_scope_ids',
                     -- MR-17: the read RPCs run as the caller, so the caller runs their helpers
                     'business_today', 'resolve_period', 'previous_period', 'scope_locations', 'fmt_money', 'fmt_number',
-                    'fmt_pct', 'figure', 'data_as_of', 'rpc_ok', 'rpc_error', 'flag', 'sales_totals', 'item_rows', 'metric_value'],
+                    'fmt_pct', 'figure', 'data_as_of', 'rpc_ok', 'rpc_error', 'flag', 'sales_totals', 'item_rows', 'metric_value',
+                    -- MR-24: the remaining read RPCs, and the engine's read-only helpers for cost drivers
+                    'food_cost_target', 'pct', 'money', 'confidence_flag', 'item_cost_rows', 'menu_price_on', 'cost_drivers',
+                    'norm_name', 'price_text', 'paid_tickets', 'staff_names', 'breakdown_rows', 'cancellation_detail',
+                    'discount_detail', 'price_of_record', 'recipe_of_record', 'recipe_cost',
+                    'menu_price_row', 'net_ex_iva', 'live_ingredients', 'subject_item', 'cancellation_days', 'food_cost'],
               'authenticated executes only the policy helpers and the read-RPC helpers');
 select ok(has_function_privilege('service_role', 'app.uuid_v7(timestamptz)', 'execute'), 'service_role can run the uuid default');
 select ok(has_schema_privilege('authenticated', 'app', 'usage'), 'authenticated has usage on app');

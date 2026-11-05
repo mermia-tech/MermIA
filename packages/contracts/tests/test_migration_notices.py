@@ -26,5 +26,8 @@ def test_migrations_are_timestamped_and_ordered() -> None:
         "read_rpcs_first4.sql",
         "apply_rollback_batch.sql",
         "costing_engine.sql",
+        "read_rpcs_cost.sql",
+        "read_rpcs_sales.sql",
+        "iva_by_tax_rate.sql",
     ]
     assert all(n.split("_", 1)[0].isdigit() and len(n.split("_", 1)[0]) == 14 for n in names)
