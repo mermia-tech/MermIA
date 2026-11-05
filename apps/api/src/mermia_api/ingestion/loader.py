@@ -8,7 +8,8 @@ tenant always comes from the source row, never from the caller. One call is one 
    one only while a proposal it filed is still pending.
 2. Checks the contract leaves to the loader (MR-10 spec 8.2, 03 B.5):
    - rejected: an unsupported grain, rows outside the period, totals that differ from the rows,
-     no location, a value the database refuses;
+     no location (the MermIA recipe template may have none: recipes are tenant-wide; an SR
+     report always needs one), a value the database refuses;
    - needs_review: a correction of an applied slice, a period other than the expected day, a
      location hint that names another location, an error-level issue from the parser.
 3. Stages the batch (status parsed / needs_review / rejected) with its issues and, unless
@@ -19,7 +20,9 @@ tenant always comes from the source row, never from the caller. One call is one 
 A catalog batch (recipes, MR-25) is never applied: the sales checks of step 2 do not apply to it,
 and instead of staging rows each recipe that differs from the recipe of record becomes a
 recipe.upsert pending change (ingestion/recipes.py). Its status is parsed when at least one
-recipe was proposed or found unchanged, and rejected when every recipe was held.
+recipe was proposed or found unchanged, and rejected when every recipe was held. Without a
+location (a template for the whole tenant) its slice is the tenant's (TENANT_SLICE in place of
+the location).
 """
 
 from __future__ import annotations
@@ -35,6 +38,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from mermia_api.ingestion.items import find_item
+from mermia_api.ingestion.parsers import mermia_recetas
 from mermia_api.ingestion.recipes import NO_PROPOSALS, propose_recipes
 from mermia_contracts.batch import Grain, IssueIn, NormalizedBatch
 from mermia_contracts.db.models import IssueSeverity
@@ -44,6 +48,7 @@ SUPPORTED = {Grain.item_daily: "item_sales", Grain.daily: "daily_sales", Grain.c
 ROW_LISTS = ("menu_items", "item_sales", "daily_sales", "tickets", "purchases", "recipes")
 OPEN = ("parsed", "needs_review", "applied")  # statuses a duplicate is found among
 SLICE = r"^[^:]+:[^:]+:\d{4}-\d{2}-\d{2}:\d{4}-\d{2}-\d{2}$"  # as mermia_contracts.keys builds it
+TENANT_SLICE = "tenant"  # the location part of the slice of a catalog batch without a location
 
 
 @dataclass(frozen=True)
@@ -123,15 +128,22 @@ def _load(
     reject: list[IssueIn] = []
     review: list[IssueIn] = []
 
-    location_id = _location(conn, tenant_id, source_location, batch.location_hint, reject, review)
-    key = slice_key(location_id, batch.parser, batch.period) if location_id else None
+    catalog = batch.grain == Grain.catalog
+    tenant_wide = catalog and batch.parser == mermia_recetas.PARSER  # may name no location
+    location_id = _location(
+        conn, tenant_id, source_location, batch.location_hint, reject, review, tenant_wide
+    )
+    key = (
+        slice_key(location_id or TENANT_SLICE, batch.parser, batch.period)
+        if location_id or tenant_wide
+        else None
+    )
     # one load per slice at a time: a file arriving twice at once (email and WhatsApp) must
     # meet the duplicate check, not the unique index on applied slices
     conn.execute(
         "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
         (f"{tenant_id}:{key or digest}",),
     )
-    catalog = batch.grain == Grain.catalog
     if catalog:  # recipes are tenant-wide: two locations must not file the same proposal at once
         conn.execute(
             "select pg_advisory_xact_lock(hashtextextended(%s, 0))", (f"{tenant_id}:recipes",)
@@ -229,7 +241,7 @@ def _load_catalog(
     Review issues (a location hint naming another location) only inform: recipes are tenant-wide
     and every change waits for approval anyway."""
     found = NO_PROPOSALS
-    if not reject and location_id is not None:
+    if not reject:
         try:
             with conn.transaction():  # a savepoint: a refused value rejects the batch, not the call
                 found = propose_recipes(conn, tenant_id, location_id, batch_id, batch, proposed_by)
@@ -349,8 +361,11 @@ def _location(
     hint: str | None,
     reject: list[IssueIn],
     review: list[IssueIn],
+    tenant_wide: bool,
 ) -> UUID | None:
-    """The source's location; for a tenant-level source (email inbox), the one the hint names."""
+    """The source's location; for a tenant-level source (email inbox), the one the hint names.
+    A `tenant_wide` batch (the recipe template) with neither is for the whole tenant (None, not
+    refused); any other batch without a location is refused."""
     named = None
     if hint is not None:
         rows = conn.execute(
@@ -370,7 +385,7 @@ def _location(
                 )
             )
         return source_location
-    if named is None:
+    if named is None and not (tenant_wide and hint is None):
         reject.append(
             _issue(
                 IssueSeverity.error, "location.unknown", "No sé de qué sucursal es este reporte."

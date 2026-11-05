@@ -43,7 +43,8 @@ def open_workbook(data: bytes) -> Workbook:
         return load_workbook(io.BytesIO(data), read_only=True, data_only=True)
     except Exception as e:  # zip, XML or openpyxl errors: a file we cannot read
         raise UnreadableFile(
-            "No pude abrir el archivo. Envíame el reporte de Soft Restaurant en Excel (.xlsx).",
+            "No pude abrir el archivo. Envíamelo en Excel (.xlsx): el reporte de Soft Restaurant "
+            "o la plantilla de recetas.",
             f"{type(e).__name__}: {e}",
         ) from e
 
@@ -76,13 +77,13 @@ def _without_thousands(s: str, where: str) -> str:
         return s.replace(",", "")
     if any(c in s for c in "$()"):
         raise MalformedReport(
-            f"El valor «{s}» en {where} tiene signo de pesos o paréntesis. Envíame el reporte "
+            f"El valor «{s}» en {where} tiene signo de pesos o paréntesis. Envíame el archivo "
             "con números sin formato (por ejemplo 1250.50 o -1250).",
             f"currency sign or parentheses in a number at {where}: {s!r}",
         )
     raise MalformedReport(
         f"El valor «{s}» en {where} tiene una coma que no es separador de miles; no sé si es "
-        "decimal. Envíame el reporte con punto decimal (por ejemplo 0.075).",
+        "decimal. Envíame el archivo con punto decimal (por ejemplo 0.075).",
         f"ambiguous comma in a number at {where}: {s!r}",
     )
 

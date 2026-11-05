@@ -14,7 +14,12 @@ from dataclasses import dataclass
 from openpyxl.workbook.workbook import Workbook
 
 from mermia_api.ingestion.errors import ReportError, UnknownReport, UnreadableFile
-from mermia_api.ingestion.parsers import sr_productos_vendidos, sr_recetas, sr_ventas_por_dia
+from mermia_api.ingestion.parsers import (
+    mermia_recetas,
+    sr_productos_vendidos,
+    sr_recetas,
+    sr_ventas_por_dia,
+)
 from mermia_api.ingestion.xlsx import open_workbook
 from mermia_contracts.batch import NormalizedBatch
 
@@ -27,9 +32,18 @@ class XlsxParser:
     report_es: str  # how the manager calls the report
     matches: Callable[[Workbook], bool]
     parse: Callable[[Workbook], NormalizedBatch]
+    from_sr: bool = True  # a Soft Restaurant report, or a file of ours (the recipe template)
 
 
+# the template first: its title and Platillo header never appear in an SR report
 XLSX_PARSERS: tuple[XlsxParser, ...] = (
+    XlsxParser(
+        mermia_recetas.PARSER,
+        "la plantilla de recetas de MermIA",
+        mermia_recetas.matches,
+        mermia_recetas.parse,
+        from_sr=False,
+    ),
     XlsxParser(
         sr_productos_vendidos.PARSER,
         "Productos vendidos",
@@ -47,8 +61,8 @@ XLSX_PARSERS: tuple[XlsxParser, ...] = (
 
 
 def parse_file(data: bytes) -> NormalizedBatch:
-    """The NormalizedBatch for an SR export. Raises a ReportError (with a Spanish message) when
-    the file cannot be read, matches no parser, or does not add up."""
+    """The NormalizedBatch for an SR export or a MermIA template. Raises a ReportError (with a
+    Spanish message) when the file cannot be read, matches no parser, or does not add up."""
     wb = open_workbook(data)
     try:
         for parser in XLSX_PARSERS:
@@ -68,8 +82,10 @@ def parse_file(data: bytes) -> NormalizedBatch:
         ) from e
     finally:
         wb.close()
-    known = ", ".join(f"«{p.report_es}»" for p in XLSX_PARSERS)
+    ours = "".join(f"{p.report_es} y " for p in XLSX_PARSERS if not p.from_sr)
+    known = ", ".join(f"«{p.report_es}»" for p in XLSX_PARSERS if p.from_sr)
     raise UnknownReport(
-        f"No reconocí este reporte. Por ahora puedo leer: {known} de Soft Restaurant.",
+        f"No reconocí este reporte. Por ahora puedo leer {ours}estos reportes de Soft "
+        f"Restaurant: {known}.",
         "no parser fingerprint matched",
     )

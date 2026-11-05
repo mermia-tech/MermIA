@@ -34,12 +34,20 @@ from __future__ import annotations
 import datetime as dt
 import re
 from dataclasses import dataclass, field
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from typing import Any
 
 from openpyxl.workbook.workbook import Workbook
 
 from mermia_api.ingestion.errors import MalformedReport
+from mermia_api.ingestion.parsers._recipe_units import (
+    IMPLAUSIBLE_QTY,
+    MAX_FRACTION_YIELD,
+    QTY_PLACES,
+    base_qty,
+    unit_of,
+    yield_pct,
+)
 from mermia_api.ingestion.parsers._sr_common import (
     DATE,
     SEARCH_ROWS,
@@ -87,49 +95,6 @@ ALIASES = {  # normalized header -> known name
     "clave de insumo": INGREDIENT_CODE,
 }
 
-# unit as SR may print it -> (base unit, base units per unit)
-_GRAMS = ("g", Decimal(1))
-_KILOS = ("g", Decimal(1000))
-_ML = ("ml", Decimal(1))
-_LITRES = ("ml", Decimal(1000))
-_PIECES = ("pza", Decimal(1))
-UNITS = {
-    "kg": _KILOS,
-    "kgs": _KILOS,
-    "g": _GRAMS,
-    "gr": _GRAMS,
-    "grs": _GRAMS,
-    "l": _LITRES,
-    "lt": _LITRES,
-    "lts": _LITRES,
-    "ml": _ML,
-    "pza": _PIECES,
-    "pzas": _PIECES,
-    "pz": _PIECES,
-    "kilo": _KILOS,
-    "kilos": _KILOS,
-    "kilogramo": _KILOS,
-    "kilogramos": _KILOS,
-    "gramo": _GRAMS,
-    "gramos": _GRAMS,
-    "litro": _LITRES,
-    "litros": _LITRES,
-    "mililitro": _ML,
-    "mililitros": _ML,
-    "pieza": _PIECES,
-    "piezas": _PIECES,
-}
-
-QTY_PLACES = Decimal("0.000001")  # the contract's Quantity: 6 decimals, 12 integer digits
-MAX_QTY = Decimal(10) ** 12
-YIELD_PLACES = Decimal("0.0001")  # the contract's PercentPoints: 4 decimals, up to 999.9999
-MAX_YIELD = Decimal("999.9999")
-# Per portion, a base quantity this large is a slip (a decimal comma read as thousands,
-# "1,500" kg): 1000 kg or l (in g or ml), or 1000 pieces, goes to a person.
-IMPLAUSIBLE_QTY = {"g": Decimal(10) ** 6, "ml": Decimal(10) ** 6, "pza": Decimal(1000)}
-# A yield this low is a fraction (0.92 for 92 %) read as percent points: it would cost the
-# line about a hundred times too much, so a person checks it.
-MAX_FRACTION_YIELD = Decimal(1)
 # The report's date: "Al 12/10/2026", "Del ... al 12/10/2026" or "Fecha: 12/10/2026" (normalized)
 AS_OF = re.compile(rf"\b(?:al|fecha\s*:?)\s*{DATE}")
 PRINTED = re.compile(r"\bimpres(?:o|ion)\b")  # "Impreso el ...", "Fecha de impresión ..."
@@ -187,35 +152,6 @@ def _as_of(title: list[Row]) -> Period:
     )
 
 
-def _base_qty(qty: Decimal, factor: Decimal, where: str) -> Decimal:
-    """The quantity in base units, rounded half-up to the contract's six decimals (1/3 kg)."""
-    base = (qty * factor).quantize(QTY_PLACES, rounding=ROUND_HALF_UP)
-    if base <= 0:
-        raise MalformedReport(
-            f"La cantidad en {where} es demasiado pequeña (menos de una millonésima de gramo, "
-            "mililitro o pieza).",
-            f"quantity {qty * factor} rounds to zero at {where}",
-        )
-    if base >= MAX_QTY:
-        raise MalformedReport(
-            f"La cantidad en {where} es demasiado grande.",
-            f"quantity {base} out of the contract's range at {where}",
-        )
-    return base
-
-
-def _yield(value: Any, where: str) -> Decimal:
-    """Percent points rounded half-up to the contract's four decimals (100/1.08 is 92.5926)."""
-    pct = number(value, where).quantize(YIELD_PLACES, rounding=ROUND_HALF_UP)
-    if not 0 < pct <= MAX_YIELD:
-        raise MalformedReport(
-            f"El rendimiento {value} en {where} debe ser un porcentaje mayor que cero y hasta "
-            f"{MAX_YIELD.normalize()}.",
-            f"yield out of range at {where}: {value!r}",
-        )
-    return pct
-
-
 def _error(code: str, message_es: str, n: int) -> IssueIn:
     return IssueIn(severity=IssueSeverity.error, code=code, message_es=message_es, row_ref=str(n))
 
@@ -258,7 +194,7 @@ def _read(line: Line) -> _Row:
             )
         )
         return _Row(text(line.raw(CODE)), product, None, tuple(issues))
-    known = UNITS.get(norm(unit).rstrip("."))
+    known = unit_of(unit)
     if known is None:
         issues.append(
             _error(
@@ -268,9 +204,9 @@ def _read(line: Line) -> _Row:
                 line.n,
             )
         )
-        base_unit, base = unit, _base_qty(qty, Decimal(1), line.where(QTY))
+        base_unit, base = unit, base_qty(qty, Decimal(1), line.where(QTY))
     else:
-        base_unit, base = known[0], _base_qty(qty, known[1], line.where(QTY))
+        base_unit, base = known[0], base_qty(qty, known[1], line.where(QTY))
         if base >= IMPLAUSIBLE_QTY[base_unit]:
             issues.append(
                 _error(
@@ -281,7 +217,7 @@ def _read(line: Line) -> _Row:
                     line.n,
                 )
             )
-    pct = line.read(YIELD, _yield)
+    pct = line.read(YIELD, yield_pct)
     if pct is not None and pct <= MAX_FRACTION_YIELD:
         issues.append(
             _error(
