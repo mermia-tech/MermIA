@@ -31,6 +31,12 @@ BACKFILL_CHUNK_DAYS = 7
 RESUME_BATCH = 100
 MAX_BACKFILL_ATTEMPTS = 5  # a backfill that failed this many sweeps is given up
 
+# Errors a later sweep can expect to get past: a lost or refused connection (class 08), deadlock,
+# serialization failure, lock not available, server shutdown or startup, too many connections.
+# Anything else (e.g. 54001 recipe too deep, 57014, 55000) fails the same way every time: counted.
+TRANSIENT_SQLSTATE_CLASSES = frozenset({"08"})
+TRANSIENT_SQLSTATES = frozenset({"40P01", "40001", "55P03", "57P01", "57P03", "53300"})
+
 log = logging.getLogger(__name__)
 
 
@@ -114,8 +120,8 @@ def resume_unfinished_backfills(
     A backfill that raises a database error is logged and reported in `failed` (its record keeps
     the last committed chunk), its `attempts` goes up and `last_error` is stored, and the others
     go on. After MAX_BACKFILL_ATTEMPTS failures the sweep stops picking it (logged once, when it
-    is given up). Operational errors (a lost connection, a deadlock, a lock timeout) are raised
-    without counting an attempt: the whole sweep is retried later.
+    is given up). Transient errors (a lost connection, a deadlock, a lock timeout; see
+    TRANSIENT_SQLSTATES) are raised without counting an attempt: the whole sweep is retried later.
     """
     done: dict[UUID, BackfillResult] = {}
     failed: dict[UUID, str] = {}
@@ -123,13 +129,23 @@ def resume_unfinished_backfills(
         change = backfill.pending_change_id
         try:
             done[change] = backfill_dish_costs(conn, change, max_days=max_days)
-        except psycopg.OperationalError:
-            raise
         except psycopg.Error as error:
+            if _is_transient(conn, error):
+                raise
             log.exception("dish cost backfill failed for pending change %s", change)
             failed[change] = str(error)
             _record_failure(conn, change, error)
     return ResumeResult(done=done, failed=failed)
+
+
+def _is_transient(conn: psycopg.Connection[Any], error: psycopg.Error) -> bool:
+    """A failure of the connection or a passing condition: retry the sweep, count nothing."""
+    if conn.broken or conn.closed:
+        return True
+    state = error.sqlstate
+    if state is None:
+        return False
+    return state in TRANSIENT_SQLSTATES or state[:2] in TRANSIENT_SQLSTATE_CLASSES
 
 
 def _record_failure(conn: psycopg.Connection[Any], change: UUID, error: psycopg.Error) -> None:

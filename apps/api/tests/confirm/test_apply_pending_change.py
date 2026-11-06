@@ -437,12 +437,14 @@ def test_a_double_tap_at_once_applies_one_change() -> None:
             c.execute("delete from public.ingredient_price where pending_change_id = %s", (change,))
 
 
-def add_poisoned_backfills(conn: psycopg.Connection[Any], how_many: int) -> list[UUID]:
+def add_poisoned_backfills(
+    conn: psycopg.Connection[Any], how_many: int, errcode: str = "P0001"
+) -> list[UUID]:
     """Backfill records whose chunk always fails: a trigger raises P0001 when it moves the record
     (only for from_date 2025-01-01, which no healthy backfill here uses)."""
     conn.execute(
-        """create function pg_temp.poison() returns trigger language plpgsql as $$
-             begin raise exception 'poison' using errcode = 'P0001'; end $$;
+        f"""create function pg_temp.poison() returns trigger language plpgsql as $$
+             begin raise exception 'poison' using errcode = '{errcode}'; end $$;
            create trigger zz_poison before update on public.dish_cost_backfill
              for each row
              when (old.from_date = date '2025-01-01' and new.next_before <> old.next_before)
@@ -530,3 +532,65 @@ def test_a_transient_error_in_the_sweep_does_not_count_an_attempt(
         resume_unfinished_backfills(conn)
 
     assert unfinished_backfills(conn)[0] == UnfinishedBackfill(change, 0, None)
+
+
+def test_a_non_transient_operational_error_is_counted_and_the_sweep_goes_on(
+    conn: psycopg.Connection[Any],
+) -> None:
+    """54001 (recipe nested too deep) is an OperationalError, but retrying never fixes it."""
+    first, second = add_poisoned_backfills(conn, 2, errcode="54001")
+
+    result = resume_unfinished_backfills(conn)
+
+    assert set(result.failed) == {first, second}
+    rows = conn.execute(
+        "select attempts, last_error from public.dish_cost_backfill "
+        "where pending_change_id = any(%s)",
+        ([first, second],),
+    ).fetchall()
+    assert rows == [(1, "54001 StatementTooComplex")] * 2
+
+
+def test_a_failure_count_survives_the_chunk_rollback_on_a_real_connection() -> None:
+    """Commits for real. A trigger (only for from_date 2024-02-02, which nothing else uses) makes
+    the chunk fail inside its transaction, which rolls back; the attempt count is still there
+    afterwards. The trigger, its function and the record are dropped at the end (the pending
+    change stays: the audit log is append-only)."""
+    url = os.environ.get("MERMIA_DB_URL")
+    if not url:
+        pytest.skip("MERMIA_DB_URL is not set")
+    with psycopg.connect(url) as c:
+        change = propose(c, PendingKind.ingredient_price_set, CARNE, price("0.32", "2099-01-01"))
+        c.execute(
+            """create function public.zz_test_poison() returns trigger language plpgsql as $$
+                 begin raise exception 'poison' using errcode = 'P0001'; end $$;
+               create trigger zz_test_poison before update on public.dish_cost_backfill
+                 for each row when (old.from_date = date '2024-02-02'
+                                  and new.next_before <> old.next_before)
+                 execute function public.zz_test_poison()"""
+        )
+        c.execute(
+            """insert into public.dish_cost_backfill
+                 (tenant_id, pending_change_id, from_date, to_date, next_before)
+               values (%s, %s, '2024-02-02', '2024-02-08', '2024-02-09')""",
+            (TENANT, change),
+        )
+    try:
+        with psycopg.connect(url) as c:
+            assert change in resume_unfinished_backfills(c).failed
+        with psycopg.connect(url) as c:
+            row = c.execute(
+                "select attempts, last_error from public.dish_cost_backfill "
+                "where pending_change_id = %s",
+                (change,),
+            ).fetchone()
+        assert row is not None
+        assert row[0] == 1
+        assert row[1] == "P0001 RaiseException"
+    finally:
+        with psycopg.connect(url) as c:
+            c.execute(
+                "delete from public.dish_cost_backfill where pending_change_id = %s", (change,)
+            )
+            c.execute("drop trigger zz_test_poison on public.dish_cost_backfill")
+            c.execute("drop function public.zz_test_poison()")
