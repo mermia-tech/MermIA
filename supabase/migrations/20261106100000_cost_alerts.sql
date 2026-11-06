@@ -3,14 +3,15 @@
 -- backend runs app.evaluate_cost_alerts daily and it writes public.alert rows only. It never
 -- writes a pending_change, a menu price or a suggestion; price suggestions are part b.
 --
--- - Price jump: the price of record of an ingredient a live dish uses changes on a day, and the
---   new price is at least 15 % away from the last price, or it crosses the 8 % line around the
---   30-day time-weighted average (the price of record on each of the 30 days before): the last
---   price within 8 % of the average, the new one at least 8 % away, on the side it moved to. The
---   average lags a real jump, so a later small move (even a drop) never fires against it. Either direction;
---   a zero price is never a jump. The quoted change is the rule that fired: vs the last price
---   when the 15 % rule does, else vs the average. One definition (app.price_jumps) for the
---   evaluator and api.get_cost_alerts.
+-- - Price jump: the price of record of an ingredient a live dish uses changes on a day, and either
+--   the new price is at least 15 % away from the last price (the 15 % rule), or the 30-day average
+--   rule fires: the new price is at least 8 % away from the 30-day time-weighted average (the price
+--   of record on each of the 30 days before), on the side the price moved to, and either the last
+--   price was within 8 % of that average or the step itself is at least 8 % vs the last price. So a
+--   small move while the average still lags a jump is no jump, but a second step is (pastor $170 ->
+--   $195 -> $215). Either direction; a zero price is never a jump. The quoted change is the rule
+--   that fired: vs the last price when the 15 % rule does, else vs the average. One definition
+--   (app.price_jumps) for the evaluator and api.get_cost_alerts.
 -- - Margin breach: a dish's snapshot food cost is above target + 3 pts (U1: 32 % + 3).
 -- - Urgent (U3, for a same-day message sent by MR-37/38): a price rise of at least 15 % vs the last
 --   price on a top-20 ingredient by spend, or a breach on a top-10 dish by net sales at its
