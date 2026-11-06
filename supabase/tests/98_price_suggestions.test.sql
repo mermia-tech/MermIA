@@ -218,6 +218,79 @@ select is((select array_agg(p.status || ' from ' || p.episode_start order by p.a
           'the dismissal held for its episode only');
 rollback to savepoint new_episode;
 
+-- an open row the writer stopped refreshing is removed, and never shown ----------------------
+savepoint star_flip;
+-- volcán (Centro's dog) turns into a star by 10-13: the 10-13 run does not refresh its 10-12 row, so it goes
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-13', '2026-10-20') > 0, 'costs through 10-20');
+alter function app.menu_quadrants(uuid[], date, date) rename to menu_quadrants_seed;
+create function app.menu_quadrants(locs uuid[], f date, t date) returns table (menu_item_id uuid, units numeric, quadrant text)
+language sql stable set search_path = '' as $$
+  select q.menu_item_id, q.units, case when q.menu_item_id = '0ff2f280-6ded-5c20-930d-3990303ecdc0' then 'star' else q.quadrant end
+  from app.menu_quadrants_seed(locs, f, t) q $$;
+grant execute on function app.menu_quadrants(uuid[], date, date) to service_role, authenticated;
+select ok(pg_temp.write(:'TENANT', '2026-10-13') > 0, 'the 10-13 run');
+select is((select array_agg(m.name || ': ' || p.as_of order by m.name)
+           from public.price_suggestion p join public.menu_item m on m.id = p.menu_item_id where p.location_id = :'CENTRO'),
+          array['Alambre de res: 2026-10-13', 'Torta de pastor: 2026-10-13'], 'a dish that became a star loses its open row');
+select is(array(select x ->> 'name' from jsonb_array_elements(
+                  pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO'), '2026-10-13') #> '{data,suggestions}') x),
+          array['Torta de pastor', 'Alambre de res'], 'get_cost_alerts last_30d on 10-13: no volcán');
+rollback to savepoint star_flip;
+
+savepoint stopped_costing;
+-- the engine stops costing the alambre and the (dismissed) torta after 10-12: on 10-20 the open alambre row goes,
+-- the dismissed torta stays; the volcán is refreshed
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-13', '2026-10-20') > 0, 'costs through 10-20');
+delete from public.dish_cost_snapshot
+where location_id = :'CENTRO' and menu_item_id in (:'ALAMBRE', :'TORTA') and date > '2026-10-12';
+update public.price_suggestion set status = 'dismissed' where menu_item_id = :'TORTA' and location_id = :'CENTRO';
+select ok(pg_temp.write(:'TENANT', '2026-10-20') > 0, 'the 10-20 run');
+select is((select array_agg(m.name || ': ' || p.status || ' ' || p.as_of order by m.name)
+           from public.price_suggestion p join public.menu_item m on m.id = p.menu_item_id where p.location_id = :'CENTRO'),
+          array['Torta de pastor: dismissed 2026-10-12', 'Volcán de pastor: open 2026-10-20'],
+          'a dish no longer costed loses its open row; an acted-on row is never removed');
+select is(array(select x ->> 'name' from jsonb_array_elements(
+                  pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO'), '2026-10-20') #> '{data,suggestions}') x),
+          array['Volcán de pastor'], 'get_cost_alerts last_30d on 10-20: the volcán only');
+select is(pg_temp.write(:'TENANT', '2026-10-20'), 0, 'a rerun writes nothing');
+select is(pg_temp.write(:'TENANT', '2026-10-19'), 0, 'nor does an older day, which removes nothing newer');
+select is((select count(*) from public.price_suggestion where location_id = :'CENTRO'), 2::bigint, 'the two rows stay');
+rollback to savepoint stopped_costing;
+
+savepoint not_evaluated;
+-- the evaluator has not run since 10-12: a row older than the dish's latest snapshot is not shown
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-13', '2026-10-20') > 0, 'costs through 10-20, no run');
+select is(jsonb_array_length(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO'), '2026-10-15')
+                             #> '{data,suggestions}'), 0, 'on 10-15: the 10-12 rows are older than the 10-15 snapshots');
+update public.price_suggestion set status = 'pending' where menu_item_id = :'ALAMBRE' and location_id = :'CENTRO';
+select is(array(select x ->> 'name' from jsonb_array_elements(
+                  pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO'), '2026-10-15') #> '{data,suggestions}') x),
+          array['Alambre de res'], 'a pending row still shows');
+rollback to savepoint not_evaluated;
+-- nor without new snapshots: an open row is shown for a week after the day it was evaluated (the writer's freshness)
+select is(jsonb_array_length(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO'), '2026-10-18')
+                             #> '{data,suggestions}'), 3, 'on 10-18, six days on, the 10-12 rows still show');
+select is(jsonb_array_length(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO'), '2026-10-19')
+                             #> '{data,suggestions}'), 0, 'on 10-19 they are a week old: not shown');
+select is(jsonb_array_length(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO'), '2026-11-05')
+                             #> '{data,suggestions}'), 0, 'nor on 11-05');
+
+-- one bad price row does not roll back the tenant's day (S1) -----------------------------------
+savepoint bad_rate;
+-- a torta price row at Centro with a -1.5 tax rate from 10-12 (same $80): its target price would be negative
+insert into public.menu_item_price (tenant_id, location_id, menu_item_id, price_gross, tax_rate, effective_from)
+values (:'TENANT', :'CENTRO', :'TORTA', 8000, -1.5, '2026-10-12');
+delete from public.price_suggestion;
+select lives_ok($$select pg_temp.write('03299e41-28bd-5779-bcc6-0e5e76580fad', '2026-10-12')$$, 'the run does not fail');
+select is((select array_agg(m.name order by m.name)
+           from public.price_suggestion p join public.menu_item m on m.id = p.menu_item_id where p.location_id = :'CENTRO'),
+          array['Alambre de res', 'Volcán de pastor'], 'the torta is skipped; the others are written');
+update public.menu_item_price set tax_rate = 1 where menu_item_id = :'TORTA' and location_id = :'CENTRO' and tax_rate = -1.5;
+select lives_ok($$select pg_temp.write('03299e41-28bd-5779-bcc6-0e5e76580fad', '2026-10-12')$$, 'nor with a 100 % rate');
+select is((select count(*) from public.price_suggestion where menu_item_id = :'TORTA' and location_id = :'CENTRO'), 0::bigint,
+          'which is skipped too');
+rollback to savepoint bad_rate;
+
 -- the sticky rule ----------------------------------------------------------------------------
 select ok(app.suggestion_reopens(6000, 6500, 6500, 7000), 'a new current price re-opens');
 select ok(app.suggestion_reopens(20000, 21000, 20000, 22000), 'so does a higher price point');
@@ -228,7 +301,7 @@ select ok(app.suggestion_reopens(8000, null, 8000, 8500), 'a price where a revie
 -- the lists are capped -------------------------------------------------------------------------
 select is((pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data}') - 'breaches'
             - 'price_moves' - 'suggestions',
-          '{"price_moves_total": 2, "suggestions_total": 3}'::jsonb, 'the totals under the cap');
+          '{"price_moves_total": 2, "breaches_total": 9, "suggestions_total": 3}'::jsonb, 'the totals under the cap');
 savepoint capped;
 create or replace function app.cost_alerts_top_n() returns int language sql immutable set search_path = '' as $$ select 1 $$;
 select is(array(select x ->> 'name' from jsonb_array_elements(
@@ -237,9 +310,14 @@ select is(array(select x ->> 'name' from jsonb_array_elements(
 select is(array(select x ->> 'ingredient' from jsonb_array_elements(
                   pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data,price_moves}') x),
           array['Aguacate Hass'], 'and the largest price move');
+select is(array(select x ->> 'name' from jsonb_array_elements(
+                  pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data,breaches}') x),
+          array['Coca-Cola'], 'and the highest food cost among the breaches');
 select is((pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data}') - 'breaches'
             - 'price_moves' - 'suggestions',
-          '{"price_moves_total": 2, "suggestions_total": 3}'::jsonb, 'the totals still count them all');
+          '{"price_moves_total": 2, "breaches_total": 9, "suggestions_total": 3}'::jsonb, 'the totals still count them all');
+select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #>> '{flags,0,code}', 'cost_estimated',
+          'the confidence flag still covers every breach');
 rollback to savepoint capped;
 
 -- a plowhorse that breaches twice gets a price ------------------------------------------------
@@ -370,6 +448,14 @@ select throws_ok(format($$insert into public.price_suggestion (tenant_id, locati
                           threshold, current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code)
                           values (%L, %L, %L, '2026-10-12', '2026-10-01', 'margin_breach', 40, 35, 8000, 9000, 9500, 30, 'estimated', 'raise_capped')$$,
                         :'TENANT', :'CENTRO', :'TORTA'), '23514', null, 'a capped raise stays under the target price');
+select throws_ok(format($$insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, episode_start, rule, value,
+                          threshold, current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code)
+                          values (%L, %L, %L, '2026-10-12', '2026-10-01', 'margin_breach', 40, 35, 8000, 8800, 8805, 33, 'estimated', 'raise_to_target')$$,
+                        :'TENANT', :'CENTRO', :'TORTA'), '23514', null, 'a raise is at most +10 % ($88.05 on $80)');
+select lives_ok(format($$insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, episode_start, rule, value,
+                         threshold, current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code, status)
+                         values (%L, %L, %L, '2026-10-12', '2026-10-01', 'margin_breach', 40, 35, 8000, 8800, 8800, 33, 'estimated', 'raise_to_target', 'dismissed')$$,
+                       :'TENANT', :'CENTRO', :'TORTA'), 'exactly +10 % ($88 on $80) is allowed');
 select throws_ok(format($$insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, episode_start, rule, value,
                           threshold, current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code)
                           values (%L, %L, %L, '2026-10-12', '2026-10-01', 'margin_breach', 40, 35, 8000, 9000, null, null, 'missing', 'review_portion_cost')$$,

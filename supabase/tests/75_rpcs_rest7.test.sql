@@ -313,9 +313,9 @@ select is(pg_temp.rpc(:OTHER_TENANT, format('api.compare_locations(%L, %L, %L)',
           'compare_locations: El Güero''s locations do not exist for another tenant');
 select is(pg_temp.rpc(:OTHER_TENANT, format('api.get_menu_engineering(%L)', '"last_30d"')) #>> '{error,code}', 'no_data', 'get_menu_engineering: nothing');
 select is(pg_temp.rpc(:OTHER_TENANT, format('api.get_cost_alerts(%L)', '"last_30d"')) -> 'data',
-          '{"price_moves": [], "price_moves_total": 0, "breaches": [], "suggestions": [], "suggestions_total": 0}', 'get_cost_alerts: no prices, dishes or suggestions of El Güero');
+          '{"price_moves": [], "price_moves_total": 0, "breaches": [], "breaches_total": 0, "suggestions": [], "suggestions_total": 0}', 'get_cost_alerts: no prices, dishes or suggestions of El Güero');
 select is(pg_temp.rpc('{}', format('api.get_cost_alerts(%L)', '"last_30d"')) -> 'data',
-          '{"price_moves": [], "price_moves_total": 0, "breaches": [], "suggestions": [], "suggestions_total": 0}', 'no claims, no alerts');
+          '{"price_moves": [], "price_moves_total": 0, "breaches": [], "breaches_total": 0, "suggestions": [], "suggestions_total": 0}', 'no claims, no alerts');
 
 -- PR #77 review fixes ---------------------------------------------------------------------
 -- H1: a day that reports the amount but not the count adds to neither; no count at all is no_data

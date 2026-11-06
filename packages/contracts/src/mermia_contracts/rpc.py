@@ -490,6 +490,9 @@ class SuggestionRationale(StrEnum):
 
 _RAISES = frozenset({SuggestionRationale.raise_to_target, SuggestionRationale.raise_capped})
 
+SUGGESTION_MAX_STEP_PCT: Final = 10
+"""U4: one suggestion raises a menu price by at most 10 % (`app.price_suggestion_settings()`)."""
+
 
 class PriceSuggestion(Model):
     """A menu price suggestion for a dish at a location that breaches the target (MR-33).
@@ -529,6 +532,8 @@ class PriceSuggestion(Model):
         current, suggested = self.current_price.raw, self.suggested_price.raw
         if suggested <= current:
             raise ValueError("a suggestion never lowers the price")
+        if 100 * suggested > (100 + SUGGESTION_MAX_STEP_PCT) * current:
+            raise ValueError(f"a suggestion raises the price at most {SUGGESTION_MAX_STEP_PCT} %")
         reaches = suggested >= self.target_price.raw
         if reaches != (self.rationale_code is SuggestionRationale.raise_to_target):
             raise ValueError("raise_to_target reaches target_price; raise_capped stays under it")
@@ -538,20 +543,21 @@ class PriceSuggestion(Model):
 
 
 COST_ALERTS_TOP_N: Final = 10
-"""How many price moves and suggestions get_cost_alerts lists (`app.cost_alerts_top_n()`)."""
+"""How many price moves, breaches and suggestions get_cost_alerts lists (`cost_alerts_top_n`)."""
 
 
 class CostAlertsData(Model):
     """Ingredient price moves, dishes over target and price suggestions (MR-33).
 
     Doc 13 keeps tool results small (top N only): `price_moves` holds the 10 largest moves (by
-    size, either way; listed by start day) and `suggestions` the 10 highest food costs; the
-    `*_total` fields count every row, so the agent can say how many more there are.
+    size, either way; listed by start day), `breaches` and `suggestions` the 10 highest food costs;
+    the `*_total` fields count every row, so the agent can say how many more there are.
     """
 
     price_moves: Annotated[list[PriceMove], Field(max_length=COST_ALERTS_TOP_N)]
     price_moves_total: Count
-    breaches: list[TargetBreach]
+    breaches: Annotated[list[TargetBreach], Field(max_length=COST_ALERTS_TOP_N)]
+    breaches_total: Count
     suggestions: Annotated[list[PriceSuggestion], Field(max_length=COST_ALERTS_TOP_N)]
     suggestions_total: Count
 
@@ -559,6 +565,7 @@ class CostAlertsData(Model):
     def _top_of_total(self) -> CostAlertsData:
         for rows, total in (
             (self.price_moves, self.price_moves_total),
+            (self.breaches, self.breaches_total),
             (self.suggestions, self.suggestions_total),
         ):
             if len(rows) != min(total, COST_ALERTS_TOP_N):

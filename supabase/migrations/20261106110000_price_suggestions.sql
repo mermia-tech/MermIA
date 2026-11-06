@@ -36,10 +36,16 @@
 --   last day evaluated); a rerun on unchanged data writes nothing, and an older day than the row's
 --   is never written back. An acted-on row (pending, dismissed, applied) sticks for its episode: no
 --   new open row until a new episode starts, the current price changes, or the suggested price
---   moves to a higher price point (a price where a review stood counts as higher).
+--   moves to a higher price point (a price where a review stood counts as higher). An open row the
+--   day's run did not refresh (the dish became a star or resale, stopped breaching or being costed,
+--   lost its earlier observation, changed price) is removed; an acted-on row never is.
+-- - A price row with a tax rate outside [0, 1) or a target price not above zero is skipped, so one
+--   bad row never rolls back the tenant's day.
 -- - api.get_cost_alerts shows each dish's latest row in the window while it is open or pending, no
 --   acted-on row of its episode holds it back, its current price is still the menu price and the
---   dish still breaches; the top 10 by food cost, with the total (doc 13: tool results stay small).
+--   dish still breaches; an open row only while it is fresh (evaluated on or after the dish's
+--   latest snapshot, and within the last week, as the writer's observations). The top 10 by food
+--   cost, with the total (doc 13: tool results stay small); breaches are capped the same way.
 
 -- Columns ------------------------------------------------------------------------------------
 -- The free-text subject (MR-10) is replaced by the dish; nothing wrote it.
@@ -67,10 +73,10 @@ alter table public.price_suggestion
       and episode_start <= as_of
       and value is not null and threshold is not null and current_price > 0 and target_price > 0
       and confidence in ('confirmed', 'estimated') and (
-        (rationale_code = 'raise_to_target' and suggested_price > current_price and suggested_price >= target_price
-          and new_food_cost_pct is not null)
-        or (rationale_code = 'raise_capped' and suggested_price > current_price and suggested_price < target_price
-          and new_food_cost_pct is not null)
+        -- a raise is above the current price and at most +10 % (U4, max_step_pct), in exact integers
+        (rationale_code in ('raise_to_target', 'raise_capped') and suggested_price > current_price
+          and suggested_price * 10 <= current_price * 11 and new_food_cost_pct is not null
+          and (rationale_code = 'raise_to_target') = (suggested_price >= target_price))
         or (rationale_code = 'review_portion_cost' and suggested_price is null and new_food_cost_pct is null)), false));
 
 -- at most one open suggestion per dish and location: the writer refreshes it in place
@@ -282,11 +288,13 @@ end
 $$;
 
 -- Writer -------------------------------------------------------------------------------------
--- Writes the tenant's suggestions for one business day; returns how many rows it added or
--- refreshed. One row per breach episode: the dish's open row is refreshed in place; a new row is
+-- Writes the tenant's suggestions for one business day; returns how many rows it added, refreshed
+-- or removed. One row per breach episode: the dish's open row is refreshed in place; a new row is
 -- added when the dish has none, its latest is from an earlier episode, or its latest was acted on
--- and app.suggestion_reopens. Idempotent: a rerun on unchanged data writes nothing. An acted-on row
--- (not open) is never touched, and a day older than the dish's latest row writes nothing.
+-- and app.suggestion_reopens. An open row from an earlier day that this run did not refresh no
+-- longer holds (no longer eligible) and is removed. Idempotent: a rerun on unchanged data writes
+-- nothing. An acted-on row (not open) is never touched, and a day older than the dish's latest row
+-- writes nothing and removes nothing newer.
 create function app.write_price_suggestions(tenant uuid, on_date date) returns int
 language plpgsql set search_path = ''
 as $$
@@ -296,6 +304,7 @@ declare
   breach_above numeric;
   target numeric := app.food_cost_target();
   written int;
+  removed int;
 begin
   if tenant is null or on_date is null then
     raise exception 'tenant and on_date are required' using errcode = '22023';
@@ -344,8 +353,10 @@ begin
     from candidate c
     cross join lateral app.menu_price_row(c.menu_item_id, c.location_id, on_date) mp
     cross join lateral app.suggest_menu_price(c.cost, mp.price_gross, mp.tax_rate, target) f
-    -- both observations at the current menu price (pacing), and not a resale item (U2)
-    where app.menu_price_steady(c.menu_item_id, c.location_id, c.prev_date, on_date)
+    -- a usable price row (one bad rate must not fail the shape check and roll back the tenant's
+    -- day), both observations at the current menu price (pacing), and not a resale item (U2)
+    where mp.tax_rate >= 0 and mp.tax_rate < 1 and f.target_price > 0
+      and app.menu_price_steady(c.menu_item_id, c.location_id, c.prev_date, on_date)
       and not app.is_resale(c.menu_item_id, c.date)
   ), episode as (
     select x.location_id, x.menu_item_id, x.food_cost, x.confidence, x.price_gross, x.target_price,
@@ -398,7 +409,13 @@ begin
     returning 1
   )
   select (select count(*) from refreshed) + (select count(*) from added) into written;
-  return written;
+
+  -- a separate statement, so it sees this run's refreshes (as_of = on_date): what is left from an
+  -- earlier day was not eligible today; no owner acted on it
+  delete from public.price_suggestion p
+  where p.tenant_id = tenant and p.status = 'open' and p.as_of < on_date;
+  get diagnostics removed = row_count;
+  return written + removed;
 end
 $$;
 
@@ -483,9 +500,12 @@ $$;
 -- As in 20261106100000_cost_alerts.sql, except:
 -- - price_moves: the app.cost_alerts_top_n() largest moves (by size, either way), still listed by
 --   start day, with price_moves_total counting them all;
+-- - breaches: the app.cost_alerts_top_n() highest food costs, with breaches_total; the confidence
+--   flag still covers them all;
 -- - suggestions: per dish and location in scope, the latest row evaluated in the window, while it
 --   is open or pending, an open one only if no acted-on row of its episode holds it back
---   (app.suggestion_reopens), its current price is still the menu price today and the dish's
+--   (app.suggestion_reopens) and only while fresh (as_of on or after the dish's latest snapshot and
+--   under a week old), its current price is still the menu price today and the dish's
 --   latest snapshot in the window still breaches (a price changed or a cost that came back makes
 --   it moot). The app.cost_alerts_top_n() highest food costs, highest first, with
 --   suggestions_total. Prices with IVA; `change` is the suggested price vs the current one.
@@ -501,6 +521,7 @@ declare
   moves jsonb;
   moves_total int;
   breaches jsonb;
+  breaches_total int;
   suggestions jsonb;
   suggestions_total int;
   levels app.cost_confidence[];
@@ -552,14 +573,19 @@ begin
   ), worst as (
     select distinct on (l.menu_item_id) l.menu_item_id, 100.0 * l.cost / l.price_net as fc, l.confidence
     from latest l order by l.menu_item_id, 100.0 * l.cost / l.price_net desc
+  ), ranked as (
+    select b.*, m.name, row_number() over (order by round(b.fc, 4) desc, m.name, b.menu_item_id) as n
+    from worst b join public.menu_item m on m.id = b.menu_item_id
+    where b.fc > breach_above
   )
-  select coalesce((select jsonb_agg(jsonb_build_object('menu_item_id', b.menu_item_id, 'name', m.name,
-                                                       'food_cost', app.pct(b.fc), 'target', app.pct(app.food_cost_target()))
-                                    order by round(b.fc, 4) desc, m.name)
-                   from worst b join public.menu_item m on m.id = b.menu_item_id
-                   where b.fc > breach_above), '[]'),
-         (select array_agg(distinct b.confidence) from worst b where b.fc > breach_above)
-  into breaches, levels;
+  -- the top N by food cost; the confidence covers every breach, listed or not
+  select coalesce(jsonb_agg(jsonb_build_object('menu_item_id', b.menu_item_id, 'name', b.name,
+                                               'food_cost', app.pct(b.fc), 'target', app.pct(app.food_cost_target()))
+                            order by b.n) filter (where b.n <= top_n), '[]'),
+         count(*),
+         array_agg(distinct b.confidence)
+  into breaches, breaches_total, levels
+  from ranked b;
 
   with shown as (
     select x.*, m.name
@@ -576,6 +602,13 @@ begin
              where d.tenant_id = x.tenant_id and d.location_id = x.location_id and d.menu_item_id = x.menu_item_id
                and d.status <> 'open' and d.episode_start >= x.episode_start
                and not app.suggestion_reopens(d.current_price, d.suggested_price, x.current_price, x.suggested_price)))
+      -- an open row only while fresh: evaluated on or after the dish's latest snapshot (the evaluator
+      -- ran since) and within the writer's observation week (a dish no longer costed shows nothing)
+      and (x.status = 'pending' or (
+             x.as_of > w_to - (select k.observation_days from app.price_suggestion_settings() k)
+             and x.as_of >= (select max(s.date) from public.dish_cost_snapshot s
+                             where s.location_id = x.location_id and s.menu_item_id = x.menu_item_id
+                               and s.date <= w_to)))
       and x.current_price = app.menu_price_on(x.menu_item_id, x.location_id, w_to)
       and (select 100.0 * s.cost / s.price_net > breach_above
            from public.dish_cost_snapshot s
@@ -607,7 +640,8 @@ begin
   end if;
   return app.rpc_ok(
     jsonb_build_object('price_moves', moves, 'price_moves_total', moves_total, 'breaches', breaches,
-                       'suggestions', suggestions, 'suggestions_total', suggestions_total),
+                       'breaches_total', breaches_total, 'suggestions', suggestions,
+                       'suggestions_total', suggestions_total),
     locs, flags, null, array[r[1], w_to]);
 exception when sqlstate '22023' then
   return app.rpc_error('invalid_args', sqlerrm, coalesce(locs, '{}'));
@@ -615,8 +649,8 @@ end
 $$;
 
 -- Privileges ---------------------------------------------------------------------------------
--- get_menu_engineering runs as the caller and needs the quadrant rule; get_cost_alerts the list size
--- and the sticky rule. The writer, the formula and their helpers are the backend's (service_role),
+-- get_menu_engineering runs as the caller and needs the quadrant rule; get_cost_alerts the list size,
+-- the sticky rule and the observation week (settings). The writer, the formula and their helpers are the backend's (service_role),
 -- called from the evaluator.
 revoke all on function app.price_suggestion_settings(), app.price_point(numeric, boolean),
   app.suggest_menu_price(bigint, bigint, numeric, numeric), app.is_resale(uuid, date),
@@ -625,8 +659,8 @@ revoke all on function app.price_suggestion_settings(), app.price_point(numeric,
   app.suggestion_reopens(bigint, bigint, bigint, bigint)
   from public, anon, authenticated;
 grant execute on function app.menu_quadrants(uuid[], date, date), app.cost_alerts_top_n(),
-  app.suggestion_reopens(bigint, bigint, bigint, bigint) to authenticated, service_role;
-grant execute on function app.price_suggestion_settings(), app.price_point(numeric, boolean),
+  app.suggestion_reopens(bigint, bigint, bigint, bigint), app.price_suggestion_settings() to authenticated, service_role;
+grant execute on function app.price_point(numeric, boolean),
   app.suggest_menu_price(bigint, bigint, numeric, numeric), app.is_resale(uuid, date),
   app.write_price_suggestions(uuid, date), app.item_cost_rows(uuid[], date, date),
   app.breach_episode_start(uuid, uuid, uuid, date, numeric), app.menu_price_steady(uuid, uuid, date, date),

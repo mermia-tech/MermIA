@@ -45,11 +45,11 @@ def test_doc_12_bistec_is_a_capped_raise() -> None:
 
 
 def test_a_raise_that_reaches_the_target_says_so() -> None:
+    # a cost of $25.40: $89.19 reaches 32 %, so $90 does
     reached = _with(
         BISTEC,
-        suggested_price={"raw": 10500, "text": "$105.00"},
-        change={"raw": 23.5294, "text": "+23.5%"},
-        new_food_cost={"raw": 30.82, "text": "30.8%"},
+        target_price={"raw": 8919, "text": "$89.19"},
+        new_food_cost={"raw": 32.7378, "text": "32.7%"},
     )
     with pytest.raises(ValidationError, match="raise_to_target"):
         PriceSuggestion.model_validate(reached)
@@ -94,6 +94,28 @@ def test_never_a_decrease() -> None:
     )
     with pytest.raises(ValidationError, match="never lowers"):
         PriceSuggestion.model_validate(lower)
+
+
+def test_at_most_ten_percent_up() -> None:
+    """U4: one step is at most +10 % ($85 -> $93.50); $95 is +11.8 %."""
+    over = _with(
+        BISTEC,
+        suggested_price={"raw": 9500, "text": "$95.00"},
+        change={"raw": 11.7647, "text": "+11.8%"},
+    )
+    with pytest.raises(ValidationError, match="at most"):
+        PriceSuggestion.model_validate(over)
+
+
+def test_exactly_ten_percent_up_is_allowed() -> None:
+    edge = _with(
+        BISTEC,
+        current_price={"raw": 5000, "text": "$50.00"},
+        target_price={"raw": 7037, "text": "$70.37"},
+        suggested_price={"raw": 5500, "text": "$55.00"},
+        change={"raw": 10, "text": "+10.0%"},
+    )
+    assert PriceSuggestion.model_validate(edge).suggested_price is not None
 
 
 def test_the_change_follows_the_prices() -> None:
