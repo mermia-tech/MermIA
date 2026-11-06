@@ -10,8 +10,9 @@ from agno.run.base import RunStatus
 
 from mermia_eval.cases import load_cases
 from mermia_eval.config import Price
-from mermia_eval.run import RunResult, cost_usd, run_case
+from mermia_eval.run import RunResult, cost_usd, run_broker_case, run_case
 from mermia_eval.score import ToolCall
+from mermia_eval.tools import make_rpc_caller
 
 CASE = next(c for c in load_cases() if c.id == "tacos_al_pastor")
 LUNA = "openai:gpt-5.6-luna"
@@ -148,3 +149,54 @@ def test_cancelled_run_is_an_error_not_a_score() -> None:
     result = run_case(LUNA, CASE, [], agent_factory=_factory(out))
     assert result.error is not None
     assert result.calls == []
+
+
+# --broker: the case goes through the real LlmBroker (MR-27), the model is scripted.
+
+MARGIN_ARGS = {"dish": "tacos al pastor", "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"}
+
+
+def _broker_factory(*texts: str) -> Any:
+    """Each run calls get_dish_margin through the broker's own tool, then answers the next text."""
+    script = list(texts)
+
+    def factory(**kwargs: Any) -> Any:
+        tools = {f.name: f for f in kwargs["tools"]}
+
+        def run(_: Any) -> RunOutput:
+            result = tools["get_dish_margin"].entrypoint(**MARGIN_ARGS)
+            return RunOutput(
+                content=script.pop(0),
+                status=RunStatus.completed,
+                tools=[
+                    ToolExecution(tool_name="get_dish_margin", tool_args=MARGIN_ARGS, result=result)
+                ],
+                metrics=RunMetrics(input_tokens=1000, output_tokens=100, cache_read_tokens=400),
+                messages=[],
+            )
+
+        return SimpleNamespace(run=run)
+
+    return factory
+
+
+def test_the_broker_path_maps_a_sent_reply() -> None:
+    backend = make_rpc_caller()
+    result = run_broker_case(
+        LUNA, CASE, backend, agent_factory=_broker_factory("El margen es $37.63.")
+    )
+    assert result.error is None
+    assert result.text == "El margen es $37.63."
+    assert result.calls == [ToolCall("get_dish_margin", MARGIN_ARGS)]
+    assert "$37.63" in result.tool_results[0]
+    assert (result.input_tokens, result.output_tokens, result.cached_tokens) == (1000, 100, 400)
+    assert result.validator == ["pass"]
+
+
+def test_the_broker_path_counts_a_menu_apart() -> None:
+    backend = make_rpc_caller()
+    invented = "El margen es $40.00."
+    result = run_broker_case(LUNA, CASE, backend, agent_factory=_broker_factory(invented, invented))
+    assert result.error is not None and result.error.startswith("menu")  # not scored as a reply
+    assert result.validator == ["retry", "reject"]
+    assert len(result.calls) == 2 and result.input_tokens == 2000  # both runs are paid for

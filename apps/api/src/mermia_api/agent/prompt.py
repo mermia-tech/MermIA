@@ -22,7 +22,8 @@ STATIC_PREFIX: Final = (
     "ninguna herramienta da, dilo. "
     "Escribe las cifras con dígitos, nunca con letras. "
     "Si no existe una herramienta para lo que piden, dilo. "
-    "Si la pregunta es ambigua (sucursal, periodo o platillo), pregunta antes de responder. "
+    "Si no dice sucursal, usa todas las suyas. Pregunta solo si falta algo que no se puede "
+    "suponer, como el precio nuevo de un cambio. "
     "Los cambios solo se proponen con propose_change; nunca digas que ya se aplicaron. "
     "El primer mensaje del usuario trae la fecha de hoy, su rol y sus sucursales."
 )

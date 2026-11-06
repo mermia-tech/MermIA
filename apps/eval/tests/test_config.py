@@ -11,6 +11,8 @@ ACTIVE = {
     "anthropic:claude-haiku-5-5",
     "google:gemini-3.8-flash",
     "google:gemini-3.5-flash-lite",
+    "deepseek:deepseek-flash",  # MR-27 candidate
+    "deepseek:deepseek-v4-pro",
 }
 PAUSED_IDS = {"openai:gpt-6.1-sol", "anthropic:claude-sonnet-5-5"}  # MR-20 D5: eval budget
 
@@ -18,7 +20,9 @@ PAUSED_IDS = {"openai:gpt-6.1-sol", "anthropic:claude-sonnet-5-5"}  # MR-20 D5: 
 def test_models_are_provider_colon_id() -> None:
     assert {m.id for m in MODELS} == ACTIVE
     assert {m.id for m in PAUSED} == PAUSED_IDS
-    assert all(re.fullmatch(r"(openai|anthropic|google):\S+", m.id) for m in MODELS + PAUSED)
+    assert all(
+        re.fullmatch(r"(openai|anthropic|google|deepseek):\S+", m.id) for m in MODELS + PAUSED
+    )
 
 
 def test_only_gpt_6_1_sol_has_no_price() -> None:

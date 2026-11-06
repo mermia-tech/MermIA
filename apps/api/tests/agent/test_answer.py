@@ -4,13 +4,16 @@
 import logging
 import subprocess
 import sys
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
 
-from mermia_api.agent import answer
+from mermia_api.agent import answer, respond
 from mermia_api.agent.broker import StubBroker
+from mermia_api.agent.usage import MemoryStore
+from mermia_api.agent.validator import Turn
 from mermia_contracts.agent import AgentRequest, AgentResponse, ChoicesMsg, TextMsg
 from mermia_contracts.rpc import RpcEnvelope
 
@@ -276,3 +279,96 @@ def test_no_data_on_a_margin_ranking_means_no_costs(
     )
     assert response.route == "template"
     assert _reply_text(response) == reply
+
+
+# respond(): answer() plus the turn it leaves in memory, and never an exception (MR-27).
+
+NOW = datetime(2026, 10, 12, 15, 0, tzinfo=UTC)
+
+
+def test_a_template_answer_becomes_a_turn(
+    el_guero: dict[UUID, str], fake_rpc: Any, counting_broker: Any
+) -> None:
+    store = MemoryStore()
+    request = _text(el_guero, "¿cuánto vendí ayer?")
+    response = respond(
+        request,
+        locations=el_guero,
+        rpc=fake_rpc,
+        broker=counting_broker,
+        store=store,
+        clock=lambda: NOW,
+    )
+    (turn,) = store.turns(request.tenant_id, request.user_id, "whatsapp")
+    assert turn == Turn(q="¿cuánto vendí ayer?", a=_reply_text(response), ts=NOW)
+
+
+def test_an_llm_answer_is_appended_to_fresh_turns(
+    el_guero: dict[UUID, str], fake_rpc: Any, counting_broker: Any
+) -> None:
+    store = MemoryStore()
+    request = _text(el_guero, "¿qué vino me recomiendas?")
+    earlier = Turn(q="hola", a="Hola.", ts=NOW - timedelta(minutes=5))
+    store.save_turns(request.tenant_id, request.user_id, "whatsapp", [earlier])
+    respond(
+        request,
+        locations=el_guero,
+        rpc=fake_rpc,
+        broker=counting_broker,
+        store=store,
+        clock=lambda: NOW,
+    )
+    assert store.turns(request.tenant_id, request.user_id, "whatsapp") == [
+        earlier,
+        Turn(q="¿qué vino me recomiendas?", a="(broker)", ts=NOW),
+    ]
+
+
+def test_an_expired_memory_is_replaced(
+    el_guero: dict[UUID, str], fake_rpc: Any, counting_broker: Any
+) -> None:
+    store = MemoryStore()
+    request = _text(el_guero, "¿qué vino me recomiendas?")
+    old = Turn(q="hola", a="Hola.", ts=NOW - timedelta(hours=3))
+    store.save_turns(request.tenant_id, request.user_id, "whatsapp", [old])
+    respond(
+        request,
+        locations=el_guero,
+        rpc=fake_rpc,
+        broker=counting_broker,
+        store=store,
+        clock=lambda: NOW,
+    )
+    (turn,) = store.turns(request.tenant_id, request.user_id, "whatsapp")
+    assert turn.q == "¿qué vino me recomiendas?"
+
+
+def test_the_menu_is_not_a_turn(el_guero: dict[UUID, str], fake_rpc: Any) -> None:
+    store = MemoryStore()
+    request = _text(el_guero, "¿qué vino me recomiendas?")
+    response = respond(
+        request,
+        locations=el_guero,
+        rpc=fake_rpc,
+        broker=StubBroker(),
+        store=store,
+        clock=lambda: NOW,
+    )
+    assert response.route == "fallback"
+    assert store.turns(request.tenant_id, request.user_id, "whatsapp") == []
+
+
+def test_respond_never_raises(el_guero: dict[UUID, str], fake_rpc: Any) -> None:
+    def broken(request: Any, locations: Any, rpc: Any) -> AgentResponse:
+        raise RuntimeError("bug")
+
+    response = respond(
+        _text(el_guero, "¿qué vino me recomiendas?"),
+        locations=el_guero,
+        rpc=fake_rpc,
+        broker=broken,
+        store=MemoryStore(),
+        clock=lambda: NOW,
+    )
+    assert response.route == "fallback"
+    assert isinstance(response.messages[0], ChoicesMsg)

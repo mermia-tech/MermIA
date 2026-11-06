@@ -6,6 +6,7 @@ import logging
 import os
 import subprocess
 import sys
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -20,7 +21,7 @@ from mermia_eval.cases import Case, load_cases
 from mermia_eval.config import MODELS, PAUSED, Price
 from mermia_eval.gate import ScoredRun, format_gate, gate_rows, write_dump
 from mermia_eval.judge import CROSS_JUDGE, JUDGE, judge_tone, needs_cross
-from mermia_eval.run import RunResult, cost_usd, run_case
+from mermia_eval.run import RunResult, cost_usd, run_broker_case, run_case
 from mermia_eval.score import score_args, score_numbers, score_tool
 from mermia_eval.tools import build_tools, make_rpc_caller
 from mermia_eval.tracing import post_scores, setup_tracing
@@ -168,6 +169,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--models", help="comma-separated provider:model ids (default: all)")
     parser.add_argument("--mock-url", help="a running Mock RPC (default: in-process)")
     parser.add_argument("--judge", action="store_true", help=f"score tone with {JUDGE} (paid)")
+    parser.add_argument(
+        "--broker", action="store_true", help="answer through the API's LlmBroker (MR-27)"
+    )
     parser.add_argument("--out", type=Path, help="run dump (default: apps/eval/out/<time>.json)")
     args = parser.parse_args(argv)
     if args.out is not None and args.out.exists():
@@ -202,6 +206,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     scored: list[ScoredRun] = []
 
     every_run_errored = True
+    validator: Counter[str] = Counter()
     first_error: dict[str, str] = {}
     print(format_header(), flush=True)
     try:
@@ -210,7 +215,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 results = []
                 for _ in range(args.runs):
                     backend.failures.clear()
-                    r = run_case(model, case, tools, failures=backend.failures)
+                    if args.broker:
+                        r = run_broker_case(model, case, backend, failures=backend.failures)
+                    else:
+                        r = run_case(model, case, tools, failures=backend.failures)
+                    validator.update(r.validator)
                     results.append(r)
                     if r.error is not None:
                         first_error.setdefault(model, r.error)
@@ -225,6 +234,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                         post_scores(env, r.trace_id, _scores(case, r) | tone)
                 print(format_row(summarize(results, case, prices)[0]), flush=True)
         print(f"\n{format_gate(gate_rows(scored))}", flush=True)
+        if args.broker:  # menu answers are errors in the table; this says why
+            counts = ", ".join(f"{k} {n}" for k, n in sorted(validator.items()))
+            print(f"validator: {counts}", flush=True)
     finally:
         write_dump(out, scored, meta)  # also on a crash or Ctrl-C: an hour of paid runs is kept
         print(f"runs written to {out}", file=sys.stderr)

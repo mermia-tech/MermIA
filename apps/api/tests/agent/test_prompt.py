@@ -17,7 +17,7 @@ OTHER = UUID("0b5c2c9e-6f2a-4c1e-9d55-2f1f4c3a7e10")
 def test_static_prefix_is_pinned() -> None:
     # A change here invalidates every tenant's provider cache: change it on purpose only.
     digest = hashlib.sha256(STATIC_PREFIX.encode()).hexdigest()
-    assert digest == "13580b55c620d13bbe38cbe424c3ebcf061508ee69f6e9a70051a79fc9fd6fab"
+    assert digest == "33e66c6d295ef313e9988560c8bc429ae85a7ab0778f549389d302e45ee6eb06"
 
 
 def test_static_prefix_holds_no_date_and_no_location() -> None:
@@ -28,6 +28,12 @@ def test_static_prefix_holds_no_date_and_no_location() -> None:
 def test_static_prefix_states_the_number_rule() -> None:
     assert "nunca inventes" in STATIC_PREFIX
     assert "propose_change" in STATIC_PREFIX
+
+
+def test_no_location_means_all_of_them() -> None:
+    # MR-27 smoke eval: "pregunta si es ambigua" made Luna ask "¿de qué sucursal?" on 14 of 40.
+    assert "Si no dice sucursal, usa todas" in STATIC_PREFIX
+    assert "ambigua" not in STATIC_PREFIX
 
 
 def test_tail_carries_today_role_and_locations() -> None:
