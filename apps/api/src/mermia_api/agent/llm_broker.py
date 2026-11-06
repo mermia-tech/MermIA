@@ -39,6 +39,8 @@ MAX_OUTPUT_TOKENS: Final = 400
 TOOL_CALL_LIMIT: Final = 4
 DAILY_QUESTIONS: Final = 60  # LLM questions per tenant per Mexico City day; then the menu
 REJECTED: Final = "No pude confirmar esa cifra. Prueba con una de estas:"
+UNAVAILABLE: Final = "No pude responder eso ahora. Prueba con una de estas:"
+OVER_CAP: Final = "Por hoy ya no puedo responder preguntas abiertas. Prueba con una de estas:"
 _PENDING = json.dumps({"status": "pending_approval"})
 
 
@@ -120,7 +122,7 @@ class LlmBroker:
         now = self._clock()
         today = now.astimezone(MEXICO_CITY).date()
         if self._store.questions_today(request.tenant_id, today) >= DAILY_QUESTIONS:
-            return fallback(locations)
+            return fallback(locations, OVER_CAP)
         memory = fresh(self._store.turns(request.tenant_id, request.user_id, request.channel), now)
         context = tail(today=today, role=self._role_of(request), locations=locations)
         messages = [
@@ -142,14 +144,14 @@ class LlmBroker:
 
         row, text, said = self._call(request, request_id, messages, rpc, results)
         if text is None:
-            return fallback(locations, usage_id=self._store.add(row))
+            return fallback(locations, UNAVAILABLE, self._store.add(row))
         if not (figures := unsourced(text)):
             return _reply(text, self._store.add(replace(row, validator_result="pass")))
         self._store.add(replace(row, validator_result="retry"))
         retry = [*said, Message(role="user", content=_correction(figures))]
         row, text, _ = self._call(request, request_id, retry, rpc, results)
         if text is None:
-            return fallback(locations, usage_id=self._store.add(row))
+            return fallback(locations, UNAVAILABLE, self._store.add(row))
         if unsourced(text):
             return fallback(
                 locations, REJECTED, self._store.add(replace(row, validator_result="reject"))

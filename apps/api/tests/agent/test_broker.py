@@ -22,6 +22,7 @@ MODEL = "openai:gpt-5.6-luna"
 NOW = datetime(2026, 10, 12, 15, 0, tzinfo=UTC)  # 09:00 in Mexico City
 CENTRO = "705e8e51-376b-5785-adbb-405eff4e2a22"
 SALES_ARGS = {"period": "last_week", "location_id": CENTRO}
+UNAVAILABLE = "No pude responder eso ahora. Prueba con una de estas:"
 CLEAN = "La semana pasada Centro vendió $184,320.50 con 648 tickets."
 
 
@@ -153,6 +154,7 @@ def test_a_provider_failure_gets_the_menu_and_a_row_with_the_error(
     response = broker(_text(el_guero), el_guero, fake_rpc)
 
     assert _is_menu(response)
+    assert response.messages[0].text == UNAVAILABLE  # type: ignore[union-attr]
     (row,) = store.rows
     assert row.error and row.validator_result is None and row.route == "haiku"
     assert response.usage_id == row.id
@@ -174,6 +176,7 @@ def test_an_empty_or_incomplete_reply_gets_the_menu(
     agents.script = [reply(**kwargs)]
     response = broker(_text(el_guero), el_guero, fake_rpc)
     assert _is_menu(response)
+    assert response.messages[0].text == UNAVAILABLE  # type: ignore[union-attr]
     (row,) = store.rows
     assert row.error and row.validator_result is None
 
@@ -315,6 +318,9 @@ def test_the_61st_question_of_the_day_gets_the_menu_without_a_model_call(
     _seed_questions(store, request, DAILY_QUESTIONS)
     response = broker(request, el_guero, fake_rpc)
     assert _is_menu(response) and agents.built == []
+    assert response.messages[0].text == (  # type: ignore[union-attr]
+        "Por hoy ya no puedo responder preguntas abiertas. Prueba con una de estas:"
+    )
     assert len(store.rows) == DAILY_QUESTIONS == 60
 
 
