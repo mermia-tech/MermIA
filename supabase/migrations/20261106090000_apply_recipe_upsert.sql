@@ -204,6 +204,9 @@ begin
   if not coalesce((line ->> 'new_ingredient')::boolean, false) or coalesce(line_name, '') = '' then
     raise exception 'line %: needs an ingredient_id, a sub_recipe_id or a named new_ingredient', n using errcode = '22023';
   end if;
+  if app.normalize_name(line_name) = '' then
+    raise exception 'line %: the new ingredient name "%" needs at least one letter or digit', n, line_name using errcode = '22023';
+  end if;
   -- one creator per tenant at a time, so two approvals cannot both create the same name
   perform pg_advisory_xact_lock(hashtextextended('ingredient_name:' || tenant::text, 0));
   select array_agg(i.id order by i.id) filter (where i.base_unit = unit),

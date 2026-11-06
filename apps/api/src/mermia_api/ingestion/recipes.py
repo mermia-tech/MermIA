@@ -411,6 +411,12 @@ def _resolve_line(
             "la receta.",
         )
     key = normalize_name(name)
+    if not key:  # nothing to match on: every such name would look like the same ingredient
+        raise _held(
+            "recipe.ingredient_name_empty",
+            f"En la receta de «{dish}», el insumo «{name}» no tiene letras ni números que pueda "
+            "reconocer; no tomé la receta. Escribe el nombre con letras o números.",
+        )
     candidates = ingredients.get(key, [])
     if len(candidates) > 1:
         raise _held(
