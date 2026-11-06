@@ -159,6 +159,43 @@ def test_the_whatsapp_identity_is_verified_and_keyed_by_wa_id(
     assert row == [("whatsapp", "525500000002", True)]
 
 
+def test_a_whatsapp_linked_to_another_user_is_refused(conn: psycopg.Connection[Any]) -> None:
+    other = one(
+        conn,
+        """insert into public.app_user (name, phone_e164) values ('Otro', '+525599990010')
+           returning id""",
+    )
+    conn.execute(
+        """insert into public.channel_identity (user_id, channel, external_id, verified_at)
+           values (%s, 'whatsapp', '525500000001', now())""",
+        (other,),
+    )
+    with pytest.raises(OnboardingError, match=r"WhatsApp \+52\*{6}0001 is linked to another user"):
+        apply(conn, make())
+    owner = "select user_id from public.channel_identity where external_id = '525500000001'"
+    assert one(conn, owner) == other
+
+
+def test_a_rerun_verifies_an_unverified_whatsapp_and_audits_it(
+    conn: psycopg.Connection[Any],
+) -> None:
+    first = apply(conn, make())
+    rosa = user_id(conn, "+525500000001")
+    conn.execute(
+        "update public.channel_identity set verified_at = null where user_id = %s", (rosa,)
+    )
+    s = apply(conn, again(first))
+    assert ("whatsapp", "Rosa", "updated") in {(c.entity, c.label, c.action) for c in s.changes}
+    verified = "select verified_at is not null from public.channel_identity where user_id = %s"
+    assert one(conn, verified, rosa)
+    rows = conn.execute(
+        """select before::text, after::text from public.audit_log
+           where tenant_id = %s and entity_type = 'channel_identity' and action like '%%update'""",
+        (first.tenant_id,),
+    ).fetchall()
+    assert len(rows) == 1 and "5500000" not in rows[0][0] + rows[0][1], rows
+
+
 def test_a_rerun_creates_nothing_and_audits_nothing(conn: psycopg.Connection[Any]) -> None:
     first = apply(conn, make())
     audit = one(conn, "select count(*) from public.audit_log where tenant_id = %s", first.tenant_id)

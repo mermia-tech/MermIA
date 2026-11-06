@@ -16,7 +16,8 @@ locations:
   - name: Roma
 
 users:
-  - name: Rosa
+  - name: Rosa                     # checked against the phone: a rerun may change case or accents,
+                                   # not the name itself (a misspelt name is fixed in the database)
     phone: "+52 55 0000 0001"      # E.164; spaces, dashes, parentheses and a +52 1 are dropped
     email: rosa@example.com        # optional; for the Phase 2 dashboard login (not used yet)
     role: owner                    # owner | manager | admin | support
