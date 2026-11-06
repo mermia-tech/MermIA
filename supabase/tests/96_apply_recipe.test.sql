@@ -241,5 +241,80 @@ select is(pg_temp.recipes(:SUADERO), 2::bigint, 'leaving one new suadero version
 select is(pg_temp.tap('owner owner only', 'owner only', :OWNER) ->> 'code', 'applied', 'the owner applies an owner-only change');
 select is((select max(recipe_version) from public.recipe where menu_item_id = :SUADERO), 3, 'as version 3');
 
+-- new ingredients match by the importer's normalized name (keys.normalize_name) ------------------
+select is(app.normalize_name(' Tacos al  pastor (Orden de 3) '), 'tacos al pastor orden de 3',
+          'normalize_name: lower case, no parentheses, single spaces');
+select is(app.normalize_name('Chile JALAPEÑO'), 'chile jalapeno', 'normalize_name: no accents, ñ is n');
+select is((select count(*) from pg_indexes where tablename = 'ingredient'
+           and indexdef like '%app.normalize_name(name)%'), 1::bigint, 'the ingredient lookup has an expression index');
+select pg_temp.propose('orégano', :PASTOR, pg_temp.lines_of(:PASTOR) || pg_temp.new_line('Orégano', '5.000000', 'g'));
+select pg_temp.propose('oregano', :BISTEC, pg_temp.lines_of(:BISTEC) || pg_temp.new_line(' OREGANO  ()', '4.000000', 'g'));
+select is(pg_temp.tap('orégano', 'orégano', :OWNER) ->> 'code', 'applied', 'the first spelling creates the ingredient');
+select is(pg_temp.tap('oregano', 'oregano', :OWNER) ->> 'code', 'applied', 'another spelling of the same name applies');
+select is((select array_agg(name) from public.ingredient where tenant_id = :TENANT and app.normalize_name(name) = 'oregano'),
+          array['Orégano'], 'and reuses it: one ingredient, the first spelling');
+select is(pg_temp.audit_after('oregano', 'pending_change.apply') -> 'reused_ingredient_ids',
+          (select jsonb_agg(id) from public.ingredient where tenant_id = :TENANT and name = 'Orégano'),
+          'the audit row lists it as reused');
+select pg_temp.propose('orégano ml', :SUADERO, pg_temp.lines_of(:SUADERO) || pg_temp.new_line('oregano', '1.000000', 'ml'));
+select is(pg_temp.tap('orégano ml', 'orégano ml', :OWNER) ->> 'code', 'failed', 'the normalized name in another unit fails');
+select matches(pg_temp.audit_after('orégano ml', 'pending_change.fail') ->> 'error', 'Orégano.*\mg\M.*ml',
+               'naming the catalog spelling and both units');
+
+-- what the approver saw is what is written: an id must carry its catalog name ----------------
+create temp table recipes_before as select count(*) as n from public.recipe;
+-- the line names Sal fina but points at Tortilla de maíz
+select pg_temp.propose('renamed', :SUADERO,
+  (select jsonb_agg(case when x ->> 'ingredient_name' = 'Tortilla de maíz' then jsonb_set(x, '{ingredient_name}', '"Sal fina"') else x end
+                    order by n)
+   from jsonb_array_elements(pg_temp.lines_of(:SUADERO)) with ordinality as t (x, n)));
+select is(pg_temp.tap('renamed', 'renamed', :OWNER) ->> 'code', 'failed', 'a line whose name is not its ingredient''s fails');
+select matches(pg_temp.audit_after('renamed', 'pending_change.fail') ->> 'error', 'Sal fina.*Tortilla de maíz',
+               'the fail audit row names both');
+-- a sub-recipe line named after another ingredient
+select pg_temp.propose('renamed sub', :PASTOR,
+  (select jsonb_agg(case when x ->> 'sub_recipe_id' is not null then jsonb_set(x, '{ingredient_name}', '"Sal fina"') else x end
+                    order by n)
+   from jsonb_array_elements(pg_temp.lines_of(:PASTOR)) with ordinality as t (x, n)));
+select is(pg_temp.tap('renamed sub', 'renamed sub', :OWNER) ->> 'code', 'failed', 'a sub-recipe line under another name fails');
+select matches(pg_temp.audit_after('renamed sub', 'pending_change.fail') ->> 'error', 'Sal fina.*Salsa verde', 'and says why');
+-- a sub-recipe line without the ingredient it produces
+select pg_temp.propose('sub no ingredient', :PASTOR,
+  (select jsonb_agg(case when x ->> 'sub_recipe_id' is not null then jsonb_set(x, '{ingredient_id}', 'null') else x end
+                    order by n)
+   from jsonb_array_elements(pg_temp.lines_of(:PASTOR)) with ordinality as t (x, n)));
+select is(pg_temp.tap('sub no ingredient', 'sub no ingredient', :OWNER) ->> 'code', 'failed',
+          'a sub-recipe line without ingredient_id fails');
+select matches(pg_temp.audit_after('sub no ingredient', 'pending_change.fail') ->> 'error', 'does not produce', 'and says why');
+select is((select count(*) from public.recipe), (select n from recipes_before), 'none of them writes a recipe');
+
+-- quantities that are not finite or round to 0 when stored ------------------------------------
+create function pg_temp.with_value(ls jsonb, path text[], value text) returns jsonb language sql immutable as $$
+  select jsonb_set(ls, path, to_jsonb(value))
+$$;
+select pg_temp.propose('qty nan', :SUADERO, pg_temp.with_value(pg_temp.lines_of(:SUADERO), '{0,qty_base}', 'NaN'));
+select pg_temp.propose('qty inf', :SUADERO, pg_temp.with_value(pg_temp.lines_of(:SUADERO), '{0,qty_base}', 'Infinity'));
+select pg_temp.propose('qty tiny', :SUADERO, pg_temp.with_value(pg_temp.lines_of(:SUADERO), '{0,qty_base}', '0.0000001'));
+select pg_temp.propose('pct nan', :SUADERO, pg_temp.with_value(pg_temp.lines_of(:SUADERO), '{0,yield_override_pct}', 'NaN'));
+select pg_temp.propose('pct inf', :SUADERO, pg_temp.with_value(pg_temp.lines_of(:SUADERO), '{0,yield_override_pct}', 'Infinity'));
+select pg_temp.propose('pct tiny', :SUADERO, pg_temp.with_value(pg_temp.lines_of(:SUADERO), '{0,yield_override_pct}', '0.00001'));
+select pg_temp.propose('pct over 100', :SUADERO, pg_temp.with_value(pg_temp.lines_of(:SUADERO), '{0,yield_override_pct}', '120.0000'));
+select pg_temp.propose('yield nan', :SUADERO, pg_temp.lines_of(:SUADERO));
+select pg_temp.propose('yield inf', :SUADERO, pg_temp.lines_of(:SUADERO));
+select pg_temp.propose('yield tiny', :SUADERO, pg_temp.lines_of(:SUADERO));
+update public.pending_change p set payload = jsonb_set(payload, '{values,yield_qty}', to_jsonb(v.y)),
+                                   diff = jsonb_set(diff, '{after,yield_qty}', to_jsonb(v.y))
+from (values ('yield nan', 'NaN'), ('yield inf', 'Infinity'), ('yield tiny', '0.0000001')) as v (name, y)
+where p.id = pg_temp.pc(v.name);
+select is((select array_agg(pg_temp.tap(n, n, :OWNER) ->> 'code' order by n) from unnest(array[
+             'pct inf', 'pct nan', 'pct tiny', 'qty inf', 'qty nan', 'qty tiny', 'yield inf', 'yield nan', 'yield tiny']) as n),
+          array_fill('failed'::text, array[9]), 'NaN, Infinity and values that round to 0 when stored fail');
+select is((select count(*) from public.audit_log a join pc on pc.id = a.pending_change_id
+           where pc.name in ('pct inf', 'pct nan', 'pct tiny', 'qty inf', 'qty nan', 'qty tiny', 'yield inf', 'yield nan', 'yield tiny')
+             and a.action = 'pending_change.fail' and a.after ->> 'error' ~ 'positive'), 9::bigint,
+          'each with a fail audit row that says the value must be positive');
+select is((select count(*) from public.recipe), (select n from recipes_before), 'and none writes a recipe');
+select is(pg_temp.tap('pct over 100', 'pct over 100', :OWNER) ->> 'code', 'applied', 'a yield override over 100 % still applies');
+
 select * from finish();
 rollback;

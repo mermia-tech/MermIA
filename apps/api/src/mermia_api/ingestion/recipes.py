@@ -174,14 +174,14 @@ def propose_recipes(
     the whole tenant."""
     day = _today(conn, location_id)
     ingredients = _ingredients(conn, tenant_id, day)
-    clashes = _new_ingredient_units(batch.recipes, ingredients)
+    new = _new_ingredients(batch.recipes, ingredients)
     issues = _code_name_warnings(batch.recipes)
     dishes: list[_Dish] = []
     template = batch.parser == mermia_recetas.PARSER
     for recipe in batch.recipes:
         try:
             dishes.append(
-                _resolve(conn, tenant_id, location_id, recipe, ingredients, clashes, template)
+                _resolve(conn, tenant_id, location_id, recipe, ingredients, new, template)
             )
         except _Held as e:
             issues.append(e.issue)
@@ -310,17 +310,28 @@ def _ingredients(
     return found
 
 
-def _new_ingredient_units(
+@dataclass(frozen=True)
+class _NewIngredients:
+    """The batch's unknown ingredients, by normalized name."""
+
+    clashes: dict[str, list[str]]  # the ones that come in more than one base unit, with them
+    spelling: dict[str, str]  # the name as first given: every recipe proposes it under that one
+
+
+def _new_ingredients(
     recipes: list[RecipeIn], ingredients: dict[str, list[_Ingredient]]
-) -> dict[str, list[str]]:
-    """Unknown ingredients (normalized name) that come in more than one base unit, with them."""
+) -> _NewIngredients:
     units: dict[str, dict[str, None]] = {}  # an ordered set
+    spelling: dict[str, str] = {}
     for recipe in recipes:
         for line in recipe.lines:
             key = normalize_name(line.ingredient_name)
             if key not in ingredients and line.unit in BASE_UNITS:
                 units.setdefault(key, {})[line.unit] = None
-    return {key: list(found) for key, found in units.items() if len(found) > 1}
+                spelling.setdefault(key, line.ingredient_name)
+    return _NewIngredients(
+        {key: list(found) for key, found in units.items() if len(found) > 1}, spelling
+    )
 
 
 def _code_name_warnings(recipes: list[RecipeIn]) -> list[IssueIn]:
@@ -349,7 +360,7 @@ def _resolve(
     location_id: UUID | None,
     recipe: RecipeIn,
     ingredients: dict[str, list[_Ingredient]],
-    clashes: dict[str, list[str]],
+    new: _NewIngredients,
     template: bool,
 ) -> _Dish:
     dish = recipe.menu_item_name
@@ -374,7 +385,7 @@ def _resolve(
         "select name, external_id from public.menu_item where id = %s", (item_id,)
     ).fetchone()
     assert row is not None
-    lines = tuple(_resolve_line(dish, line, ingredients, clashes) for line in recipe.lines)
+    lines = tuple(_resolve_line(dish, line, ingredients, new) for line in recipe.lines)
     repeated = [k for k, n in Counter(x.key for x in lines).items() if n > 1]
     if repeated:
         name = next(x.name for x in lines if x.key == repeated[0])
@@ -390,7 +401,7 @@ def _resolve_line(
     dish: str,
     line: RecipeLineIn,
     ingredients: dict[str, list[_Ingredient]],
-    clashes: dict[str, list[str]],
+    new: _NewIngredients,
 ) -> _Line:
     name, unit = line.ingredient_name, line.unit
     if unit not in BASE_UNITS:
@@ -399,15 +410,16 @@ def _resolve_line(
             f"En la receta de «{dish}», la unidad «{unit}» de {name} no es g, ml ni pza; no tomé "
             "la receta.",
         )
-    candidates = ingredients.get(normalize_name(name), [])
+    key = normalize_name(name)
+    candidates = ingredients.get(key, [])
     if len(candidates) > 1:
         raise _held(
             "recipe.ingredient_ambiguous",
             f"En la receta de «{dish}», tu catálogo tiene {len(candidates)} insumos llamados "
             f"«{name}» y no sé cuál es; no tomé la receta.",
         )
-    if normalize_name(name) in clashes:
-        units = " y ".join(clashes[normalize_name(name)])
+    if key in new.clashes:
+        units = " y ".join(new.clashes[key])
         raise _held(
             "recipe.new_ingredient_units",
             f"En la receta de «{dish}», {name} es un insumo nuevo y el archivo lo trae en {units}; "
@@ -415,8 +427,8 @@ def _resolve_line(
         )
     if not candidates:  # decision 1: proposed as a new ingredient, created by MR-32 on approval
         return _Line(
-            f"new:{normalize_name(name)}",
-            name,
+            f"new:{key}",
+            new.spelling[key],  # one spelling for the whole batch, so one ingredient is created
             line.ingredient_external_id,
             None,
             None,
