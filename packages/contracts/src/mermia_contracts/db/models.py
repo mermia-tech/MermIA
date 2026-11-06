@@ -4,7 +4,7 @@ Regenerate with `python -m mermia_contracts.tools.gen_db_models` after
 `supabase db reset`. Source of truth: supabase/migrations.
 
 generator_version: 1
-migrations_sha256: 27791534e012fb8f40d249335890f50d831106d18acfae0e67e6445120c5f8ee
+migrations_sha256: d4fb5a8f99aaf4e7704e5f7f05bba46ce4cd67deeba6998d494d1d2df35189a6
 """
 
 import datetime as dt
@@ -339,6 +339,8 @@ class DishCostBackfillRow(RowModel):
     created_at: AwareDatetime
     updated_at: AwareDatetime
     version: int
+    attempts: int
+    last_error: str | None = None
 
 
 class DishCostSnapshotRow(RowModel):
