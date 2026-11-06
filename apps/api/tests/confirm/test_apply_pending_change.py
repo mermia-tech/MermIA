@@ -17,6 +17,7 @@ import psycopg
 import pytest
 from psycopg.types.json import Jsonb
 
+from mermia_api.confirm import backfill as backfill_module
 from mermia_api.confirm.apply import apply_pending_change
 from mermia_api.confirm.backfill import (
     MAX_BACKFILL_ATTEMPTS,
@@ -551,6 +552,40 @@ def test_a_non_transient_operational_error_is_counted_and_the_sweep_goes_on(
     assert rows == [(1, "54001 StatementTooComplex")] * 2
 
 
+def test_a_non_database_error_is_counted_and_the_sweep_goes_on(
+    conn: psycopg.Connection[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    first, second = add_poisoned_backfills(conn, 2)
+    real = backfill_module.backfill_dish_costs
+
+    def flaky(c: psycopg.Connection[Any], change: UUID, **kw: Any) -> BackfillResult:
+        if change == first:
+            raise RuntimeError("bug")
+        return real(c, change, **kw)
+
+    monkeypatch.setattr(backfill_module, "backfill_dish_costs", flaky)
+
+    result = resume_unfinished_backfills(conn, only=[first, second])
+
+    assert set(result.failed) == {first, second}
+    row = conn.execute(
+        "select attempts, last_error from public.dish_cost_backfill where pending_change_id = %s",
+        (first,),
+    ).fetchone()
+    assert row == (1, "unknown RuntimeError")
+
+
+@pytest.mark.parametrize(
+    ("sqlstate", "is_transient"),
+    [("53100", True), ("58030", True), ("53200", False), ("54001", False), ("08006", True)],
+)
+def test_sqlstate_classification(
+    conn: psycopg.Connection[Any], sqlstate: str, is_transient: bool
+) -> None:
+    error = psycopg.errors.lookup(sqlstate)("x")
+    assert backfill_module._is_transient(conn, error) is is_transient
+
+
 def test_a_failure_count_survives_the_chunk_rollback_on_a_real_connection() -> None:
     """Commits for real. A trigger (only for from_date 2024-02-02, which nothing else uses) makes
     the chunk fail inside its transaction, which rolls back; the attempt count is still there
@@ -561,8 +596,11 @@ def test_a_failure_count_survives_the_chunk_rollback_on_a_real_connection() -> N
         pytest.skip("MERMIA_DB_URL is not set")
     with psycopg.connect(url) as c:
         change = propose(c, PendingKind.ingredient_price_set, CARNE, price("0.32", "2099-01-01"))
+        c.execute("drop trigger if exists zz_test_poison on public.dish_cost_backfill")
+        c.execute("delete from public.dish_cost_backfill where from_date = date '2024-02-02'")
         c.execute(
-            """create function public.zz_test_poison() returns trigger language plpgsql as $$
+            """create or replace function public.zz_test_poison()
+                 returns trigger language plpgsql as $$
                  begin raise exception 'poison' using errcode = 'P0001'; end $$;
                create trigger zz_test_poison before update on public.dish_cost_backfill
                  for each row when (old.from_date = date '2024-02-02'
@@ -577,7 +615,7 @@ def test_a_failure_count_survives_the_chunk_rollback_on_a_real_connection() -> N
         )
     try:
         with psycopg.connect(url) as c:
-            assert change in resume_unfinished_backfills(c).failed
+            assert change in resume_unfinished_backfills(c, only=[change]).failed
         with psycopg.connect(url) as c:
             row = c.execute(
                 "select attempts, last_error from public.dish_cost_backfill "

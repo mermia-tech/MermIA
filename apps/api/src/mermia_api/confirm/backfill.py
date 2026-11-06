@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+from collections.abc import Collection
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -32,10 +33,13 @@ RESUME_BATCH = 100
 MAX_BACKFILL_ATTEMPTS = 5  # a backfill that failed this many sweeps is given up
 
 # Errors a later sweep can expect to get past: a lost or refused connection (class 08), deadlock,
-# serialization failure, lock not available, server shutdown or startup, too many connections.
+# serialization failure, lock not available, server shutdown or startup, too many connections,
+# disk full (53100) and I/O error (58030). 53200 (out of memory) is counted: it can be this query.
 # Anything else (e.g. 54001 recipe too deep, 57014, 55000) fails the same way every time: counted.
 TRANSIENT_SQLSTATE_CLASSES = frozenset({"08"})
-TRANSIENT_SQLSTATES = frozenset({"40P01", "40001", "55P03", "57P01", "57P03", "53300"})
+TRANSIENT_SQLSTATES = frozenset(
+    {"40P01", "40001", "55P03", "57P01", "57P03", "53300", "53100", "58030"}
+)
 
 log = logging.getLogger(__name__)
 
@@ -92,19 +96,26 @@ def backfill_dish_costs(
 
 
 def unfinished_backfills(
-    conn: psycopg.Connection[Any], *, limit: int = RESUME_BATCH, include_given_up: bool = True
+    conn: psycopg.Connection[Any],
+    *,
+    limit: int = RESUME_BATCH,
+    include_given_up: bool = True,
+    only: Collection[UUID] | None = None,
 ) -> list[UnfinishedBackfill]:
     """The backfills that are not done, fewest failures first, then oldest.
 
     Given-up ones (attempts >= MAX_BACKFILL_ATTEMPTS) are listed, marked `is_given_up`, unless
-    `include_given_up` is false; the sweep leaves them out.
+    `include_given_up` is false; the sweep leaves them out. `only` (a test seam) restricts the list
+    to those pending changes.
     """
+    ids = None if only is None else list(only)
     with conn.transaction():
         rows = conn.execute(
             "select pending_change_id, attempts, last_error from public.dish_cost_backfill "
             "where done_at is null and (%s or attempts < %s) "
+            "and (%s::uuid[] is null or pending_change_id = any(%s::uuid[])) "
             "order by attempts, created_at, pending_change_id limit %s",
-            (include_given_up, MAX_BACKFILL_ATTEMPTS, limit),
+            (include_given_up, MAX_BACKFILL_ATTEMPTS, ids, ids, limit),
         ).fetchall()
     return [UnfinishedBackfill(UUID(str(r[0])), int(r[1]), r[2]) for r in rows]
 
@@ -114,6 +125,7 @@ def resume_unfinished_backfills(
     *,
     limit: int = RESUME_BATCH,
     max_days: int = BACKFILL_CHUNK_DAYS,
+    only: Collection[UUID] | None = None,
 ) -> ResumeResult:
     """Finish up to `limit` unfinished backfills, fewest failures first, then oldest.
 
@@ -125,7 +137,7 @@ def resume_unfinished_backfills(
     """
     done: dict[UUID, BackfillResult] = {}
     failed: dict[UUID, str] = {}
-    for backfill in unfinished_backfills(conn, limit=limit, include_given_up=False):
+    for backfill in unfinished_backfills(conn, limit=limit, include_given_up=False, only=only):
         change = backfill.pending_change_id
         try:
             done[change] = backfill_dish_costs(conn, change, max_days=max_days)
@@ -133,6 +145,10 @@ def resume_unfinished_backfills(
             if _is_transient(conn, error):
                 raise
             log.exception("dish cost backfill failed for pending change %s", change)
+            failed[change] = str(error)
+            _record_failure(conn, change, error)
+        except Exception as error:  # a bug in a backfill must not stall the sweep at attempts 0
+            log.exception("dish cost backfill crashed for pending change %s", change)
             failed[change] = str(error)
             _record_failure(conn, change, error)
     return ResumeResult(done=done, failed=failed)
@@ -148,10 +164,11 @@ def _is_transient(conn: psycopg.Connection[Any], error: psycopg.Error) -> bool:
     return state in TRANSIENT_SQLSTATES or state[:2] in TRANSIENT_SQLSTATE_CLASSES
 
 
-def _record_failure(conn: psycopg.Connection[Any], change: UUID, error: psycopg.Error) -> None:
+def _record_failure(conn: psycopg.Connection[Any], change: UUID, error: Exception) -> None:
     """Count the failed attempt in its own transaction. The message is not stored: it can carry
     payload values, so only the SQLSTATE and the exception class are."""
-    reason = f"{error.sqlstate or 'unknown'} {type(error).__name__}"
+    state = error.sqlstate if isinstance(error, psycopg.Error) else None
+    reason = f"{state or 'unknown'} {type(error).__name__}"
     with conn.transaction():
         row = conn.execute(
             "update public.dish_cost_backfill set attempts = attempts + 1, last_error = %s "
