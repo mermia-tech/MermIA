@@ -43,11 +43,11 @@ def evaluate_cost_alerts(
     return int(row[0])
 
 
-def tenant_business_today(conn: psycopg.Connection[Any], tenant_id: UUID) -> dt.date:
+def tenant_today(conn: psycopg.Connection[Any], tenant_id: UUID) -> dt.date:
     """The tenant's business day today, as the database sees it."""
-    row = conn.execute("select app.tenant_business_today(%s)", (tenant_id,)).fetchone()
+    row = conn.execute("select app.tenant_today(%s)", (tenant_id,)).fetchone()
     if row is None or row[0] is None:  # a function call always returns one row
-        raise RuntimeError("app.tenant_business_today returned no day")
+        raise RuntimeError("app.tenant_today returned no day")
     day: dt.date = row[0]
     return day
 
@@ -68,6 +68,6 @@ def evaluate_cost_alerts_range(
         raise ValueError(f"invalid range {start} .. {end}")
     if (end - start).days >= MAX_RANGE_DAYS:
         raise ValueError(f"at most {MAX_RANGE_DAYS} days ({start} .. {end})")
-    run_day = today if today is not None else tenant_business_today(conn, tenant_id)
+    run_day = today if today is not None else tenant_today(conn, tenant_id)
     days = (start + dt.timedelta(days=n) for n in range((end - start).days + 1))
     return sum(evaluate_cost_alerts(conn, tenant_id, day, run_day) for day in days)

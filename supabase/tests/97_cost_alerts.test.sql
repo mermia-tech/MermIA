@@ -92,7 +92,7 @@ select ok(has_function_privilege('service_role', 'app.evaluate_cost_alerts(uuid,
 select ok(not has_function_privilege('authenticated', 'app.evaluate_cost_alerts(uuid, date, date)', 'execute'), 'clients cannot');
 select ok(not has_function_privilege('anon', 'app.evaluate_cost_alerts(uuid, date, date)', 'execute'), 'nor anon');
 select ok(not has_function_privilege('authenticated', 'app.ingredient_spend(uuid, date, date)', 'execute'), 'spend ranking is the backend''s');
-select ok(not has_function_privilege('authenticated', 'app.tenant_business_today(uuid)', 'execute'), 'and the tenant''s today');
+select ok(not has_function_privilege('authenticated', 'app.tenant_today(uuid)', 'execute'), 'and the tenant''s today');
 select ok(has_function_privilege('authenticated', 'app.price_jumps(uuid, date, date)', 'execute'), 'get_cost_alerts uses the jump rule as the caller');
 select ok(not has_table_privilege('authenticated', 'public.alert', 'insert,update,delete'), 'clients read alerts only');
 select throws_ok($$select app.evaluate_cost_alerts(null, '2026-10-12')$$, '22023', null, 'a tenant is required');

@@ -160,8 +160,9 @@ as $$
   group by rl.ingredient_id
 $$;
 
--- The tenant's business day today (the timezone of its first location).
-create function app.tenant_business_today(tenant uuid) returns date
+-- The tenant's business day today (the timezone of its first location). Word for word MR-32's
+-- app.tenant_today (20261105090000_apply_pending_change.sql), so the merged schema has one.
+create or replace function app.tenant_today(tenant uuid) returns date
 language sql stable set search_path = ''
 as $$
   select app.business_today((select l.id from public.location l where l.tenant_id = tenant order by l.id limit 1))
@@ -185,7 +186,7 @@ begin
     raise exception 'tenant and on_date are required' using errcode = '22023';
   end if;
   select * into k from app.cost_alert_settings();
-  today := coalesce(today, app.tenant_business_today(tenant));
+  today := coalesce(today, app.tenant_today(tenant));
   breach_above := app.food_cost_target() + k.breach_pts;
   -- one evaluation per tenant at a time
   perform pg_advisory_xact_lock(hashtextextended('cost_alerts:' || tenant::text, 0));
@@ -352,10 +353,10 @@ $$;
 -- The RPC runs as the caller and needs the jump rule. The evaluator and its spend ranking are the
 -- backend's (service_role), with the helpers and the sales view they read.
 revoke all on function app.cost_alert_settings(), app.price_jumps(uuid, date, date),
-  app.ingredient_spend(uuid, date, date), app.tenant_business_today(uuid), app.evaluate_cost_alerts(uuid, date, date)
+  app.ingredient_spend(uuid, date, date), app.tenant_today(uuid), app.evaluate_cost_alerts(uuid, date, date)
   from public, anon, authenticated;
 grant execute on function app.cost_alert_settings(), app.price_jumps(uuid, date, date) to authenticated, service_role;
-grant execute on function app.ingredient_spend(uuid, date, date), app.tenant_business_today(uuid),
+grant execute on function app.ingredient_spend(uuid, date, date), app.tenant_today(uuid),
   app.evaluate_cost_alerts(uuid, date, date),
   app.food_cost_target(), app.live_ingredients(date), app.business_today(uuid) to service_role;
 grant select on app.v_item_sales_daily to service_role;
