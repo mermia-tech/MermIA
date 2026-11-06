@@ -139,13 +139,6 @@ select is((select count(*)::int from jsonb_array_elements(pg_temp.rpc(:POLANCO_M
 select is(jsonb_array_length(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_7d"', :'CENTRO'), '2026-10-20') #> '{data,suggestions}'),
           0, 'a row evaluated before the window is not shown');
 
-savepoint dismissed;
-update public.price_suggestion set status = 'dismissed' where menu_item_id = :'TORTA' and location_id = :'CENTRO';
-select is(pg_temp.write(:'TENANT', '2026-10-12'), 0, 'a dismissed row is never rewritten');
-select is(jsonb_array_length(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_7d"', :'CENTRO')) #> '{data,suggestions}'),
-          2, 'nor shown');
-rollback to savepoint dismissed;
-
 savepoint repriced;
 insert into public.menu_item_price (tenant_id, location_id, menu_item_id, price_gross, effective_from)
 values (:'TENANT', :'CENTRO', :'TORTA', 9000, '2026-10-12');
@@ -153,14 +146,101 @@ select is(jsonb_array_length(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L,
           2, 'a suggestion whose current price is no longer the menu price is not shown');
 rollback to savepoint repriced;
 
-savepoint older;
--- an older day's row stays, but only the latest per dish is read
-select ok(pg_temp.write(:'TENANT', '2026-10-11') > 0, 'the day before has its own rows');
-select is((select count(*) from public.price_suggestion where location_id = :'CENTRO' and as_of = '2026-10-11'), 3::bigint,
-          'three at Centro');
-select is(jsonb_array_length(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_7d"', :'CENTRO')) #> '{data,suggestions}'),
-          3, 'one per dish');
-rollback to savepoint older;
+-- one row per breach episode ----------------------------------------------------------------
+savepoint episode;
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-13', '2026-10-20') > 0, 'costs through 10-20');
+select ok(pg_temp.write(:'TENANT', '2026-10-13') > 0, 'the next day refreshes the open rows');
+select is((select count(*) from public.price_suggestion where location_id = :'CENTRO'), 3::bigint,
+          'one row per episode, not per day');
+select is((select array_agg(distinct as_of) from public.price_suggestion where location_id = :'CENTRO'),
+          array['2026-10-13'::date], 'refreshed in place: as_of is the last day evaluated');
+select is(pg_temp.write(:'TENANT', '2026-10-13'), 0, 'a rerun of that day writes nothing');
+select is(pg_temp.write(:'TENANT', '2026-10-11'), 0, 'an older day writes nothing back');
+select is((select array_agg(distinct as_of) from public.price_suggestion where location_id = :'CENTRO'),
+          array['2026-10-13'::date], 'the rows keep the newer day');
+rollback to savepoint episode;
+
+savepoint dismissed;
+-- dismissed (torta) and pending (alambre) on 10-12 stick for the episode
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-13', '2026-10-20') > 0, 'costs through 10-20');
+update public.price_suggestion set status = 'dismissed' where menu_item_id = :'TORTA' and location_id = :'CENTRO';
+update public.price_suggestion set status = 'pending' where menu_item_id = :'ALAMBRE' and location_id = :'CENTRO';
+select is(pg_temp.write(:'TENANT', '2026-10-12'), 0, 'an acted-on row is never rewritten');
+select ok(pg_temp.write(:'TENANT', '2026-10-13') >= 0, 'the 10-13 run');
+select is((select array_agg(m.name || ': ' || p.status order by m.name)
+           from public.price_suggestion p join public.menu_item m on m.id = p.menu_item_id
+           where p.location_id = :'CENTRO'),
+          array['Alambre de res: pending', 'Torta de pastor: dismissed', 'Volcán de pastor: open'],
+          'no new open row for the dismissed torta nor the pending alambre');
+select is(array(select x ->> 'name' from jsonb_array_elements(
+                  pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_7d"', :'CENTRO'), '2026-10-13')
+                  #> '{data,suggestions}') x),
+          array['Alambre de res', 'Volcán de pastor'], 'get_cost_alerts on 10-13: no torta; the pending alambre still shows');
+-- an open copy of a dismissed row (same episode, price and suggestion) is never shown
+insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, episode_start, rule, value, threshold,
+                                     current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code)
+select tenant_id, location_id, menu_item_id, '2026-10-13', episode_start, rule, value, threshold, current_price, target_price,
+       suggested_price, new_food_cost_pct, confidence, rationale_code
+from public.price_suggestion where menu_item_id = :'TORTA' and location_id = :'CENTRO';
+select is((select count(*)::int from jsonb_array_elements(
+             pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_7d"', :'CENTRO'), '2026-10-13') #> '{data,suggestions}') x
+           where x ->> 'name' = 'Torta de pastor'), 0, 'the read path holds back an open copy of a dismissed row');
+delete from public.price_suggestion where menu_item_id = :'TORTA' and location_id = :'CENTRO' and status = 'open';
+-- the torta goes to $90 on 10-13: after a week at $90 (pacing) a new open row
+insert into public.menu_item_price (tenant_id, location_id, menu_item_id, price_gross, effective_from)
+values (:'TENANT', :'CENTRO', :'TORTA', 9000, '2026-10-13');
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-13', '2026-10-20') > 0, 'recomputed at $90');
+select is((select count(*)::int from generate_series('2026-10-14'::date, '2026-10-19', '1 day') d
+           where pg_temp.write(:'TENANT', d::date) >= 0), 6, 'runs 10-14 .. 10-19');
+select is((select count(*) from public.price_suggestion where menu_item_id = :'TORTA' and location_id = :'CENTRO'), 1::bigint,
+          'no new row before a week at $90');
+select ok(pg_temp.write(:'TENANT', '2026-10-20') > 0, 'the 10-20 run');
+select is((select row(p.as_of, p.current_price, p.rationale_code) from public.price_suggestion p
+           where p.menu_item_id = :'TORTA' and p.location_id = :'CENTRO' and p.status = 'open'),
+          row('2026-10-20'::date, 9000::bigint, 'review_portion_cost'::text), 'the price change re-opens it');
+select ok(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_7d"', :'CENTRO'), '2026-10-20') #> '{data,suggestions}' @>
+          format('[{"menu_item_id": "%s", "current_price": {"raw": 9000, "text": "$90.00"}}]', :'TORTA')::jsonb,
+          'and get_cost_alerts shows it at $90');
+rollback to savepoint dismissed;
+
+savepoint new_episode;
+-- the dismissed torta comes back within the line on 10-13 and breaches again from 10-14: a new episode, a new row
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-13', '2026-10-20') > 0, 'costs through 10-20');
+update public.price_suggestion set status = 'dismissed' where menu_item_id = :'TORTA' and location_id = :'CENTRO';
+update public.dish_cost_snapshot set cost = price_net * 30 / 100
+where menu_item_id = :'TORTA' and location_id = :'CENTRO' and date = '2026-10-13';
+select ok(pg_temp.write(:'TENANT', '2026-10-14') > 0, 'the 10-14 run');
+select is((select array_agg(p.status || ' from ' || p.episode_start order by p.as_of) from public.price_suggestion p
+           where p.menu_item_id = :'TORTA' and p.location_id = :'CENTRO'),
+          array['dismissed from ' || (select episode_start from public.price_suggestion
+                                      where menu_item_id = :'TORTA' and location_id = :'CENTRO' and status = 'dismissed'),
+                'open from 2026-10-14'],
+          'the dismissal held for its episode only');
+rollback to savepoint new_episode;
+
+-- the sticky rule ----------------------------------------------------------------------------
+select ok(app.suggestion_reopens(6000, 6500, 6500, 7000), 'a new current price re-opens');
+select ok(app.suggestion_reopens(20000, 21000, 20000, 22000), 'so does a higher price point');
+select ok(not app.suggestion_reopens(20000, 22000, 20000, 21000), 'a lower one does not');
+select ok(not app.suggestion_reopens(8000, null, 8000, null), 'nor the same review');
+select ok(app.suggestion_reopens(8000, null, 8000, 8500), 'a price where a review stood re-opens');
+
+-- the lists are capped -------------------------------------------------------------------------
+select is((pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data}') - 'breaches'
+            - 'price_moves' - 'suggestions',
+          '{"price_moves_total": 2, "suggestions_total": 3}'::jsonb, 'the totals under the cap');
+savepoint capped;
+create or replace function app.cost_alerts_top_n() returns int language sql immutable set search_path = '' as $$ select 1 $$;
+select is(array(select x ->> 'name' from jsonb_array_elements(
+                  pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data,suggestions}') x),
+          array['Torta de pastor'], 'a cap of 1: the highest food cost');
+select is(array(select x ->> 'ingredient' from jsonb_array_elements(
+                  pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data,price_moves}') x),
+          array['Aguacate Hass'], 'and the largest price move');
+select is((pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data}') - 'breaches'
+            - 'price_moves' - 'suggestions',
+          '{"price_moves_total": 2, "suggestions_total": 3}'::jsonb, 'the totals still count them all');
+rollback to savepoint capped;
 
 -- a plowhorse that breaches twice gets a price ------------------------------------------------
 -- quesadilla at Centro (plowhorse, $45, 28.4 %) is priced $60 from 08-17 (a newer row that day), and queso Oaxaca goes from
@@ -195,6 +275,38 @@ select is((select count(*) from public.price_suggestion p where p.menu_item_id =
           'one breaching observation is not enough (03: two, a week apart)');
 rollback to savepoint one_observation;
 
+savepoint pacing;
+-- quesadilla at Centro $60 from 08-17 and queso $400/kg from 09-28: $65 on 10-12, applied on 10-13; at $65 it
+-- still breaches, but the next step waits for a week at $65
+insert into public.menu_item_price (tenant_id, location_id, menu_item_id, price_gross, effective_from)
+values (:'TENANT', :'CENTRO', :'QUESADILLA', 6000, '2026-08-17');
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'QUESO', 0.400, '2026-09-28', 'cfdi');
+select ok(app.compute_dish_costs(:'TENANT', '2026-09-01', '2026-10-20') > 0, 'costs recomputed');
+select ok(pg_temp.write(:'TENANT', '2026-10-12') > 0, 'written');
+select is((select row(p.current_price, p.suggested_price, p.rationale_code) from public.price_suggestion p
+           where p.menu_item_id = :'QUESADILLA' and p.location_id = :'CENTRO'),
+          row(6000::bigint, 6500::bigint, 'raise_capped'::text), '$60 -> $65');
+update public.price_suggestion set status = 'applied' where menu_item_id = :'QUESADILLA' and location_id = :'CENTRO';
+insert into public.menu_item_price (tenant_id, location_id, menu_item_id, price_gross, effective_from)
+values (:'TENANT', :'CENTRO', :'QUESADILLA', 6500, '2026-10-13');
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-13', '2026-10-20') > 0, 'recomputed at $65');
+select ok((select bool_and(s.food_cost_pct > 35) from public.dish_cost_snapshot s
+           where s.menu_item_id = :'QUESADILLA' and s.location_id = :'CENTRO' and s.date between '2026-10-13' and '2026-10-20'),
+          'at $65 it still breaches');
+select is((select count(*)::int from generate_series('2026-10-13'::date, '2026-10-19', '1 day') d
+           where pg_temp.write(:'TENANT', d::date) >= 0), 7, 'runs 10-13 .. 10-19');
+select is((select count(*) from public.price_suggestion where menu_item_id = :'QUESADILLA' and location_id = :'CENTRO'),
+          1::bigint, 'no new suggestion in the first week at $65');
+select is((select count(*)::int from jsonb_array_elements(
+             pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_7d"', :'CENTRO'), '2026-10-13') #> '{data,suggestions}') x
+           where x ->> 'menu_item_id' = :'QUESADILLA'), 0, 'nor in get_cost_alerts on 10-13');
+select ok(pg_temp.write(:'TENANT', '2026-10-20') > 0, 'the 10-20 run');
+select is((select row(p.as_of, p.current_price, p.suggested_price) from public.price_suggestion p
+           where p.menu_item_id = :'QUESADILLA' and p.location_id = :'CENTRO' and p.status = 'open'),
+          row('2026-10-20'::date, 6500::bigint, 7000::bigint), 'after a week at $65, the next step: $70');
+rollback to savepoint pacing;
+
 savepoint capped_flat;
 -- at $45 the +10 % cap ($49.50) rounds down to $45: a breaching plowhorse with no price gets no row
 insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
@@ -207,6 +319,38 @@ select is((select count(*) from public.price_suggestion p where p.menu_item_id =
           'no suggestion when the cap lands on the current price');
 rollback to savepoint capped_flat;
 
+savepoint piece_dishes;
+-- a single line by the piece is resale only as one piece at 100 % yield: torta becomes "5 tortillas" and volcán
+-- "2 huevos" (Centro's puzzle and dog), both still dishes that get a suggestion
+insert into public.ingredient (tenant_id, name, base_unit) values (:'TENANT', 'Tortilla de harina (pieza)', 'pza')
+returning id as tortilla \gset
+insert into public.ingredient (tenant_id, name, base_unit) values (:'TENANT', 'Huevo blanco (pieza)', 'pza')
+returning id as huevo \gset
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'tortilla', 6.0, '2026-08-01', 'cfdi'), (:'TENANT', :'huevo', 8.0, '2026-08-01', 'cfdi');
+insert into public.recipe (tenant_id, menu_item_id, recipe_version, status, yield_qty)
+select :'TENANT', d.item, (select max(r.recipe_version) + 1 from public.recipe r where r.menu_item_id = d.item), 'confirmed', 1
+from (values (:'TORTA'::uuid), (:'VOLCAN'::uuid)) d(item);
+insert into public.recipe_line (tenant_id, recipe_id, ingredient_id, qty_base)
+select :'TENANT', app.recipe_of_record(d.item, null, '2026-10-12'), d.ingredient, d.qty
+from (values (:'TORTA'::uuid, :'tortilla'::uuid, 5), (:'VOLCAN'::uuid, :'huevo'::uuid, 2)) d(item, ingredient, qty);
+select ok(not app.is_resale(:'TORTA', '2026-10-12'), '"5 tortillas" is not resale');
+select ok(not app.is_resale(:'VOLCAN', '2026-10-12'), 'nor "2 huevos"');
+select ok(app.compute_dish_costs(:'TENANT', '2026-09-01', '2026-10-12') > 0, 'costs recomputed');
+delete from public.price_suggestion;
+select ok(pg_temp.write(:'TENANT', '2026-10-12') > 0, 'written');
+select is((select array_agg(m.name || ': ' || p.rationale_code order by m.name)
+           from public.price_suggestion p join public.menu_item m on m.id = p.menu_item_id
+           where p.location_id = :'CENTRO' and p.menu_item_id in (:'TORTA', :'VOLCAN')),
+          array['Torta de pastor: review_portion_cost', 'Volcán de pastor: review_portion_cost'],
+          'the single-line piece dishes ("5 tortillas", "2 huevos") get their suggestion');
+select is((select count(*) from public.price_suggestion p
+           where p.menu_item_id in (select id from public.menu_item where name in ('Coca-Cola', 'Cerveza Corona', 'Agua mineral'))),
+          0::bigint, 'Coca-Cola, Corona and agua mineral still do not');
+update public.recipe_line set yield_override_pct = 90 where recipe_id = app.recipe_of_record(:'COCA', null, '2026-10-12');
+select ok(not app.is_resale(:'COCA', '2026-10-12'), 'one piece at 90 % yield is not resale either');
+rollback to savepoint piece_dishes;
+
 savepoint stale;
 -- a dish the engine stopped costing a week ago gets nothing
 delete from public.dish_cost_snapshot where date > '2026-10-05';
@@ -214,22 +358,33 @@ select is(pg_temp.write(:'TENANT', '2026-10-12'), 0, 'no fresh snapshot, no sugg
 rollback to savepoint stale;
 
 -- shape --------------------------------------------------------------------------------------
-select throws_ok(format($$insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, rule, value, threshold,
-                          current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code)
-                          values (%L, %L, %L, '2026-10-12', 'margin_breach', 40, 35, 8000, 9000, 8000, 38, 'estimated', 'raise_capped')$$,
+select throws_ok(format($$insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, episode_start, rule, value,
+                          threshold, current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code)
+                          values (%L, %L, %L, '2026-10-12', '2026-10-01', 'margin_breach', 40, 35, 8000, 9000, 8000, 38, 'estimated', 'raise_capped')$$,
                         :'TENANT', :'CENTRO', :'TORTA'), '23514', null, 'a raise must be above the current price');
-select throws_ok(format($$insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, rule, value, threshold,
-                          current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code)
-                          values (%L, %L, %L, '2026-10-12', 'margin_breach', 40, 35, 8000, 9000, 8500, null, 'estimated', 'review_portion_cost')$$,
+select throws_ok(format($$insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, episode_start, rule, value,
+                          threshold, current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code)
+                          values (%L, %L, %L, '2026-10-12', '2026-10-01', 'margin_breach', 40, 35, 8000, 9000, 8500, null, 'estimated', 'review_portion_cost')$$,
                         :'TENANT', :'CENTRO', :'TORTA'), '23514', null, 'a review carries no price');
-select throws_ok(format($$insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, rule, value, threshold,
-                          current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code)
-                          values (%L, %L, %L, '2026-10-12', 'margin_breach', 40, 35, 8000, 9000, 9500, 30, 'estimated', 'raise_capped')$$,
+select throws_ok(format($$insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, episode_start, rule, value,
+                          threshold, current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code)
+                          values (%L, %L, %L, '2026-10-12', '2026-10-01', 'margin_breach', 40, 35, 8000, 9000, 9500, 30, 'estimated', 'raise_capped')$$,
                         :'TENANT', :'CENTRO', :'TORTA'), '23514', null, 'a capped raise stays under the target price');
-select throws_ok(format($$insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, rule, value, threshold,
-                          current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code)
-                          values (%L, %L, %L, '2026-10-12', 'margin_breach', 40, 35, 8000, 9000, null, null, 'missing', 'review_portion_cost')$$,
+select throws_ok(format($$insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, episode_start, rule, value,
+                          threshold, current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code)
+                          values (%L, %L, %L, '2026-10-12', '2026-10-01', 'margin_breach', 40, 35, 8000, 9000, null, null, 'missing', 'review_portion_cost')$$,
                         :'TENANT', :'CENTRO', :'TORTA'), '23514', null, 'confidence is confirmed or estimated');
+
+select throws_ok(format($$insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, episode_start, rule, value,
+                          threshold, current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code, status)
+                          values (%L, %L, %L, '2026-10-12', '2026-10-13', 'margin_breach', 40, 35, 8000, 9000, null, null, 'estimated',
+                                  'review_portion_cost', 'dismissed')$$,
+                        :'TENANT', :'CENTRO', :'TORTA'), '23514', null, 'an episode starts on or before the day evaluated');
+select throws_ok(format($$insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, episode_start, rule, value,
+                          threshold, current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code)
+                          values (%L, %L, %L, '2026-10-12', '2026-10-01', 'margin_breach', 40, 35, 8000, 9000, null, null, 'estimated',
+                                  'review_portion_cost')$$,
+                        :'TENANT', :'CENTRO', :'TORTA'), '23505', null, 'one open suggestion per dish and location');
 
 select * from finish();
 rollback;

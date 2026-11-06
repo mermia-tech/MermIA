@@ -32,6 +32,7 @@
           }
         }
       ],
+      "price_moves_total": 2,
       "breaches": [
         {
           "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
@@ -197,7 +198,8 @@
           "confidence": "estimated",
           "rationale_code": "review_portion_cost"
         }
-      ]
+      ],
+      "suggestions_total": 3
     },
     "flags": [],
     "meta": {

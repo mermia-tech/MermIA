@@ -260,9 +260,9 @@ select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L)', '"tomorrow"')) #
 
 savepoint suggestions;
 -- rows as app.write_price_suggestions writes them (98_price_suggestions tests the writer)
-insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, rule, value, threshold, current_price,
-                                     target_price, suggested_price, new_food_cost_pct, confidence, rationale_code, status)
-select :'TENANT', x.loc, x.item, '2026-10-12', 'margin_breach', 50, 35, app.menu_price_on(x.item, x.loc, '2026-10-12'),
+insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, episode_start, rule, value, threshold,
+                                     current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code, status)
+select :'TENANT', x.loc, x.item, '2026-10-12', '2026-10-01', 'margin_breach', 50, 35, app.menu_price_on(x.item, x.loc, '2026-10-12'),
        12503, null, null, 'estimated', 'review_portion_cost', x.status
 from (values (:'CENTRO'::uuid, :'TORTA'::uuid, 'open'), (:'CENTRO', :'ALAMBRE', 'applied'), (:'POLANCO', :'TORTA', 'open')) x(loc, item, status);
 select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(location_id => %L)', :'CENTRO')) #> '{data,suggestions}',
@@ -313,9 +313,9 @@ select is(pg_temp.rpc(:OTHER_TENANT, format('api.compare_locations(%L, %L, %L)',
           'compare_locations: El Güero''s locations do not exist for another tenant');
 select is(pg_temp.rpc(:OTHER_TENANT, format('api.get_menu_engineering(%L)', '"last_30d"')) #>> '{error,code}', 'no_data', 'get_menu_engineering: nothing');
 select is(pg_temp.rpc(:OTHER_TENANT, format('api.get_cost_alerts(%L)', '"last_30d"')) -> 'data',
-          '{"price_moves": [], "breaches": [], "suggestions": []}', 'get_cost_alerts: no prices, dishes or suggestions of El Güero');
+          '{"price_moves": [], "price_moves_total": 0, "breaches": [], "suggestions": [], "suggestions_total": 0}', 'get_cost_alerts: no prices, dishes or suggestions of El Güero');
 select is(pg_temp.rpc('{}', format('api.get_cost_alerts(%L)', '"last_30d"')) -> 'data',
-          '{"price_moves": [], "breaches": [], "suggestions": []}', 'no claims, no alerts');
+          '{"price_moves": [], "price_moves_total": 0, "breaches": [], "suggestions": [], "suggestions_total": 0}', 'no claims, no alerts');
 
 -- PR #77 review fixes ---------------------------------------------------------------------
 -- H1: a day that reports the amount but not the count adds to neither; no count at all is no_data

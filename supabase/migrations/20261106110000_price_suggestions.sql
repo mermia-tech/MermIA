@@ -15,19 +15,31 @@
 -- - Eligibility (03 "2 observations"): the dish breaches (food cost above target + 3 pts, U1) on the
 --   latest snapshot on or before the evaluated day and on the latest on or before a week earlier;
 --   each must be at most a week old (a dish the engine stopped costing gets nothing, never a guess).
+--   Both observations count only at the dish's current menu price: that price must be the menu
+--   price every day since the earlier one (pacing: a week after any price change, e.g. an applied
+--   suggestion, before the next one). The suggestion quotes the menu price on the evaluated day.
 -- - Resale items (U2: bottled drinks; Coca-Cola, Corona) keep their breach alerts but never get a
 --   suggestion. The schema has no resale flag, so the narrowest signal is used: the dish's recipe
---   of record is a single line, an ingredient bought by the piece (`pza`) with no sub-recipe; it
---   is bought and sold as is. (menu_item.kind = 'drink' is wider: it holds micheladas and coffee.)
+--   of record is a single line, an ingredient bought by the piece (`pza`), no sub-recipe, quantity
+--   exactly 1 and yield 100 % (the line's and the recipe's): one bought piece is one sold item.
+--   "5 tortillas" or "2 huevos" are dishes. (menu_item.kind = 'drink' is wider: it holds micheladas
+--   and coffee.) An owner-confirmed resale flag at onboarding is a follow-up (MR-95).
 -- - Menu engineering (U4, 03 Kasavana-Smith over the location's last 30 days, the rule of
 --   api.get_menu_engineering): plowhorses get a price (raise_to_target or raise_capped); stars are
 --   not raised (no row); puzzles and dogs get review_portion_cost ("revisa porción/costo") and no
 --   price. A dish not sold in those 30 days has no quadrant and gets nothing.
 -- - Confidence: the snapshot's (the engine's rule: confirmed = every recipe confirmed and every
 --   price from a CFDI, or a confirmed nota, under 30 days old; else estimated).
--- - One row per (tenant, location, dish, day evaluated); a rerun refreshes an open row only when
---   its figures changed. api.get_cost_alerts shows each dish's latest row in the window while it
---   is open or pending, its current price is still the menu price and the dish still breaches.
+-- - One row per breach episode per (tenant, location, dish), not per day. The episode is the
+--   margin_breach alert's: the run of breaching snapshots since the last one within the line
+--   (`episode_start`). While the row is open the daily run refreshes it in place (`as_of` = the
+--   last day evaluated); a rerun on unchanged data writes nothing, and an older day than the row's
+--   is never written back. An acted-on row (pending, dismissed, applied) sticks for its episode: no
+--   new open row until a new episode starts, the current price changes, or the suggested price
+--   moves to a higher price point (a price where a review stood counts as higher).
+-- - api.get_cost_alerts shows each dish's latest row in the window while it is open or pending, no
+--   acted-on row of its episode holds it back, its current price is still the menu price and the
+--   dish still breaches; the top 10 by food cost, with the total (doc 13: tool results stay small).
 
 -- Columns ------------------------------------------------------------------------------------
 -- The free-text subject (MR-10) is replaced by the dish; nothing wrote it.
@@ -37,6 +49,7 @@ drop function app.subject_item(text, uuid[], date);
 alter table public.price_suggestion
   add column menu_item_id uuid,
   add column as_of date,
+  add column episode_start date,
   add column current_price bigint,
   add column target_price bigint,
   add column new_food_cost_pct numeric(7, 4),
@@ -51,6 +64,7 @@ alter table public.price_suggestion
   -- coalesce: a null comparison must fail the check, not pass it
   add constraint price_suggestion_shape check (coalesce(
     rule = 'margin_breach' and menu_item_id is not null and location_id is not null and as_of is not null
+      and episode_start <= as_of
       and value is not null and threshold is not null and current_price > 0 and target_price > 0
       and confidence in ('confirmed', 'estimated') and (
         (rationale_code = 'raise_to_target' and suggested_price > current_price and suggested_price >= target_price
@@ -59,7 +73,11 @@ alter table public.price_suggestion
           and new_food_cost_pct is not null)
         or (rationale_code = 'review_portion_cost' and suggested_price is null and new_food_cost_pct is null)), false));
 
-create unique index price_suggestion_key on public.price_suggestion (tenant_id, location_id, menu_item_id, as_of);
+-- at most one open suggestion per dish and location: the writer refreshes it in place
+create unique index price_suggestion_open_key on public.price_suggestion (tenant_id, location_id, menu_item_id)
+  where status = 'open';
+-- a dish's rows by day (the writer's latest row, get_cost_alerts' episode check)
+create index price_suggestion_dish_idx on public.price_suggestion (tenant_id, location_id, menu_item_id, as_of);
 create index price_suggestion_menu_item_idx on public.price_suggestion (tenant_id, menu_item_id);
 select app.tag('public.price_suggestion', 'unit=centavos', array['current_price', 'target_price']);
 select app.tag('public.price_suggestion', 'unit=percent_points', array['new_food_cost_pct']);
@@ -68,6 +86,9 @@ comment on column public.price_suggestion.status is 'open | pending | applied | 
 comment on column public.price_suggestion.rationale_code is
   'raise_to_target | raise_capped | review_portion_cost (price_suggestion_shape)';
 comment on column public.price_suggestion.value is 'percent points: the food cost on as_of';
+comment on column public.price_suggestion.as_of is 'the last day evaluated (refreshed in place while open)';
+comment on column public.price_suggestion.episode_start is
+  'the first day of the breach run (the margin_breach alert''s as_of): one row per episode';
 comment on column public.price_suggestion.threshold is 'percent points: the breach line (target + 3 pts)';
 
 -- Settings -----------------------------------------------------------------------------------
@@ -77,6 +98,12 @@ create function app.price_suggestion_settings(
   out observation_days int)
 language sql immutable set search_path = ''
 as $$ select 10.0, 500::bigint, 1000::bigint, 25000::bigint, 7 $$;
+
+-- How many price moves and suggestions api.get_cost_alerts lists (the largest; it also returns the
+-- totals). Doc 13: tool results stay around 400 tokens, top N only. CostAlertsData.TOP_N.
+create function app.cost_alerts_top_n() returns int
+language sql immutable set search_path = ''
+as $$ select 10 $$;
 
 -- A price rounded to a menu price point: the next one up, or down ($5 steps under $250, $10 at or
 -- above). Centavos in and out.
@@ -115,15 +142,58 @@ as $$
   from p
 $$;
 
--- U2: a dish bought and sold as is (its recipe of record on the day is one line, an ingredient
--- counted by the piece).
+-- U2: a dish bought and sold as is. Its recipe of record on the day is one line: one piece (`pza`,
+-- quantity 1) of a bought ingredient, at 100 % yield, for one portion. "5 tortillas" is a dish.
 create function app.is_resale(item uuid, on_date date) returns boolean
 language sql stable set search_path = ''
 as $$
-  select count(*) = 1 and coalesce(bool_and(l.sub_recipe_id is null and i.base_unit = 'pza'), false)
-  from public.recipe_line l
+  select count(*) = 1 and coalesce(bool_and(
+           l.sub_recipe_id is null and i.base_unit = 'pza' and l.qty_base = 1
+           and coalesce(l.yield_override_pct, i.default_yield_pct) = 100 and coalesce(r.yield_qty, 1) = 1), false)
+  from public.recipe r
+  join public.recipe_line l on l.recipe_id = r.id
   left join public.ingredient i on i.id = l.ingredient_id
-  where l.recipe_id = app.recipe_of_record(item, null, on_date)
+  where r.id = app.recipe_of_record(item, null, on_date)
+$$;
+
+-- The first day of the breach run that the snapshot of `on_date` closes: the first snapshot after
+-- the last one within the line (food cost at or under `breach_above`) before on_date. Days without
+-- a snapshot or a price say nothing, so they neither end nor start a run. The margin_breach
+-- alert's episode and the price suggestion's.
+create function app.breach_episode_start(tenant uuid, loc uuid, item uuid, on_date date, breach_above numeric)
+returns date
+language sql stable set search_path = ''
+as $$
+  select min(s.date) from public.dish_cost_snapshot s
+  where s.tenant_id = tenant and s.location_id = loc and s.menu_item_id = item
+    and s.date <= on_date and s.price_net > 0 and s.date > coalesce((
+      select max(o.date) from public.dish_cost_snapshot o
+      where o.tenant_id = tenant and o.location_id = loc and o.menu_item_id = item
+        and o.date < on_date and o.price_net > 0 and 100.0 * o.cost / o.price_net <= breach_above),
+      '-infinity'::date)
+$$;
+
+-- The menu price on `on_date` was the menu price every day since `since`: the same price then, and
+-- no other price started in between. Null without a price on on_date.
+create function app.menu_price_steady(item uuid, loc uuid, since date, on_date date) returns boolean
+language sql stable set search_path = ''
+as $$
+  select (select r.price_gross from app.menu_price_row(item, loc, since) r) is not distinct from cur.price_gross
+     and not exists (
+       select 1 from public.menu_item_price p
+       where p.menu_item_id = item and p.location_id = loc and p.effective_from > since
+         and p.effective_from <= on_date and p.price_gross <> cur.price_gross)
+  from app.menu_price_row(item, loc, on_date) cur
+$$;
+
+-- A suggestion an owner acted on (pending, dismissed, applied) gives way to a new one in its
+-- episode only when the current price changed or the suggested price is a higher price point (a
+-- price where a review, no price, stood counts as higher).
+create function app.suggestion_reopens(acted_current bigint, acted_suggested bigint, new_current bigint,
+                                       new_suggested bigint) returns boolean
+language sql immutable set search_path = ''
+as $$
+  select new_current is distinct from acted_current or coalesce(new_suggested, 0) > coalesce(acted_suggested, 0)
 $$;
 
 -- Menu engineering ---------------------------------------------------------------------------
@@ -213,8 +283,10 @@ $$;
 
 -- Writer -------------------------------------------------------------------------------------
 -- Writes the tenant's suggestions for one business day; returns how many rows it added or
--- refreshed. Idempotent: a rerun on unchanged data writes nothing. An acted-on row (not open) is
--- never touched.
+-- refreshed. One row per breach episode: the dish's open row is refreshed in place; a new row is
+-- added when the dish has none, its latest is from an earlier episode, or its latest was acted on
+-- and app.suggestion_reopens. Idempotent: a rerun on unchanged data writes nothing. An acted-on row
+-- (not open) is never touched, and a day older than the dish's latest row writes nothing.
 create function app.write_price_suggestions(tenant uuid, on_date date) returns int
 language plpgsql set search_path = ''
 as $$
@@ -222,6 +294,7 @@ declare
   k record;
   a record;
   breach_above numeric;
+  target numeric := app.food_cost_target();
   written int;
 begin
   if tenant is null or on_date is null then
@@ -229,7 +302,9 @@ begin
   end if;
   select * into k from app.price_suggestion_settings();
   select * into a from app.cost_alert_settings();
-  breach_above := app.food_cost_target() + a.breach_pts;
+  breach_above := target + a.breach_pts;
+  -- one writer per tenant at a time (the evaluator's lock; it nests)
+  perform pg_advisory_xact_lock(hashtextextended('cost_alerts:' || tenant::text, 0));
 
   with obs as (
     -- n = 0: the latest snapshot on or before on_date; n = 1: on or before a week earlier; each at
@@ -242,57 +317,94 @@ begin
      and s.date <= on_date - o.n * k.observation_days and s.date > on_date - (o.n + 1) * k.observation_days
     order by s.location_id, s.menu_item_id, o.n, s.date desc
   ), breaching as (
-    select cur.location_id, cur.menu_item_id, cur.date, cur.cost, cur.confidence,
+    select cur.location_id, cur.menu_item_id, cur.date, prev.date as prev_date, cur.cost, cur.confidence,
            round(100.0 * cur.cost / cur.price_net, 4) as food_cost
     from obs cur
     join obs prev on prev.location_id = cur.location_id and prev.menu_item_id = cur.menu_item_id and prev.n = 1
     where cur.n = 0
       and 100.0 * cur.cost / cur.price_net > breach_above and 100.0 * prev.cost / prev.price_net > breach_above
       and cur.confidence in ('confirmed', 'estimated')
-      and not app.is_resale(cur.menu_item_id, cur.date)
-  ), quadrant as (
+  ), quadrant as materialized (
+    -- once per location (inlined, the planner can rerun it per breaching dish)
     select l.location_id, q.menu_item_id, q.quadrant
     from (select distinct b.location_id from breaching b) l
     cross join lateral app.menu_quadrants(array[l.location_id], on_date - (a.ranking_days - 1), on_date) q
-  ), proposal as (
-    select b.*, mp.price_gross, f.target_price, f.suggested_price, f.new_food_cost_pct,
-           case when q.quadrant in ('puzzle', 'dog') then 'review_portion_cost'
-                when q.quadrant = 'plowhorse' and f.suggested_price >= f.target_price then 'raise_to_target'
-                when q.quadrant = 'plowhorse' and f.suggested_price is not null then 'raise_capped'
-           end as rationale_code
+  ), candidate as materialized (
+    -- stars are not raised; the per-dish checks below run only on what is left
+    select b.*, q.quadrant
     from breaching b
     join quadrant q on q.location_id = b.location_id and q.menu_item_id = b.menu_item_id
-    cross join lateral app.menu_price_row(b.menu_item_id, b.location_id, b.date) mp
-    cross join lateral app.suggest_menu_price(b.cost, mp.price_gross, mp.tax_rate, app.food_cost_target()) f
+    where q.quadrant in ('plowhorse', 'puzzle', 'dog')
+  ), proposal as materialized (
+    select c.*, mp.price_gross, f.target_price, f.suggested_price, f.new_food_cost_pct,
+           case when c.quadrant in ('puzzle', 'dog') then 'review_portion_cost'
+                when f.suggested_price >= f.target_price then 'raise_to_target'
+                when f.suggested_price is not null then 'raise_capped'
+           end as rationale_code
+    from candidate c
+    cross join lateral app.menu_price_row(c.menu_item_id, c.location_id, on_date) mp
+    cross join lateral app.suggest_menu_price(c.cost, mp.price_gross, mp.tax_rate, target) f
+    -- both observations at the current menu price (pacing), and not a resale item (U2)
+    where app.menu_price_steady(c.menu_item_id, c.location_id, c.prev_date, on_date)
+      and not app.is_resale(c.menu_item_id, c.date)
+  ), episode as (
+    select x.location_id, x.menu_item_id, x.food_cost, x.confidence, x.price_gross, x.target_price,
+           x.rationale_code,
+           case when x.rationale_code <> 'review_portion_cost' then x.suggested_price end as suggested_price,
+           case when x.rationale_code <> 'review_portion_cost' then x.new_food_cost_pct end as new_food_cost_pct,
+           app.breach_episode_start(tenant, x.location_id, x.menu_item_id, x.date, breach_above) as episode_start
+    from proposal x
+    where x.rationale_code is not null
+  ), decision as (
+    select e.*, l.id as latest_id,
+           case when l.id is null then 'insert'
+                when on_date < l.as_of then 'skip'
+                when l.status = 'open' then 'update'
+                when l.episode_start >= e.episode_start
+                     and not app.suggestion_reopens(l.current_price, l.suggested_price, e.price_gross, e.suggested_price)
+                  then 'skip'
+                else 'insert'
+           end as action
+    from episode e
+    left join lateral (
+      select p.id, p.status, p.as_of, p.episode_start, p.current_price, p.suggested_price
+      from public.price_suggestion p
+      where p.tenant_id = tenant and p.location_id = e.location_id and p.menu_item_id = e.menu_item_id
+      order by p.as_of desc, p.id desc
+      limit 1
+    ) l on true
+  ), refreshed as (
+    update public.price_suggestion p
+    set as_of = on_date, episode_start = d.episode_start, value = d.food_cost, threshold = breach_above,
+        current_price = d.price_gross, target_price = d.target_price, suggested_price = d.suggested_price,
+        new_food_cost_pct = d.new_food_cost_pct, confidence = d.confidence, rationale_code = d.rationale_code
+    from decision d
+    where d.action = 'update' and p.id = d.latest_id and p.status = 'open'
+      and (p.as_of, p.episode_start, p.value, p.threshold, p.current_price, p.target_price, p.suggested_price,
+           p.new_food_cost_pct, p.confidence, p.rationale_code)
+          is distinct from (on_date, d.episode_start, d.food_cost, breach_above, d.price_gross, d.target_price,
+                            d.suggested_price, d.new_food_cost_pct, d.confidence, d.rationale_code)
+    returning 1
+  ), added as (
+    insert into public.price_suggestion
+      (tenant_id, location_id, menu_item_id, as_of, episode_start, rule, value, threshold, current_price,
+       target_price, suggested_price, new_food_cost_pct, confidence, rationale_code)
+    select tenant, d.location_id, d.menu_item_id, on_date, d.episode_start, 'margin_breach', d.food_cost,
+           breach_above, d.price_gross, d.target_price, d.suggested_price, d.new_food_cost_pct, d.confidence,
+           d.rationale_code
+    from decision d
+    where d.action = 'insert'
+    on conflict (tenant_id, location_id, menu_item_id) where status = 'open' do nothing
+    returning 1
   )
-  insert into public.price_suggestion as p
-    (tenant_id, location_id, menu_item_id, as_of, rule, value, threshold, current_price, target_price,
-     suggested_price, new_food_cost_pct, confidence, rationale_code)
-  select tenant, x.location_id, x.menu_item_id, on_date, 'margin_breach', x.food_cost, breach_above,
-         x.price_gross, x.target_price,
-         case when x.rationale_code <> 'review_portion_cost' then x.suggested_price end,
-         case when x.rationale_code <> 'review_portion_cost' then x.new_food_cost_pct end,
-         x.confidence, x.rationale_code
-  from proposal x
-  where x.rationale_code is not null
-  on conflict (tenant_id, location_id, menu_item_id, as_of) do update
-    set value = excluded.value, threshold = excluded.threshold, current_price = excluded.current_price,
-        target_price = excluded.target_price, suggested_price = excluded.suggested_price,
-        new_food_cost_pct = excluded.new_food_cost_pct, confidence = excluded.confidence,
-        rationale_code = excluded.rationale_code
-    where p.status = 'open'
-      and (p.value, p.threshold, p.current_price, p.target_price, p.suggested_price, p.new_food_cost_pct,
-           p.confidence, p.rationale_code)
-          is distinct from (excluded.value, excluded.threshold, excluded.current_price, excluded.target_price,
-                            excluded.suggested_price, excluded.new_food_cost_pct, excluded.confidence,
-                            excluded.rationale_code);
-  get diagnostics written = row_count;
+  select (select count(*) from refreshed) + (select count(*) from added) into written;
   return written;
 end
 $$;
 
 -- Evaluator ----------------------------------------------------------------------------------
--- As in 20261106100000_cost_alerts.sql, plus the day's price suggestions (written after the
+-- As in 20261106100000_cost_alerts.sql, with the episode start from app.breach_episode_start (the
+-- same rule, now shared with the suggestions), plus the day's price suggestions (written after the
 -- alerts, in the same transaction). Still returns how many alerts it added.
 create or replace function app.evaluate_cost_alerts(tenant uuid, on_date date, today date default null) returns int
 language plpgsql set search_path = ''
@@ -334,16 +446,8 @@ begin
     from public.dish_cost_snapshot s
     where s.tenant_id = tenant and s.date = on_date and s.price_net > 0 and 100.0 * s.cost / s.price_net > breach_above
   ), episode as (
-    -- first breaching day after the last snapshot within target (days without a snapshot or a
-    -- price say nothing, so they neither end nor start an episode)
-    select b.location_id, b.menu_item_id, (
-             select min(s.date) from public.dish_cost_snapshot s
-             where s.tenant_id = tenant and s.location_id = b.location_id and s.menu_item_id = b.menu_item_id
-               and s.date <= on_date and s.price_net > 0 and s.date > coalesce((
-                 select max(o.date) from public.dish_cost_snapshot o
-                 where o.tenant_id = tenant and o.location_id = b.location_id and o.menu_item_id = b.menu_item_id
-                   and o.date < on_date and o.price_net > 0 and 100.0 * o.cost / o.price_net <= breach_above),
-                 '-infinity'::date)) as started
+    select b.location_id, b.menu_item_id,
+           app.breach_episode_start(tenant, b.location_id, b.menu_item_id, on_date, breach_above) as started
     from breach b
   ), top_dish as (
     select x.location_id, x.menu_item_id from (
@@ -376,11 +480,15 @@ end
 $$;
 
 -- get_cost_alerts with the suggestions -------------------------------------------------------
--- As in 20261106100000_cost_alerts.sql, except suggestions: per dish and location in scope, the
--- latest row evaluated in the window, while it is open or pending, its current price is still the
--- menu price today and the dish's latest snapshot in the window still breaches (a price changed or
--- a cost that came back makes it moot). Highest food cost first. Prices with IVA; `change` is the
--- suggested price vs the current one.
+-- As in 20261106100000_cost_alerts.sql, except:
+-- - price_moves: the app.cost_alerts_top_n() largest moves (by size, either way), still listed by
+--   start day, with price_moves_total counting them all;
+-- - suggestions: per dish and location in scope, the latest row evaluated in the window, while it
+--   is open or pending, an open one only if no acted-on row of its episode holds it back
+--   (app.suggestion_reopens), its current price is still the menu price today and the dish's
+--   latest snapshot in the window still breaches (a price changed or a cost that came back makes
+--   it moot). The app.cost_alerts_top_n() highest food costs, highest first, with
+--   suggestions_total. Prices with IVA; `change` is the suggested price vs the current one.
 create or replace function api.get_cost_alerts(since jsonb default '"last_7d"', location_id uuid default null) returns jsonb
 language plpgsql stable security invoker set search_path = ''
 as $$
@@ -389,9 +497,12 @@ declare
   today date;
   r date[];
   w_to date;
+  top_n int := app.cost_alerts_top_n();
   moves jsonb;
+  moves_total int;
   breaches jsonb;
   suggestions jsonb;
+  suggestions_total int;
   levels app.cost_confidence[];
   flags jsonb := '[]';
   breach_above numeric := app.food_cost_target() + (select s.breach_pts from app.cost_alert_settings() s);
@@ -406,14 +517,7 @@ begin
   end if;
   w_to := today;
 
-  select coalesce(jsonb_agg(jsonb_build_object(
-           'ingredient', m.name,
-           'change', app.pct(m.change_pct, true),
-           'new_unit_price', jsonb_build_object('raw', trim_scale(m.new_price), 'base_unit', m.base_unit,
-                                                'text', app.price_text(m.new_price, m.base_unit)))
-         order by m.started, m.name), '[]')
-  into moves
-  from (
+  with moved as (
     select i.name, i.base_unit, cur.unit_price_net as new_price, j.started,
            100 * (cur.unit_price_net - coalesce(nullif(pre.unit_price_net, 0), j.first_old))
              / coalesce(nullif(pre.unit_price_net, 0), j.first_old) as change_pct
@@ -425,8 +529,20 @@ begin
     cross join lateral app.price_of_record(j.ingredient_id, w_to) cur
     left join lateral app.price_of_record(j.ingredient_id, r[1] - 1) pre on true
     where cur.unit_price_net > 0
-  ) m
-  where abs(m.change_pct) >= (select s.jump_vs_avg_pct from app.cost_alert_settings() s);
+  ), ranked as (
+    select m.*, row_number() over (order by abs(m.change_pct) desc, m.name) as n
+    from moved m
+    where abs(m.change_pct) >= (select s.jump_vs_avg_pct from app.cost_alert_settings() s)
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'ingredient', m.name,
+           'change', app.pct(m.change_pct, true),
+           'new_unit_price', jsonb_build_object('raw', trim_scale(m.new_price), 'base_unit', m.base_unit,
+                                                'text', app.price_text(m.new_price, m.base_unit)))
+         order by m.started, m.name) filter (where m.n <= top_n), '[]'),
+         count(*)
+  into moves, moves_total
+  from ranked m;
 
   with latest as (
     select distinct on (s.menu_item_id, s.location_id) s.menu_item_id, s.cost, s.price_net, s.confidence
@@ -445,6 +561,30 @@ begin
          (select array_agg(distinct b.confidence) from worst b where b.fc > breach_above)
   into breaches, levels;
 
+  with shown as (
+    select x.*, m.name
+    from (
+      select distinct on (p.location_id, p.menu_item_id) p.*
+      from public.price_suggestion p
+      where p.location_id = any (locs) and p.as_of between r[1] and w_to
+      order by p.location_id, p.menu_item_id, p.as_of desc, p.id desc
+    ) x
+    join public.menu_item m on m.id = x.menu_item_id
+    where x.status in ('open', 'pending')
+      and (x.status = 'pending' or not exists (
+             select 1 from public.price_suggestion d
+             where d.tenant_id = x.tenant_id and d.location_id = x.location_id and d.menu_item_id = x.menu_item_id
+               and d.status <> 'open' and d.episode_start >= x.episode_start
+               and not app.suggestion_reopens(d.current_price, d.suggested_price, x.current_price, x.suggested_price)))
+      and x.current_price = app.menu_price_on(x.menu_item_id, x.location_id, w_to)
+      and (select 100.0 * s.cost / s.price_net > breach_above
+           from public.dish_cost_snapshot s
+           where s.location_id = x.location_id and s.menu_item_id = x.menu_item_id
+             and s.date between r[1] and w_to and s.price_net > 0
+           order by s.date desc limit 1)
+  ), ranked as (
+    select x.*, row_number() over (order by x.value desc, x.name, x.location_id) as n from shown x
+  )
   select coalesce(jsonb_agg(jsonb_build_object(
            'menu_item_id', x.menu_item_id,
            'location_id', x.location_id,
@@ -457,28 +597,17 @@ begin
            'new_food_cost', case when x.new_food_cost_pct is not null then app.pct(x.new_food_cost_pct) end,
            'confidence', x.confidence,
            'rationale_code', x.rationale_code)
-         order by x.value desc, x.name, x.location_id), '[]')
-  into suggestions
-  from (
-    select distinct on (p.location_id, p.menu_item_id) p.*, m.name
-    from public.price_suggestion p
-    join public.menu_item m on m.id = p.menu_item_id
-    where p.location_id = any (locs) and p.as_of between r[1] and w_to
-    order by p.location_id, p.menu_item_id, p.as_of desc
-  ) x
-  where x.status in ('open', 'pending')
-    and x.current_price = app.menu_price_on(x.menu_item_id, x.location_id, w_to)
-    and (select 100.0 * s.cost / s.price_net > breach_above
-         from public.dish_cost_snapshot s
-         where s.location_id = x.location_id and s.menu_item_id = x.menu_item_id
-           and s.date between r[1] and w_to and s.price_net > 0
-         order by s.date desc limit 1);
+         order by x.n) filter (where x.n <= top_n), '[]'),
+         count(*)
+  into suggestions, suggestions_total
+  from ranked x;
 
   if breaches <> '[]' then
     flags := flags || app.confidence_flag(levels);
   end if;
   return app.rpc_ok(
-    jsonb_build_object('price_moves', moves, 'breaches', breaches, 'suggestions', suggestions),
+    jsonb_build_object('price_moves', moves, 'price_moves_total', moves_total, 'breaches', breaches,
+                       'suggestions', suggestions, 'suggestions_total', suggestions_total),
     locs, flags, null, array[r[1], w_to]);
 exception when sqlstate '22023' then
   return app.rpc_error('invalid_args', sqlerrm, coalesce(locs, '{}'));
@@ -486,15 +615,20 @@ end
 $$;
 
 -- Privileges ---------------------------------------------------------------------------------
--- get_menu_engineering runs as the caller and needs the quadrant rule. The writer, the formula
--- and their helpers are the backend's (service_role), called from the evaluator.
+-- get_menu_engineering runs as the caller and needs the quadrant rule; get_cost_alerts the list size
+-- and the sticky rule. The writer, the formula and their helpers are the backend's (service_role),
+-- called from the evaluator.
 revoke all on function app.price_suggestion_settings(), app.price_point(numeric, boolean),
   app.suggest_menu_price(bigint, bigint, numeric, numeric), app.is_resale(uuid, date),
-  app.menu_quadrants(uuid[], date, date), app.write_price_suggestions(uuid, date)
+  app.menu_quadrants(uuid[], date, date), app.write_price_suggestions(uuid, date), app.cost_alerts_top_n(),
+  app.breach_episode_start(uuid, uuid, uuid, date, numeric), app.menu_price_steady(uuid, uuid, date, date),
+  app.suggestion_reopens(bigint, bigint, bigint, bigint)
   from public, anon, authenticated;
-grant execute on function app.menu_quadrants(uuid[], date, date) to authenticated, service_role;
+grant execute on function app.menu_quadrants(uuid[], date, date), app.cost_alerts_top_n(),
+  app.suggestion_reopens(bigint, bigint, bigint, bigint) to authenticated, service_role;
 grant execute on function app.price_suggestion_settings(), app.price_point(numeric, boolean),
   app.suggest_menu_price(bigint, bigint, numeric, numeric), app.is_resale(uuid, date),
   app.write_price_suggestions(uuid, date), app.item_cost_rows(uuid[], date, date),
+  app.breach_episode_start(uuid, uuid, uuid, date, numeric), app.menu_price_steady(uuid, uuid, date, date),
   app.net_ex_iva(numeric, numeric), app.menu_price_row(uuid, uuid, date)
   to service_role;

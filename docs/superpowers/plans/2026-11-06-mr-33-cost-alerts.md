@@ -34,6 +34,15 @@
 - **Status** stays `open` until the owner acts (`acknowledged`, `dismissed`).
 - Doc 03 formula divides by a fraction, but values are percent points: convert. Missing snapshot => no alert, never a guess. Stale-cost and mix-shift alerts later.
 
+## Part b rules (PR #94 review, decided 2026-11-06)
+
+- **Episode (A1, P5):** one `price_suggestion` row per breach episode per (tenant, location, dish), not per day; the episode is the margin_breach alert's (`episode_start`, shared `app.breach_episode_start`). While open, the daily run refreshes the row in place (`as_of` = last day evaluated); an older day never writes back. A pending, dismissed or applied row sticks for its episode: no new open row until a new episode starts, the current price changes, or the suggested price moves to a higher price point (a price where a review stood counts as higher; `app.suggestion_reopens`). At most one open row per dish and location (partial unique index). `get_cost_alerts` never shows an open row that an acted-on row of its episode holds back.
+- **Pacing:** both observations count only at the dish's current menu price: that price must be the menu price every day since the earlier observation (`app.menu_price_steady`), so a week passes after any price change (e.g. an applied $60 -> $65) before the next step. The suggestion quotes the menu price on the evaluated day.
+- **Resale (A2, U2):** `app.is_resale` = recipe of record is one line, an ingredient bought by the piece, no sub-recipe, quantity exactly 1, yield 100 % (line and recipe): one bought piece = one sold item. "5 tortillas" and "2 huevos" are dishes. An owner-confirmed `menu_item.is_resale` flag at onboarding is MR-95. Checked only on rows left after the quadrant join (P1).
+- **Cap (P4, contract):** `get_cost_alerts` lists the top 10 suggestions by food cost and the 10 largest price moves (by size; still listed by start day), with `suggestions_total` and `price_moves_total` (doc 13: tool results ~400 tokens). `CostAlertsData.COST_ALERTS_TOP_N`, `app.cost_alerts_top_n()`. `breaches` is still uncapped.
+- **Performance:** `menu_quadrants` is a materialized CTE (once per location; inlined it re-ran per breaching dish: 273 s on the benchmark). bench8 (50 tenants, all breaching): evaluate one tenant/day 3.9 s first run, 2.9 s rerun; `get_cost_alerts` last_30d 2.5 s.
+- **Follow-up MR-95:** P2 (quadrants once per tenant), P3 (`get_menu_engineering` reads `item_cost_rows` once), P6 (lateral snapshot lookups), the resale flag, and "Cambiar precios" building the pending change from the server-side row (still open, current price unchanged), never from the button payload or the LLM.
+
 ## Tasks
 
 ### Task 1: Tests first

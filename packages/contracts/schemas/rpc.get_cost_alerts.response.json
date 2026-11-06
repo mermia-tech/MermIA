@@ -45,6 +45,7 @@
     },
     "CostAlertsData": {
       "additionalProperties": false,
+      "description": "Ingredient price moves, dishes over target and price suggestions (MR-33).\n\nDoc 13 keeps tool results small (top N only): `price_moves` holds the 10 largest moves (by\nsize, either way; listed by start day) and `suggestions` the 10 highest food costs; the\n`*_total` fields count every row, so the agent can say how many more there are.",
       "properties": {
         "breaches": {
           "items": {
@@ -57,21 +58,37 @@
           "items": {
             "$ref": "#/$defs/PriceMove"
           },
+          "maxItems": 10,
           "title": "Price Moves",
           "type": "array"
+        },
+        "price_moves_total": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Price Moves Total",
+          "type": "integer"
         },
         "suggestions": {
           "items": {
             "$ref": "#/$defs/PriceSuggestion"
           },
+          "maxItems": 10,
           "title": "Suggestions",
           "type": "array"
+        },
+        "suggestions_total": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Suggestions Total",
+          "type": "integer"
         }
       },
       "required": [
         "price_moves",
+        "price_moves_total",
         "breaches",
-        "suggestions"
+        "suggestions",
+        "suggestions_total"
       ],
       "title": "CostAlertsData",
       "type": "object"

@@ -537,10 +537,36 @@ class PriceSuggestion(Model):
         return self
 
 
+COST_ALERTS_TOP_N: Final = 10
+"""How many price moves and suggestions get_cost_alerts lists (`app.cost_alerts_top_n()`)."""
+
+
 class CostAlertsData(Model):
-    price_moves: list[PriceMove]
+    """Ingredient price moves, dishes over target and price suggestions (MR-33).
+
+    Doc 13 keeps tool results small (top N only): `price_moves` holds the 10 largest moves (by
+    size, either way; listed by start day) and `suggestions` the 10 highest food costs; the
+    `*_total` fields count every row, so the agent can say how many more there are.
+    """
+
+    price_moves: Annotated[list[PriceMove], Field(max_length=COST_ALERTS_TOP_N)]
+    price_moves_total: Count
     breaches: list[TargetBreach]
-    suggestions: list[PriceSuggestion]
+    suggestions: Annotated[list[PriceSuggestion], Field(max_length=COST_ALERTS_TOP_N)]
+    suggestions_total: Count
+
+    @model_validator(mode="after")
+    def _top_of_total(self) -> CostAlertsData:
+        for rows, total in (
+            (self.price_moves, self.price_moves_total),
+            (self.suggestions, self.suggestions_total),
+        ):
+            if len(rows) != min(total, COST_ALERTS_TOP_N):
+                raise ValueError(
+                    f"a list is the top {COST_ALERTS_TOP_N} of its total:"
+                    f" {len(rows)} rows, total {total}"
+                )
+        return self
 
 
 class SourceStatus(Model):
