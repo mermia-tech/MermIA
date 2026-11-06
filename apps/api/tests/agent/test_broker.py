@@ -373,3 +373,40 @@ def test_a_figure_from_an_earlier_reply_passes_the_validator(
     response = broker(request, el_guero, fake_rpc)
     assert response.route == "haiku"
     assert [r.validator_result for r in store.rows] == ["pass"]
+
+
+def test_only_the_last_model_message_is_sent(
+    broker: LlmBroker, agents: Any, reply: Any, el_guero: Any, fake_rpc: Any
+) -> None:
+    # Agno joins the text of every model turn into `content`, the pre-tool narration included.
+    from types import SimpleNamespace
+
+    def step(tools: dict[str, Any]) -> Any:
+        out = reply("Voy a revisar.Sí, tus datos están al día.")(tools)
+        messages = [
+            Message(role="assistant", content="Voy a revisar."),
+            Message(role="tool", content="{}"),
+            Message(role="assistant", content="Sí, tus datos están al día."),
+        ]
+        return SimpleNamespace(**{**vars(out), "messages": messages})
+
+    agents.script = [step]
+    response = broker(_text(el_guero), el_guero, fake_rpc)
+    assert response.messages == [TextMsg(kind="text", text="Sí, tus datos están al día.")]
+
+
+def test_an_empty_last_message_is_an_empty_reply(
+    broker: LlmBroker, agents: Any, reply: Any, el_guero: Any, fake_rpc: Any
+) -> None:
+    from types import SimpleNamespace
+
+    def step(tools: dict[str, Any]) -> Any:
+        out = reply("Voy a revisar.")(tools)
+        messages = [
+            Message(role="assistant", content="Voy a revisar."),
+            Message(role="assistant", content=""),
+        ]
+        return SimpleNamespace(**{**vars(out), "messages": messages})
+
+    agents.script = [step]
+    assert _is_menu(broker(_text(el_guero), el_guero, fake_rpc))

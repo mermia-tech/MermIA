@@ -80,6 +80,15 @@ def _tools(rpc: RpcCall, results: list[str]) -> list[Function]:
     ]
 
 
+def _reply_text(out: Any) -> str:
+    """The last model message: Agno joins every turn's text into `content`, so the owner would
+    get the narration written before a tool call ("Voy a revisar….Sí, …")."""
+    said = [m for m in (out.messages or []) if m.role == "assistant"]
+    if said:
+        return said[-1].get_content_string() or ""
+    return str(out.content or "")  # no messages: a provider error's text, or a test double
+
+
 def _reply(text: str, usage_id: UUID) -> AgentResponse:
     return AgentResponse(
         messages=[TextMsg(kind="text", text=text)], route="haiku", usage_id=usage_id
@@ -185,10 +194,10 @@ class LlmBroker:
         except Exception as e:
             error = f"{type(e).__name__}: {e}"
         latency_ms = int((time.perf_counter() - start) * 1000)
-        text = str(out.content or "").strip() if out is not None else ""
+        text = _reply_text(out).strip() if out is not None else ""
         metrics: RunMetrics | None = out.metrics if out is not None else None
         if out is not None and out.status != RunStatus.completed:  # the provider's error text
-            error = text or f"run {out.status}"
+            error = str(out.content or "").strip() or f"run {out.status}"
         elif out is not None and not text:
             error = "empty reply"
         elif metrics is not None and self._output_tokens(metrics) >= MAX_OUTPUT_TOKENS:
