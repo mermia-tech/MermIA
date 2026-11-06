@@ -262,6 +262,7 @@ def test_an_invented_figure_gets_one_silent_retry(
     *earlier, correction = agents.inputs[1]
     assert [m.role for m in earlier] == ["assistant"]  # the first run, without its system message
     assert correction.role == "user" and "99999" in correction.content
+    assert "no lo menciones" in correction.content  # the owner never sees the correction
     assert len(fake_rpc.calls) == 1
 
 

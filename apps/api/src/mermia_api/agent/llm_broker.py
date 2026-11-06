@@ -90,7 +90,8 @@ def _correction(figures: set[Decimal]) -> str:
     shown = ", ".join(str(f) for f in sorted(figures))
     return (
         f"Estas cifras no salen de ninguna herramienta: {shown}. Reescribe la respuesta usando "
-        "solo cifras que devolvieron las herramientas, copiadas tal cual."
+        "solo cifras que devolvieron las herramientas, copiadas tal cual. Este aviso es "
+        "interno: no lo menciones."
     )
 
 
