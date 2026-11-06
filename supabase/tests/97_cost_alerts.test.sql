@@ -42,13 +42,13 @@ begin
   return n;
 end $$;
 
-create function pg_temp.rpc(claims text, expr text) returns jsonb
+create function pg_temp.rpc(claims text, expr text, today text default '2026-10-12') returns jsonb
 language plpgsql as $$
 declare r jsonb;
 begin
   execute 'set local role authenticated';
   perform set_config('request.jwt.claims', claims, true);
-  perform set_config('app.today', '2026-10-12', true);
+  perform set_config('app.today', today, true);
   execute 'select ' || expr into r;
   reset role;
   return r;
@@ -173,9 +173,9 @@ savepoint moves;
 insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
 values (:'TENANT', :'MEAT', 0.250, '2026-10-05', 'cfdi'), (:'TENANT', :'AVOCADO', 0, '2026-10-12', 'manual');
 select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data,price_moves}',
-          '[{"ingredient": "Carne al pastor (adobada)", "change": {"raw": 28.2051, "text": "+28.2%"},
+          '[{"ingredient": "Carne al pastor (adobada)", "change": {"raw": 47.0588, "text": "+47.1%"},
              "new_unit_price": {"raw": 0.25, "base_unit": "g", "text": "$250.00/kg"}}]',
-          'two jumps on one ingredient: the latest; an ingredient at zero at the window''s end is left out');
+          'two jumps on one ingredient: one move, from the price before the window ($170) to the one at its end; an ingredient at zero at the window''s end is left out');
 rollback to savepoint moves;
 
 -- the jump rule ------------------------------------------------------------------------------
@@ -187,6 +187,10 @@ select is((select row(j.started, j.avg_unit_price, j.threshold_pct, round(j.chan
            from app.price_jumps(:'TENANT', '2026-09-12', '2026-10-12') j where j.ingredient_id = :'BISTEC'),
           row('2026-10-08'::date, 0.213430::numeric, 8.0::numeric, round(100 * (0.231 - 0.21343) / 0.21343, 4)),
           'a creeping price fires the 30-day average rule (23 days at $210 and 7 at $224.70)');
+select is((select m #> '{change,raw}' from jsonb_array_elements(
+             pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data,price_moves}') m
+           where m ->> 'ingredient' = 'Bistec de res'),
+          '10'::jsonb, 'the RPC quotes the whole move over the window ($210 to $231), not the last step');
 select is((select count(*) from app.price_jumps(:'TENANT', '2026-10-01', '2026-10-01')), 0::bigint, '+7 % alone is no jump');
 rollback to savepoint creep;
 
@@ -200,17 +204,39 @@ select is((select count(*) from app.price_jumps(:'TENANT', '2026-10-05', '2026-1
 select is(pg_temp.evaluate(:'TENANT', '2026-10-05', '2026-10-12', '2026-10-12'), 0, 'so no second aguacate alert');
 select is((select jsonb_agg(jsonb_build_array(m ->> 'ingredient', m #> '{change,raw}', m #> '{new_unit_price,raw}'))
            from jsonb_array_elements(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data,price_moves}') m),
-          '[["Carne al pastor (adobada)", 14.7059, 0.195], ["Aguacate Hass", 61.8182, 0.087]]',
-          'the RPC quotes the jump''s change and the price of record at the window''s end');
--- a fall back below the price before the jump is a jump down, quoted as a drop, never +61.8 %
+          '[["Carne al pastor (adobada)", 14.7059, 0.195], ["Aguacate Hass", 58.1818, 0.087]]',
+          'the RPC quotes the move from the price before the window ($55) to the one at its end ($87)');
+-- a fall back to $54 is a jump down (-37.9 %), but over the window the price barely moved: no row
 insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
 values (:'TENANT', :'AVOCADO', 0.054, '2026-10-12', 'nota');
 select is((select jsonb_agg(jsonb_build_array(m ->> 'text', m #> '{new_unit_price,raw}'))
            from jsonb_array_elements(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data,price_moves}') x,
                 lateral (select x || jsonb_build_object('text', x #>> '{change,text}')) y(m)
            where m ->> 'ingredient' = 'Aguacate Hass'),
-          '[["-37.9%", 0.054]]', 'its latest jump, a drop: never the wrong sign');
+          null, 'a move since undone (-1.8 % from $55) is left out, never quoted with the wrong sign');
+select is((select count(*) from app.price_jumps(:'TENANT', '2026-10-12', '2026-10-12') j where j.ingredient_id = :'AVOCADO'),
+          1::bigint, 'though the fall itself is a jump');
 rollback to savepoint lag;
+
+savepoint second_step;
+-- pastor $170 -> $195 on 09-21, then $215 on 09-24: +10.3 % vs the last price, far above the
+-- 30-day average ($172.50) it never came back to; the second step is a jump too
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'MEAT', 0.215, '2026-09-24', 'cfdi');
+select is((select jsonb_agg(jsonb_build_array(j.started, j.old_unit_price, j.new_unit_price, j.threshold_pct, round(j.change_pct, 4))
+                            order by j.started)
+           from app.price_jumps(:'TENANT', '2026-09-12', '2026-10-12') j where j.ingredient_id = :'MEAT'),
+          jsonb_build_array(jsonb_build_array('2026-09-21', 0.170, 0.195, 8.0, 14.7059),
+                            jsonb_build_array('2026-09-24', 0.195, 0.215, 8.0, round(100 * (0.215 - 0.1725) / 0.1725, 4))),
+          'both steps are jumps (the second on the 30-day average rule)');
+select is(pg_temp.evaluate(:'TENANT', '2026-09-24', '2026-09-24', '2026-10-12'), 1, 'the second step is alerted');
+select is((select count(*) from public.alert a where a.ingredient_id = :'MEAT' and a.rule = 'price_jump'), 2::bigint,
+          'one alert per step');
+select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_7d"', :'CENTRO'), '2026-09-27') #> '{data,price_moves}',
+          '[{"ingredient": "Carne al pastor (adobada)", "change": {"raw": 26.4706, "text": "+26.5%"},
+             "new_unit_price": {"raw": 0.215, "base_unit": "g", "text": "$215.00/kg"}}]',
+          'the RPC quotes the move from the price before the window ($170) to $215, not the first step');
+rollback to savepoint second_step;
 
 savepoint drops;
 insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)

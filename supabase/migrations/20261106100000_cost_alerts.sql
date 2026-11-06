@@ -109,11 +109,13 @@ as $$
     where n.unit_price_net > 0 and o.unit_price_net > 0 and n.unit_price_net <> o.unit_price_net
   ), fired as (
     select m.*, 100 * abs(m.new_price - m.old_price) >= k.jump_vs_last_pct * m.old_price as vs_last,
-           -- the move crosses the line around the average (the average lags a jump: once a price
-           -- sits outside the line, later moves never fire against it)
-           100 * abs(m.old_price - m.avg_price) < k.jump_vs_avg_pct * m.avg_price
-             and 100 * abs(m.new_price - m.avg_price) >= k.jump_vs_avg_pct * m.avg_price
-             and sign(m.new_price - m.avg_price) = sign(m.new_price - m.old_price) as vs_avg,
+           -- the new price is outside the line around the average, on the side the price moved to,
+           -- and the move either crosses that line or is itself a step of at least the line (the
+           -- average lags a jump: a small move while it still lags is no jump, a second step is)
+           100 * abs(m.new_price - m.avg_price) >= k.jump_vs_avg_pct * m.avg_price
+             and sign(m.new_price - m.avg_price) = sign(m.new_price - m.old_price)
+             and (100 * abs(m.old_price - m.avg_price) < k.jump_vs_avg_pct * m.avg_price
+                  or 100 * abs(m.new_price - m.old_price) >= k.jump_vs_avg_pct * m.old_price) as vs_avg,
            k.jump_vs_last_pct, k.jump_vs_avg_pct
     from move m, k
   )
@@ -254,12 +256,13 @@ end
 $$;
 
 -- get_cost_alerts on the shared jump rule ----------------------------------------------------
--- As in 20261104090000_read_rpcs_cost.sql, except price moves: per ingredient, the latest jump
--- (app.price_jumps) that started in the window, while the ingredient still has a price of record
--- above zero at the window's end. `change` is the change that fired; `new_unit_price` is still the
--- price of record at the window's end. A move the price has since undone (back across the price
--- before the jump) is left out, so the change never shows the wrong sign. Breaches read the
--- breach points from app.cost_alert_settings(). Same output (C3).
+-- As in 20261104090000_read_rpcs_cost.sql, except price moves: ingredients with a jump
+-- (app.price_jumps) that started in the window and a price of record above zero at the window's
+-- end. `change` is computed from that price and the price before the window (#77's move; the
+-- earliest jump's last price when the ingredient had none above zero then), so a second step
+-- shows the whole move; a row whose move is under 8 % (since undone) is left out. Ordered by the
+-- latest jump's start. Breaches read the breach points from app.cost_alert_settings(). Same
+-- output (C3).
 create or replace function api.get_cost_alerts(since jsonb default '"last_7d"', location_id uuid default null) returns jsonb
 language plpgsql stable security invoker set search_path = ''
 as $$
@@ -293,15 +296,19 @@ begin
          order by m.started, m.name), '[]')
   into moves
   from (
-    select distinct on (j.ingredient_id) i.name, i.base_unit, j.old_unit_price as old_price,
-           cur.unit_price_net as new_price, j.change_pct, j.started
-    from app.price_jumps((select app.current_tenant_id()), r[1], w_to) j
+    select i.name, i.base_unit, cur.unit_price_net as new_price, j.started,
+           100 * (cur.unit_price_net - coalesce(nullif(pre.unit_price_net, 0), j.first_old))
+             / coalesce(nullif(pre.unit_price_net, 0), j.first_old) as change_pct
+    from (select x.ingredient_id, max(x.started) as started,
+                 (array_agg(x.old_unit_price order by x.started))[1] as first_old
+          from app.price_jumps((select app.current_tenant_id()), r[1], w_to) x
+          group by x.ingredient_id) j
     join public.ingredient i on i.id = j.ingredient_id
     cross join lateral app.price_of_record(j.ingredient_id, w_to) cur
+    left join lateral app.price_of_record(j.ingredient_id, r[1] - 1) pre on true
     where cur.unit_price_net > 0
-    order by j.ingredient_id, j.started desc
   ) m
-  where sign(m.new_price - m.old_price) = sign(m.change_pct);
+  where abs(m.change_pct) >= (select s.jump_vs_avg_pct from app.cost_alert_settings() s);
 
   with latest as (
     select distinct on (s.menu_item_id, s.location_id) s.menu_item_id, s.cost, s.price_net, s.confidence

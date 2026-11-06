@@ -24,7 +24,8 @@
 
 ## Technical calls (open to change, repeated in the PR)
 
-- **Price jump** (03): the price of record changes on a day and the new price is at least 15 % away from the last price, or at least 8 % away from the 30-day time-weighted average (the price of record on each of the 30 days before). Both directions; zero prices are never a jump. Only ingredients a live dish uses. The quoted change is the one that fired (vs the last price when the 15 % rule fires, else vs the average).
+- **Price jump** (03): the price of record changes on a day and either (a) the new price is at least 15 % away from the last price, or (b) the new price is at least 8 % away from the 30-day time-weighted average (the price of record on each of the 30 days before) on the side the price moved to, and either the last price was within 8 % of that average or the step itself is at least 8 % vs the last price (so a small move while the average still lags a jump is no jump, but a second step, e.g. pastor $170 -> $195 -> $215, is). Both directions; zero prices are never a jump. Only ingredients a live dish uses. The alert quotes the change that fired (vs the last price when (a) fires, else vs the average).
+- **`get_cost_alerts` price moves:** ingredients with a jump that started in the window; `change` is from the price before the window to the price of record at its end (as #77), so a second step shows the whole move; a row under 8 % (a move since undone) is left out.
 - **Top-20 filter:** applies to urgency only (U3); every jump of at least 8 % gets a normal alert for the weekly report.
 - **Spend** for the top 20: theoretical usage over the 30 days to the evaluation day (units sold x recipe of record, through sub-recipes, x price of record), since purchases are only partly captured in Phase 1.
 - **Top 10 dishes:** by net sales at the location over the same 30 days.
