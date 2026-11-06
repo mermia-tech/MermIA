@@ -1,0 +1,29 @@
+# Onboarding spec for `uv run python -m mermia_api.admin <file> --operator <you>` (MR-30).
+# The first run creates the tenant and prints its id: add it as tenant.id before any rerun.
+# Rerunning the same file changes nothing; edit it and rerun to update. Nothing is ever deleted.
+# Keep real specs out of git: they hold customers' phone numbers.
+
+tenant:
+  name: Taquería La Ejemplo        # a new tenant: refused if one is named like it already
+  rfc: TLE200101AB1                # optional
+  # id: <uuid>                     # required on reruns: the id the first run printed
+
+locations:
+  - name: Centro
+    timezone: America/Mexico_City  # default for a new location; left out = keep the stored one
+    address: Av. Ejemplo 1, Centro, CDMX
+    sr_version: "12"
+  - name: Roma
+
+users:
+  - name: Rosa
+    phone: "+52 55 0000 0001"      # E.164; spaces, dashes, parentheses and a +52 1 are dropped
+    email: rosa@example.com        # optional; for the Phase 2 dashboard login (not used yet)
+    role: owner                    # owner | manager | admin | support
+    # locations: all               # default for owner, admin and support
+    # existing_user: true          # only if this phone is already a member of another tenant
+  - name: Beto
+    phone: "+52 55 0000 0002"
+    role: manager
+    locations: [Roma]              # required for a manager: a list of names above, or all
+    # can_approve: [import_batch.approve, import_batch.rollback]   # the manager default

@@ -930,6 +930,7 @@ dependencies = [
     { name = "mermia-contracts" },
     { name = "openpyxl" },
     { name = "psycopg", extra = ["binary"] },
+    { name = "pyyaml" },
     { name = "uvicorn" },
 ]
 
@@ -937,6 +938,7 @@ dependencies = [
 dev = [
     { name = "httpx2" },
     { name = "types-openpyxl" },
+    { name = "types-pyyaml" },
 ]
 
 [package.metadata]
@@ -945,6 +947,7 @@ requires-dist = [
     { name = "mermia-contracts", editable = "packages/contracts" },
     { name = "openpyxl", specifier = ">=3.1" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
+    { name = "pyyaml", specifier = ">=6.0" },
     { name = "uvicorn", specifier = ">=0.34" },
 ]
 
@@ -952,6 +955,7 @@ requires-dist = [
 dev = [
     { name = "httpx2" },
     { name = "types-openpyxl" },
+    { name = "types-pyyaml" },
 ]
 
 [[package]]
@@ -1824,6 +1828,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/af/13/ce0b36e7e29ee31ec75d6718d48d28d2d48ad319ddf4665f81c8f3a8fc95/types_openpyxl-3.1.5.20261017.tar.gz", hash = "sha256:3deb3b6279b65ab379c126df0ee1fd27500c9628edb8d9667d73f637462917dc", size = 102026, upload-time = "2026-10-17T06:20:01.431Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2b/17/a091e90fde3e90eff9168354269626e210a4c3c688910d8c9176b8a08cb4/types_openpyxl-3.1.5.20261017-py3-none-any.whl", hash = "sha256:3315cfebad290cc7ade1fccaf3a46ee820b3a8e7df726ff4f18d30ab7f383d68", size = 165886, upload-time = "2026-10-17T06:19:59.944Z" },
+]
+
+[[package]]
+name = "types-pyyaml"
+version = "6.0.12.20261103"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d9/82/2ed4d215a2840b467a9a864f03b0d21904250e28f5e1f006ad36fba0311a/types_pyyaml-6.0.12.20261103.tar.gz", hash = "sha256:7a1b5f837881dd35d5448b5f18275164f89f206185e31e8eae6e0b42607bc001", size = 18911, upload-time = "2026-11-03T08:45:23.714Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e8/10/4353eb86278f6a59aeb9fe2be4d979c20b110b4009fa455a3ea6467cf5cb/types_pyyaml-6.0.12.20261103-py3-none-any.whl", hash = "sha256:444654c61f635dab82c092a511aa96a0ce31164810784b9a37314e3e56532ac8", size = 21299, upload-time = "2026-11-03T08:45:22.749Z" },
 ]
 
 [[package]]
