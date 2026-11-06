@@ -399,3 +399,13 @@ def test_no_data_says_what_is_missing(rpc: str, args: dict[str, Any], text: str)
     # SQL (#77): food cost answers no_data when no dish has a cost yet, the breakdown when the
     # days have no per-payment detail
     assert no_data(rpc, args).text == text
+
+
+def test_data_status_with_nothing_loaded_names_the_location(
+    example: Any, el_guero: dict[UUID, str]
+) -> None:
+    envelope = example("get_data_status")
+    data = {**envelope.data, "sources": [{"source_kind": "sr_report", "last_batch_at": None}]}
+    args = {"location_id": CENTRO}
+    reply = render("get_data_status", args, envelope.model_copy(update={"data": data}), el_guero)
+    assert reply.text.splitlines()[0] == "Todavía no hay reportes cargados en Centro."
