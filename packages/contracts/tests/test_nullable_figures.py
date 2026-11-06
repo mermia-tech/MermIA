@@ -1,10 +1,10 @@
 """Figures the data may not have are null, never zero (MR-10 spec 5.5: not reported is not zero).
 
 `daily_sales_agg.tickets`, `guests`, `discounts` and `cancellations_amount` and
-`daily_location_metrics.avg_ticket` are nullable; `item_sales_agg` has no ticket count; the
-`price_suggestion` table has no `menu_item_id` and no current price. The fields stay REQUIRED
-where they are nullable (a key that is left out is an error), except the two optional ones of
-PriceSuggestion.
+`daily_location_metrics.avg_ticket` are nullable; `item_sales_agg` has no ticket count. The fields
+stay REQUIRED where they are nullable (a key that is left out is an error). (PriceSuggestion's
+dish and current price were optional here until MR-33 gave `price_suggestion` both columns: see
+test_price_suggestion.py.)
 """
 
 import copy
@@ -15,7 +15,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from mermia_contracts.rpc import BreakdownRow, PriceSuggestion, SalesSummaryData
+from mermia_contracts.rpc import BreakdownRow, SalesSummaryData
 
 EXAMPLES = Path(__file__).parent / "examples" / "rpc"
 NULLABLE = ["tickets", "avg_ticket", "guests", "discounts", "cancellations"]
@@ -95,37 +95,6 @@ def test_a_breakdown_row_that_omits_tickets_is_an_error() -> None:
 
 def test_zero_tickets_in_a_breakdown_row_stays_zero() -> None:
     assert BreakdownRow.model_validate({**_row(), "tickets": 0}).tickets == 0
-
-
-def _suggestion() -> dict[str, Any]:
-    return {
-        "menu_item_id": "0f7a1c52-3b6e-7c1a-9d22-000000000001",
-        "name": "Taco al pastor",
-        "current_price": {"raw": 5000, "text": "$50.00"},
-        "suggested_price": {"raw": 5500, "text": "$55.00"},
-    }
-
-
-@pytest.mark.parametrize("field", ["menu_item_id", "current_price"])
-def test_the_dish_id_and_the_current_price_of_a_suggestion_are_optional(field: str) -> None:
-    PriceSuggestion.model_validate(_suggestion())
-    omitted = {k: v for k, v in _suggestion().items() if k != field}
-    assert getattr(PriceSuggestion.model_validate(omitted), field) is None
-    assert getattr(PriceSuggestion.model_validate({**_suggestion(), field: None}), field) is None
-
-
-def test_a_suggestion_still_needs_a_name_and_a_suggested_price() -> None:
-    for field in ("name", "suggested_price"):
-        omitted = {k: v for k, v in _suggestion().items() if k != field}
-        with pytest.raises(ValidationError) as info:
-            PriceSuggestion.model_validate(omitted)
-        assert [(e["loc"], e["type"]) for e in info.value.errors()] == [((field,), "missing")]
-
-
-def test_a_suggestion_with_neither_optional_field_is_valid() -> None:
-    bare = {"name": "Taco al pastor", "suggested_price": {"raw": 5500, "text": "$55.00"}}
-    suggestion = PriceSuggestion.model_validate(bare)
-    assert (suggestion.menu_item_id, suggestion.current_price) == (None, None)
 
 
 @pytest.mark.parametrize("name", ["get_sales_summary.nulls", "get_sales_breakdown.no_tickets"])

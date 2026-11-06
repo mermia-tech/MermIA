@@ -4,7 +4,7 @@ Regenerate with `python -m mermia_contracts.tools.gen_db_models` after
 `supabase db reset`. Source of truth: supabase/migrations.
 
 generator_version: 1
-migrations_sha256: 185a0bea1dc26ea563b3997af2032baa504272dfa651ec318e35321ca4186e1a
+migrations_sha256: ba258f75470c3decaed3dc740301f8970e469cd42a4cfb27a45643cffbc5ccbd
 """
 
 import datetime as dt
@@ -673,16 +673,21 @@ class PriceSuggestionRow(RowModel):
     tenant_id: UUID
     location_id: UUID | None = None
     rule: str
-    subject: str | None = None
     value: Decimal | None = None
     threshold: Decimal | None = None
-    status: str | None = None
+    status: str
     suggested_price: Cents | None = None
     currency: str
     rationale_code: str | None = None
     created_at: AwareDatetime
     updated_at: AwareDatetime
     version: int
+    menu_item_id: UUID | None = None
+    as_of: dt.date | None = None
+    current_price: Cents | None = None
+    target_price: Cents | None = None
+    new_food_cost_pct: PercentPoints | None = None
+    confidence: CostConfidence | None = None
 
 
 class PurchaseDocRow(RowModel):

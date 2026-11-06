@@ -144,16 +144,58 @@
       ],
       "suggestions": [
         {
-          "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05",
-          "name": "Coca-Cola",
+          "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
+          "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+          "name": "Torta de pastor",
           "current_price": {
-            "raw": 3000,
-            "text": "$30.00"
+            "raw": 8000,
+            "text": "$80.00"
           },
-          "suggested_price": {
-            "raw": 3300,
-            "text": "$33.00"
-          }
+          "target_price": {
+            "raw": 12503,
+            "text": "$125.03"
+          },
+          "suggested_price": null,
+          "change": null,
+          "new_food_cost": null,
+          "confidence": "estimated",
+          "rationale_code": "review_portion_cost"
+        },
+        {
+          "menu_item_id": "81404715-16f4-518e-b9e7-07df075161eb",
+          "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+          "name": "Alambre de res",
+          "current_price": {
+            "raw": 14500,
+            "text": "$145.00"
+          },
+          "target_price": {
+            "raw": 22243,
+            "text": "$222.43"
+          },
+          "suggested_price": null,
+          "change": null,
+          "new_food_cost": null,
+          "confidence": "estimated",
+          "rationale_code": "review_portion_cost"
+        },
+        {
+          "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
+          "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+          "name": "Volcán de pastor",
+          "current_price": {
+            "raw": 4500,
+            "text": "$45.00"
+          },
+          "target_price": {
+            "raw": 5300,
+            "text": "$53.00"
+          },
+          "suggested_price": null,
+          "change": null,
+          "new_food_cost": null,
+          "confidence": "estimated",
+          "rationale_code": "review_portion_cost"
         }
       ]
     },

@@ -477,14 +477,64 @@ class TargetBreach(Model):
     target: Pct
 
 
-class PriceSuggestion(Model):
-    """`price_suggestion` has a free-text `subject` and no dish id or current price, so
-    `menu_item_id` and `current_price` are present only when the subject resolves to a dish."""
+class SuggestionRationale(StrEnum):
+    """Why a dish gets this suggestion (03 "Price-suggestion formula", MR-33 decision U4)."""
 
-    menu_item_id: UUID | None = None
+    raise_to_target = "raise_to_target"
+    """A plowhorse: `suggested_price` reaches the target food cost."""
+    raise_capped = "raise_capped"
+    """A plowhorse: `suggested_price` is the +10 % cap; reaching the target needs `target_price`."""
+    review_portion_cost = "review_portion_cost"
+    """A puzzle or a dog: "revisa porción/costo" before any price; no suggested price."""
+
+
+_RAISES = frozenset({SuggestionRationale.raise_to_target, SuggestionRationale.raise_capped})
+
+
+class PriceSuggestion(Model):
+    """A menu price suggestion for a dish at a location that breaches the target (MR-33).
+
+    Every price here is a MENU price with IVA included, the price on the menu (settles MR-11 spec
+    7.2): `current_price` is the menu price today, `target_price` the lowest price that reaches the
+    target food cost (to the centavo, not rounded to a price point), `suggested_price` the price
+    point to propose. `change` is suggested vs current; `new_food_cost` the food cost (on the net
+    price, as everywhere) at the suggested price. A review (`review_portion_cost`) has no
+    suggested price, change or new food cost. `confidence` is the cost's (confirmed: fresh CFDI
+    prices and confirmed recipes). Stars and resale items (bottled drinks) never appear.
+    "Cambiar precios" proposes a `menu_item_price.set` pending change for `location_id`.
+    """
+
+    menu_item_id: UUID
+    location_id: UUID
     name: Text
-    current_price: Money | None = None
-    suggested_price: Money
+    current_price: PositiveMoney
+    target_price: PositiveMoney
+    suggested_price: PositiveMoney | None
+    change: Pct | None
+    new_food_cost: Pct | None
+    confidence: CostConfidence
+    rationale_code: SuggestionRationale
+
+    @model_validator(mode="after")
+    def _consistent(self) -> PriceSuggestion:
+        if self.confidence is CostConfidence.missing:
+            raise ValueError("a suggestion needs a cost: confidence is confirmed or estimated")
+        priced = (self.suggested_price, self.change, self.new_food_cost)
+        if self.rationale_code not in _RAISES:
+            if any(x is not None for x in priced):
+                raise ValueError("a review has no suggested price, change or new food cost")
+            return self
+        if self.suggested_price is None or self.change is None or self.new_food_cost is None:
+            raise ValueError("a raise needs suggested_price, change and new_food_cost")
+        current, suggested = self.current_price.raw, self.suggested_price.raw
+        if suggested <= current:
+            raise ValueError("a suggestion never lowers the price")
+        reaches = suggested >= self.target_price.raw
+        if reaches != (self.rationale_code is SuggestionRationale.raise_to_target):
+            raise ValueError("raise_to_target reaches target_price; raise_capped stays under it")
+        if abs(self.change.raw - Decimal(suggested - current) / current * 100) > _PCT_ROUNDING:
+            raise ValueError("change must be suggested_price vs current_price")
+        return self
 
 
 class CostAlertsData(Model):

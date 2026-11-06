@@ -124,3 +124,35 @@ def test_get_cost_alerts_keeps_its_contract(conn: psycopg.Connection[Any]) -> No
 def test_a_bad_range_is_refused_before_the_database(start: dt.date, end: dt.date) -> None:
     with pytest.raises(ValueError):
         evaluate_cost_alerts_range(None, TENANT, start, end)  # type: ignore[arg-type]
+
+
+@pytest.mark.db
+def test_the_run_writes_suggestions_the_rpc_returns(conn: psycopg.Connection[Any]) -> None:
+    evaluate_cost_alerts(conn, TENANT, TODAY, TODAY)
+    evaluate_cost_alerts(conn, TENANT, TODAY, TODAY)  # a rerun refreshes nothing
+    rows = conn.execute(
+        """select m.name, p.rationale_code, p.suggested_price, p.version
+           from public.price_suggestion p join public.menu_item m on m.id = p.menu_item_id
+           where p.location_id = %s order by p.value desc""",
+        [CENTRO],
+    ).fetchall()
+    # puzzles and a dog: "revisa porción/costo"; resale and stars get nothing (U2, U4)
+    assert rows == [
+        ("Torta de pastor", "review_portion_cost", None, 1),
+        ("Alambre de res", "review_portion_cost", None, 1),
+        ("Volcán de pastor", "review_portion_cost", None, 1),
+    ]
+    conn.execute("reset role")
+    conn.execute("set local role authenticated")
+    claims = {"tenant_id": str(TENANT), "location_ids": None}
+    conn.execute("select set_config('request.jwt.claims', %s, true)", [json.dumps(claims)])
+    conn.execute("set local app.today = '2026-10-12'")
+    row = conn.execute("select api.get_cost_alerts(location_id => %s::uuid)", [CENTRO]).fetchone()
+    assert row is not None
+    envelope = TypeAdapter(RpcEnvelope[CostAlertsData]).validate_python(row[0])
+    suggestions = envelope.data.suggestions  # type: ignore[union-attr]
+    assert [(s.name, s.target_price.raw) for s in suggestions] == [
+        ("Torta de pastor", 12503),
+        ("Alambre de res", 22243),
+        ("Volcán de pastor", 5300),
+    ]

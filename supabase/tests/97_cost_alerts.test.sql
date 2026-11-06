@@ -85,7 +85,7 @@ values (:'OTHER', 'aaaaaaaa-0000-7000-8000-0000000003b1', 0.100, '2026-08-01', '
 select ok(app.compute_dish_costs(:'TENANT', '2026-08-17', '2026-10-12') > 0, 'dish cost snapshots computed by the engine');
 create temp table before_counts as
 select (select count(*) from public.pending_change) as pending, (select count(*) from public.menu_item_price) as prices,
-       (select count(*) from public.price_suggestion) as suggestions, (select count(*) from public.ingredient_price) as costs;
+       (select count(*) from public.ingredient_price) as costs;
 
 -- privileges -------------------------------------------------------------------------------
 select ok(has_function_privilege('service_role', 'app.evaluate_cost_alerts(uuid, date, date)', 'execute'), 'the backend runs the evaluator');
@@ -141,10 +141,10 @@ select is((select row(count(*) filter (where status = 'open'), count(*) filter (
           row(19::bigint, 2::bigint), 'every alert open; price jumps are tenant-level (no location)');
 
 -- never applied -----------------------------------------------------------------------------
-select is((select row(b.pending, b.prices, b.suggestions, b.costs) from before_counts b),
-          (select row(count(*), (select count(*) from public.menu_item_price), (select count(*) from public.price_suggestion),
+select is((select row(b.pending, b.prices, b.costs) from before_counts b),
+          (select row(count(*), (select count(*) from public.menu_item_price),
                       (select count(*) from public.ingredient_price)) from public.pending_change),
-          'no pending change, menu price, suggestion or ingredient price is written');
+          'no pending change, menu price or ingredient price is written (suggestions are, 98_price_suggestions)');
 
 -- the other tenant: its own jump only --------------------------------------------------------
 select is(pg_temp.evaluate(:'OTHER', '2026-09-12', '2026-10-12', '2026-10-12'), 1, 'the other tenant gets its own jump');

@@ -2,8 +2,9 @@
 
 The rules live in SQL next to the costing engine (`app.evaluate_cost_alerts`, migration
 20261106100000_cost_alerts.sql): price jumps and margin breaches become `public.alert` rows, urgent
-ones marked for a same-day message (U3; sending is MR-37 / MR-38). Nothing is ever applied: the
-evaluator writes no pending change, menu price or suggestion.
+ones marked for a same-day message (U3; sending is MR-37 / MR-38). The same call writes the day's
+menu price suggestions (`public.price_suggestion`, 20261106110000_price_suggestions.sql). Nothing
+is ever applied: the evaluator writes no pending change and no menu price.
 
 The backend calls `evaluate_cost_alerts` once a day per tenant, after the day's dish costs are
 computed, and `evaluate_cost_alerts_range` to catch up on missed days (oldest first, so breach
@@ -30,7 +31,8 @@ def evaluate_cost_alerts(
     on_date: dt.date,
     today: dt.date | None = None,
 ) -> int:
-    """Write the tenant's alerts for one business day; return how many were added.
+    """Write the tenant's alerts and price suggestions for one business day; return how many
+    alerts were added.
 
     `today` is the day the run happens; None means the tenant's business today.
     """
