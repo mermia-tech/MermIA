@@ -32,7 +32,7 @@ def test_every_table_and_column_is_modelled(db_url: str) -> None:
     tables: dict[str, list[tuple[str, bool]]] = {}
     for table, column, nullable in rows:
         tables.setdefault(table, []).append((column, nullable == "YES"))
-    assert len(tables) == 40
+    assert len(tables) == 41
     for table, columns in tables.items():
         cls = getattr(models, f"{pascal(table)}Row")
         fields = cls.model_fields

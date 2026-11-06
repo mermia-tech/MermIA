@@ -1,6 +1,6 @@
 -- Layers: privilege + policy. Data-driven tenant and location isolation over every table
 -- (spec 7.2, 10.4). Fixtures are inserted with foreign keys switched off (replica mode) so one
--- generic generator can fill all 40 tables; the integrity of the keys is proven in 40_integrity.
+-- generic generator can fill all 41 tables; the integrity of the keys is proven in 40_integrity.
 begin;
 select * from no_plan();
 
@@ -155,7 +155,7 @@ from result where expected is distinct from actual;
 select is((select count(*) from result where expected is distinct from actual), 0::bigint,
           'authenticated sees exactly the rows its claims allow, in every table and scenario');
 select is((select count(*) from result), (select count(*) from cls) * (select count(*) from scenario),
-          'the matrix covers all 40 tables and all 9 scenarios');
+          'the matrix covers all 41 tables and all 9 scenarios');
 
 -- anon is denied at the privilege layer everywhere
 select is((select count(*) from cls where pg_temp.seen('anon', '', tbl) is distinct from 'ERR 42501'), 0::bigint,

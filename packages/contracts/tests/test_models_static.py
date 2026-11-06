@@ -27,8 +27,8 @@ def enums() -> list[type]:
     ]
 
 
-def test_forty_rows_and_twenty_four_enums() -> None:
-    assert len(rows()) == 40
+def test_forty_one_rows_and_twenty_four_enums() -> None:
+    assert len(rows()) == 41
     assert len(enums()) == 24
 
 

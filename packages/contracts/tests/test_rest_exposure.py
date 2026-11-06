@@ -32,6 +32,7 @@ SECRET_CONFIG = "secret-config-do-not-leak"
 X_TABLES = [
     "app_user", "channel_identity", "consent_log", "membership", "raw_file",
     "report_run", "external_ref", "conversation", "llm_usage", "message_log",
+    "dish_cost_backfill",
 ]  # fmt: skip
 
 
