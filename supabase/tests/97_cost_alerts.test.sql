@@ -1,6 +1,7 @@
 -- MR-33 (part a): cost alert rules against the El Güero seed (fixtures/README.md: carne al pastor
 -- $170 -> $195/kg on 2026-09-21, aguacate $55 -> $89/kg on 2026-09-28). The backend's cost job
--- computes snapshots, then the evaluator runs as service_role once per day of 2026-09-12..10-12.
+-- computes snapshots, then the evaluator runs as service_role once per day of 2026-09-12..10-12,
+-- as a catch-up on 2026-10-12 (urgency is judged against that day, not the day evaluated).
 begin;
 select * from no_plan();
 
@@ -13,14 +14,29 @@ select * from no_plan();
 \set AVOCADO 'd01b40d2-85f2-58c9-93b5-e4ab08393eba'
 \set BISTEC '087dcd5c-41dc-5c06-986e-6d558ac6e593'
 \set OTHER 'aaaaaaaa-0000-7000-8000-000000000033'
+\set SUGAR '31c9177d-9581-50c2-bed4-01574d0c7e74'
+\set MASA '26099fe1-626d-504d-8ddb-90d5343f7d5b'
 
--- the backend's daily job over a range of days, as service_role
-create function pg_temp.evaluate(tenant uuid, f date, t date) returns int
+-- the backend's job over a range of days, as service_role, run on `today` (a catch-up when today
+-- is after the range)
+create function pg_temp.evaluate(tenant uuid, f date, t date, today date) returns int
 language plpgsql as $$
 declare n int;
 begin
   execute 'set local role service_role';
-  select coalesce(sum(app.evaluate_cost_alerts(tenant, d::date)), 0) into n
+  select coalesce(sum(app.evaluate_cost_alerts(tenant, d::date, today)), 0) into n
+  from generate_series(f, t, interval '1 day') d;
+  reset role;
+  return n;
+end $$;
+
+-- the daily job as it happens: each day evaluated on that day
+create function pg_temp.evaluate_daily(tenant uuid, f date, t date) returns int
+language plpgsql as $$
+declare n int;
+begin
+  execute 'set local role service_role';
+  select coalesce(sum(app.evaluate_cost_alerts(tenant, d::date, d::date)), 0) into n
   from generate_series(f, t, interval '1 day') d;
   reset role;
   return n;
@@ -72,23 +88,24 @@ select (select count(*) from public.pending_change) as pending, (select count(*)
        (select count(*) from public.price_suggestion) as suggestions, (select count(*) from public.ingredient_price) as costs;
 
 -- privileges -------------------------------------------------------------------------------
-select ok(has_function_privilege('service_role', 'app.evaluate_cost_alerts(uuid, date)', 'execute'), 'the backend runs the evaluator');
-select ok(not has_function_privilege('authenticated', 'app.evaluate_cost_alerts(uuid, date)', 'execute'), 'clients cannot');
-select ok(not has_function_privilege('anon', 'app.evaluate_cost_alerts(uuid, date)', 'execute'), 'nor anon');
+select ok(has_function_privilege('service_role', 'app.evaluate_cost_alerts(uuid, date, date)', 'execute'), 'the backend runs the evaluator');
+select ok(not has_function_privilege('authenticated', 'app.evaluate_cost_alerts(uuid, date, date)', 'execute'), 'clients cannot');
+select ok(not has_function_privilege('anon', 'app.evaluate_cost_alerts(uuid, date, date)', 'execute'), 'nor anon');
 select ok(not has_function_privilege('authenticated', 'app.ingredient_spend(uuid, date, date)', 'execute'), 'spend ranking is the backend''s');
+select ok(not has_function_privilege('authenticated', 'app.tenant_business_today(uuid)', 'execute'), 'and the tenant''s today');
 select ok(has_function_privilege('authenticated', 'app.price_jumps(uuid, date, date)', 'execute'), 'get_cost_alerts uses the jump rule as the caller');
 select ok(not has_table_privilege('authenticated', 'public.alert', 'insert,update,delete'), 'clients read alerts only');
 select throws_ok($$select app.evaluate_cost_alerts(null, '2026-10-12')$$, '22023', null, 'a tenant is required');
 select throws_ok($$select app.evaluate_cost_alerts('03299e41-28bd-5779-bcc6-0e5e76580fad', null)$$, '22023', null, 'and a day');
 
 -- the seed, one run per day over 2026-09-12..10-12 -----------------------------------------
-select is(pg_temp.evaluate(:'TENANT', '2026-09-12', '2026-10-12'), 19, '2 price jumps and 17 breaches');
+select is(pg_temp.evaluate(:'TENANT', '2026-09-12', '2026-10-12', '2026-10-12'), 19, '2 price jumps and 17 breaches');
 select results_eq(
   $$select i.name, a.as_of, a.value, a.threshold, a.old_unit_price, a.new_unit_price, a.avg_unit_price, a.urgent, a.status, a.location_id
     from public.alert a join public.ingredient i on i.id = a.ingredient_id where a.rule = 'price_jump' order by a.as_of$$,
   $$values ('Carne al pastor (adobada)'::text, '2026-09-21'::date, 14.7059::numeric, 8.0::numeric, 0.170::numeric, 0.195::numeric, 0.170::numeric, false, 'open'::text, null::uuid),
-           ('Aguacate Hass', '2026-09-28', 61.8182, 15.0, 0.055, 0.089, 0.055, true, 'open', null)$$,
-  'the two seed jumps: pastor +14.7 % (8 % vs its 30-day average), aguacate +61.8 % (15 % vs the last price, urgent: a top-20 ingredient)');
+           ('Aguacate Hass', '2026-09-28', 61.8182, 15.0, 0.055, 0.089, 0.055, false, 'open', null)$$,
+  'the two seed jumps: pastor +14.7 % (8 % vs its 30-day average), aguacate +61.8 % (15 % vs the last price; a catch-up on 10-12 marks it not urgent: 14 days old)');
 select results_eq(
   $$select l.name, m.name, a.as_of, a.value, a.threshold, a.urgent
     from public.alert a join public.location l on l.id = a.location_id join public.menu_item m on m.id = a.menu_item_id
@@ -117,7 +134,7 @@ select is((select count(*) from (select distinct s.location_id, s.menu_item_id f
 select is((select count(*) from public.alert where rule = 'margin_breach' and menu_item_id = :'PASTOR'), 0::bigint,
           'tacos al pastor (32.8 %) is within target + 3');
 
-select is(pg_temp.evaluate(:'TENANT', '2026-09-12', '2026-10-12'), 0, 'a rerun adds nothing');
+select is(pg_temp.evaluate(:'TENANT', '2026-09-12', '2026-10-12', '2026-10-12'), 0, 'a rerun adds nothing');
 select is((select count(*) from public.alert), 19::bigint, 'no duplicates');
 select is((select count(*) from public.alert where tenant_id <> :'TENANT'), 0::bigint, 'nothing for another tenant');
 select is((select row(count(*) filter (where status = 'open'), count(*) filter (where location_id is null)) from public.alert),
@@ -130,7 +147,7 @@ select is((select row(b.pending, b.prices, b.suggestions, b.costs) from before_c
           'no pending change, menu price, suggestion or ingredient price is written');
 
 -- the other tenant: its own jump only --------------------------------------------------------
-select is(pg_temp.evaluate(:'OTHER', '2026-09-12', '2026-10-12'), 1, 'the other tenant gets its own jump');
+select is(pg_temp.evaluate(:'OTHER', '2026-09-12', '2026-10-12', '2026-10-12'), 1, 'the other tenant gets its own jump');
 select results_eq($$select a.as_of, a.value, a.threshold, a.urgent from public.alert a where a.tenant_id = 'aaaaaaaa-0000-7000-8000-000000000033'$$,
                   $$values ('2026-09-30'::date, 50.0000::numeric, 15.0::numeric, false)$$,
                   '+50 %, not urgent: no sales, so not a top-20 ingredient by spend');
@@ -151,6 +168,16 @@ select is((select jsonb_agg(jsonb_build_array(m ->> 'ingredient', m #> '{change,
 select is(pg_temp.rpc(:OTHER_OWNER, format('api.get_cost_alerts(%L)', '"last_30d"')) #> '{data,price_moves,0,change}',
           '{"raw": 50, "text": "+50.0%"}', 'and the other tenant''s RPC sees its own jump only');
 
+savepoint moves;
+-- pastor jumps again on 10-05 (+28.2 % vs $195), aguacate goes to zero on 10-12
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'MEAT', 0.250, '2026-10-05', 'cfdi'), (:'TENANT', :'AVOCADO', 0, '2026-10-12', 'manual');
+select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data,price_moves}',
+          '[{"ingredient": "Carne al pastor (adobada)", "change": {"raw": 28.2051, "text": "+28.2%"},
+             "new_unit_price": {"raw": 0.25, "base_unit": "g", "text": "$250.00/kg"}}]',
+          'two jumps on one ingredient: the latest; an ingredient at zero at the window''s end is left out');
+rollback to savepoint moves;
+
 -- the jump rule ------------------------------------------------------------------------------
 savepoint creep;
 -- bistec creeps: +7 % on 10-01 (no rule fires), +2.8 % more on 10-08: 8.2 % above its 30-day average
@@ -163,12 +190,34 @@ select is((select row(j.started, j.avg_unit_price, j.threshold_pct, round(j.chan
 select is((select count(*) from app.price_jumps(:'TENANT', '2026-10-01', '2026-10-01')), 0::bigint, '+7 % alone is no jump');
 rollback to savepoint creep;
 
+savepoint lag;
+-- after its +61.8 % jump on 09-28, aguacate eases from $89 to $87/kg on 10-05: -2.2 % vs the last
+-- price, but still far above its lagging 30-day average, which it never crossed on the way down
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'AVOCADO', 0.087, '2026-10-05', 'nota');
+select is((select count(*) from app.price_jumps(:'TENANT', '2026-10-05', '2026-10-05')), 0::bigint,
+          'a small move after a jump is no jump, though the 30-day average still lags behind it');
+select is(pg_temp.evaluate(:'TENANT', '2026-10-05', '2026-10-12', '2026-10-12'), 0, 'so no second aguacate alert');
+select is((select jsonb_agg(jsonb_build_array(m ->> 'ingredient', m #> '{change,raw}', m #> '{new_unit_price,raw}'))
+           from jsonb_array_elements(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data,price_moves}') m),
+          '[["Carne al pastor (adobada)", 14.7059, 0.195], ["Aguacate Hass", 61.8182, 0.087]]',
+          'the RPC quotes the jump''s change and the price of record at the window''s end');
+-- a fall back below the price before the jump is a jump down, quoted as a drop, never +61.8 %
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'AVOCADO', 0.054, '2026-10-12', 'nota');
+select is((select jsonb_agg(jsonb_build_array(m ->> 'text', m #> '{new_unit_price,raw}'))
+           from jsonb_array_elements(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_30d"', :'CENTRO')) #> '{data,price_moves}') x,
+                lateral (select x || jsonb_build_object('text', x #>> '{change,text}')) y(m)
+           where m ->> 'ingredient' = 'Aguacate Hass'),
+          '[["-37.9%", 0.054]]', 'its latest jump, a drop: never the wrong sign');
+rollback to savepoint lag;
+
 savepoint drops;
 insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
 values (:'TENANT', :'MEAT', 0.156, '2026-10-12', 'cfdi');
 select is((select row(j.threshold_pct, round(j.change_pct, 4)) from app.price_jumps(:'TENANT', '2026-10-12', '2026-10-12') j),
           row(15.0::numeric, -20.0000::numeric), 'a 20 % drop is a jump too');
-select is(pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12'), 1, 'it is alerted');
+select is(pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12', '2026-10-12'), 1, 'it is alerted');
 select is((select row(a.value, a.urgent) from public.alert a where a.as_of = '2026-10-12' and a.rule = 'price_jump'),
           row(-20.0000::numeric, false), 'but a drop is never urgent');
 rollback to savepoint drops;
@@ -199,7 +248,7 @@ savepoint urgent;
 insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
 values (:'TENANT', :'MEAT', 0.300, '2026-10-12', 'cfdi');
 select ok(app.compute_dish_costs(:'TENANT', '2026-10-12', '2026-10-12') > 0, 'today recomputed');
-select ok(pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12') > 0, 'evaluated today');
+select ok(pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12', '2026-10-12') > 0, 'evaluated today');
 select is((select row(a.value, a.threshold, a.urgent) from public.alert a where a.rule = 'price_jump' and a.as_of = '2026-10-12'),
           row(53.8462::numeric, 15.0::numeric, true), 'the meat jump is urgent');
 select is((select array_agg(l.name order by l.name) from public.alert a join public.location l on l.id = a.location_id
@@ -213,7 +262,7 @@ savepoint fresh;
 -- seen within 7 days of its start, a breach on a top-10 dish is urgent; bistec tacos are in
 -- Centro's top 10 by net sales over 2026-07-20..08-18
 delete from public.alert;
-select ok(pg_temp.evaluate(:'TENANT', '2026-08-18', '2026-08-18') > 0, 'evaluated the second day of data');
+select ok(pg_temp.evaluate(:'TENANT', '2026-08-18', '2026-08-18', '2026-08-18') > 0, 'evaluated the second day of data');
 select is((select array_agg(m.name order by m.name) from public.alert a join public.menu_item m on m.id = a.menu_item_id
            where a.rule = 'margin_breach' and a.location_id = :'CENTRO' and a.urgent),
           (select array_agg(m.name order by m.name) from public.alert a join public.menu_item m on m.id = a.menu_item_id
@@ -225,23 +274,93 @@ select is((select array_agg(m.name order by m.name) from public.alert a join pub
           'the breaches on Centro''s top 10 dishes are urgent, the others are not');
 select ok((select bool_or(a.urgent) from public.alert a where a.menu_item_id = (select id from public.menu_item where name = 'Tacos de bistec (orden de 3)')
            and a.location_id = :'CENTRO'), 'tacos de bistec among them');
+-- the 08-17 breaches run on 08-23 are in their 7th day, on 08-24 their 8th
+delete from public.alert;
+select ok(pg_temp.evaluate(:'TENANT', '2026-08-18', '2026-08-18', '2026-08-23') > 0, 'the same day evaluated on 08-23');
+select ok((select bool_or(a.urgent) from public.alert a where a.location_id = :'CENTRO'), 'day 7: still urgent');
+delete from public.alert;
+select ok(pg_temp.evaluate(:'TENANT', '2026-08-18', '2026-08-18', '2026-08-24') > 0, 'and on 08-24');
+select is((select count(*) from public.alert a where a.urgent), 0::bigint, 'day 8: not urgent');
 rollback to savepoint fresh;
+
+savepoint daily;
+-- the daily job on 09-28 itself sees the aguacate jump the day it starts: urgent
+delete from public.alert;
+select ok(pg_temp.evaluate_daily(:'TENANT', '2026-09-28', '2026-09-28') > 0, 'evaluated on 09-28');
+select is((select a.urgent from public.alert a where a.rule = 'price_jump' and a.ingredient_id = :'AVOCADO'), true,
+          'a fresh run marks the aguacate jump urgent (a top-20 ingredient)');
+-- without `today` the evaluator uses the tenant's business today
+delete from public.alert;
+select set_config('app.today', '2026-09-28', true);
+select ok(pg_temp.evaluate(:'TENANT', '2026-09-28', '2026-09-28', null) > 0, 'evaluated with no today');
+select is((select a.urgent from public.alert a where a.rule = 'price_jump' and a.ingredient_id = :'AVOCADO'), true,
+          'today defaults to the business today (09-28): urgent');
+select set_config('app.today', '2026-10-12', true);
+select ok(pg_temp.evaluate(:'TENANT', '2026-09-28', '2026-09-28', null) = 0, 'a rerun on 10-12 adds nothing');
+delete from public.alert;
+select ok(pg_temp.evaluate(:'TENANT', '2026-09-28', '2026-09-28', null) > 0, 'evaluated anew on 10-12');
+select is((select a.urgent from public.alert a where a.rule = 'price_jump' and a.ingredient_id = :'AVOCADO'), false,
+          'business today 10-12: 15 days old, not urgent');
+rollback to savepoint daily;
+
+savepoint jump_fresh;
+-- meat to $300/kg on 10-05: urgent on its 7th day (10-11), not on its 8th (10-12)
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'MEAT', 0.300, '2026-10-05', 'cfdi');
+select is(pg_temp.evaluate(:'TENANT', '2026-10-05', '2026-10-05', '2026-10-11'), 1, 'the meat jump, run on 10-11');
+select is((select a.urgent from public.alert a where a.as_of = '2026-10-05'), true, 'day 7: urgent');
+delete from public.alert where as_of = '2026-10-05';
+select is(pg_temp.evaluate(:'TENANT', '2026-10-05', '2026-10-05', '2026-10-12'), 1, 'run on 10-12');
+select is((select a.urgent from public.alert a where a.as_of = '2026-10-05'), false, 'day 8: not urgent');
+rollback to savepoint jump_fresh;
+
+savepoint top20;
+-- azúcar (20th by spend) and masa (22nd) both rise 16 % today; masa's new price lifts it to 21st,
+-- still outside the top 20
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+select :'TENANT', x.id, p.unit_price_net * 1.16, '2026-10-12', 'cfdi'
+from (values (:'SUGAR'::uuid), (:'MASA'::uuid)) x(id) cross join lateral app.price_of_record(x.id, '2026-10-11') p;
+select is((select array_agg(x.n order by x.n) from (
+             select s.ingredient_id, row_number() over (order by s.spend desc, s.ingredient_id) as n
+             from app.ingredient_spend(:'TENANT', '2026-09-13', '2026-10-12') s where s.spend > 0) x
+           where x.ingredient_id in (:'SUGAR', :'MASA')),
+          array[20, 21]::bigint[], 'azúcar ranks 20th by spend, masa 21st');
+select is(pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12', '2026-10-12'), 2, 'both jumps alerted');
+select results_eq($$select a.ingredient_id, a.urgent from public.alert a where a.as_of = '2026-10-12' and a.rule = 'price_jump' order by a.urgent$$,
+                  format($$values (%L::uuid, false), (%L::uuid, true)$$, :'MASA', :'SUGAR'),
+                  'a +16 % jump on the 21st ingredient by spend is not urgent; on the 20th it is');
+rollback to savepoint top20;
+
+savepoint at_line;
+-- tacos al pastor at Centro today at exactly 35.0 %: within target + 3; at 35.01 % a breach
+update public.dish_cost_snapshot set price_net = 10000, cost = 3500
+where location_id = :'CENTRO' and menu_item_id = :'PASTOR' and date = '2026-10-12';
+select is(pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12', '2026-10-12'), 0, 'exactly 35.0 %: no breach');
+select is((select count(*) from jsonb_array_elements(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_7d"', :'CENTRO')) #> '{data,breaches}') b
+           where b ->> 'menu_item_id' = :'PASTOR'), 0::bigint, 'nor in the RPC');
+update public.dish_cost_snapshot set cost = 3501
+where location_id = :'CENTRO' and menu_item_id = :'PASTOR' and date = '2026-10-12';
+select is(pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12', '2026-10-12'), 1, '35.01 %: a breach');
+select is((select a.value from public.alert a where a.menu_item_id = :'PASTOR'), 35.0100::numeric, 'at its food cost');
+select is((select count(*) from jsonb_array_elements(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_7d"', :'CENTRO')) #> '{data,breaches}') b
+           where b ->> 'menu_item_id' = :'PASTOR'), 1::bigint, 'and in the RPC');
+rollback to savepoint at_line;
 
 -- breach episodes -----------------------------------------------------------------------------
 savepoint episodes;
 -- Volcán de pastor at Centro drops within target on 10-01 and breaches again from 10-02: a new
 -- episode, alerted once
 update public.dish_cost_snapshot set cost = price_net / 4 where location_id = :'CENTRO' and menu_item_id = :'VOLCAN' and date = '2026-10-01';
-select is(pg_temp.evaluate(:'TENANT', '2026-10-02', '2026-10-12'), 1, 'a breach that ends and comes back is a new alert');
+select is(pg_temp.evaluate(:'TENANT', '2026-10-02', '2026-10-12', '2026-10-12'), 1, 'a breach that ends and comes back is a new alert');
 select is((select array_agg(a.as_of order by a.as_of) from public.alert a where a.location_id = :'CENTRO' and a.menu_item_id = :'VOLCAN'),
           array['2026-09-21', '2026-10-02']::date[], 'dated from its new start');
 -- a recompute that moves an episode's start earlier does not alert it again
 update public.dish_cost_snapshot set cost = price_net where location_id = :'CENTRO' and menu_item_id = :'VOLCAN' and date = '2026-09-20';
-select is(pg_temp.evaluate(:'TENANT', '2026-09-21', '2026-09-30'), 0, 'an episode that now starts on 09-20 is still the 09-21 alert');
+select is(pg_temp.evaluate(:'TENANT', '2026-09-21', '2026-09-30', '2026-10-12'), 0, 'an episode that now starts on 09-20 is still the 09-21 alert');
 -- no snapshot, no alert (never a guess)
 delete from public.alert where location_id = :'POLANCO';
 delete from public.dish_cost_snapshot where location_id = :'POLANCO' and date = '2026-10-12';
-select is(pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12'), 0, 'no Polanco snapshot today: no Polanco breach');
+select is(pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12', '2026-10-12'), 0, 'no Polanco snapshot today: no Polanco breach');
 rollback to savepoint episodes;
 
 -- the alert row's shape -------------------------------------------------------------------------

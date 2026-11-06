@@ -4,8 +4,10 @@
 -- writes a pending_change, a menu price or a suggestion; price suggestions are part b.
 --
 -- - Price jump: the price of record of an ingredient a live dish uses changes on a day, and the
---   new price is at least 15 % away from the last price, or at least 8 % away from the 30-day
---   time-weighted average (the price of record on each of the 30 days before). Either direction;
+--   new price is at least 15 % away from the last price, or it crosses the 8 % line around the
+--   30-day time-weighted average (the price of record on each of the 30 days before): the last
+--   price within 8 % of the average, the new one at least 8 % away, on the side it moved to. The
+--   average lags a real jump, so a later small move (even a drop) never fires against it. Either direction;
 --   a zero price is never a jump. The quoted change is the rule that fired: vs the last price
 --   when the 15 % rule does, else vs the average. One definition (app.price_jumps) for the
 --   evaluator and api.get_cost_alerts.
@@ -13,7 +15,8 @@
 -- - Urgent (U3, for a same-day message sent by MR-37/38): a price rise of at least 15 % vs the last
 --   price on a top-20 ingredient by spend, or a breach on a top-10 dish by net sales at its
 --   location, both over the 30 days to the evaluation day, and only when the evidence is at most
---   7 days old (a catch-up run over old days marks nothing urgent). The top-20 filter applies to
+--   7 days old on the business day the run happens (today, not the day evaluated: a catch-up run
+--   over old days marks nothing urgent). The top-20 filter applies to
 --   urgency only: every jump gets an alert for the weekly report.
 -- - Spend is theoretical usage (units sold x recipe of record, through sub-recipes, x price of
 --   record): purchases are only partly captured in Phase 1.
@@ -22,6 +25,14 @@
 --   snapshots): a breach that persists does not alert again, one that ends and comes back does.
 --   `as_of` is that day and `value` the change or food cost on it. Status stays `open` until the
 --   owner acts.
+
+-- Lookup indexes ----------------------------------------------------------------------------------
+-- price_of_record, recipe_of_record and live_ingredients filter on these columns alone, and the
+-- tables' other indexes lead with tenant_id. Same names and columns as MR-32's
+-- 20261105090000_apply_pending_change.sql, so the merged schema has one of each.
+create index if not exists ingredient_price_ingredient_date_idx on public.ingredient_price (ingredient_id, effective_from);
+create index if not exists recipe_menu_item_idx on public.recipe (menu_item_id);
+create index if not exists recipe_produces_idx on public.recipe (produces_ingredient_id);
 
 -- Alert rows ---------------------------------------------------------------------------------
 alter table public.alert
@@ -98,7 +109,11 @@ as $$
     where n.unit_price_net > 0 and o.unit_price_net > 0 and n.unit_price_net <> o.unit_price_net
   ), fired as (
     select m.*, 100 * abs(m.new_price - m.old_price) >= k.jump_vs_last_pct * m.old_price as vs_last,
-           100 * abs(m.new_price - m.avg_price) >= k.jump_vs_avg_pct * m.avg_price as vs_avg,
+           -- the move crosses the line around the average (the average lags a jump: once a price
+           -- sits outside the line, later moves never fire against it)
+           100 * abs(m.old_price - m.avg_price) < k.jump_vs_avg_pct * m.avg_price
+             and 100 * abs(m.new_price - m.avg_price) >= k.jump_vs_avg_pct * m.avg_price
+             and sign(m.new_price - m.avg_price) = sign(m.new_price - m.old_price) as vs_avg,
            k.jump_vs_last_pct, k.jump_vs_avg_pct
     from move m, k
   )
@@ -145,11 +160,19 @@ as $$
   group by rl.ingredient_id
 $$;
 
+-- The tenant's business day today (the timezone of its first location).
+create function app.tenant_business_today(tenant uuid) returns date
+language sql stable set search_path = ''
+as $$
+  select app.business_today((select l.id from public.location l where l.tenant_id = tenant order by l.id limit 1))
+$$;
+
 -- Evaluator ----------------------------------------------------------------------------------
 -- Writes the tenant's alerts for one business day; returns how many rows it added. Idempotent: a
 -- rerun adds nothing. Price jumps are looked for over the 7 days to on_date, so a price entered a
--- few days late is still caught by the next run.
-create function app.evaluate_cost_alerts(tenant uuid, on_date date) returns int
+-- few days late is still caught by the next run. Urgency is judged against `today` (null: the
+-- tenant's business today), never on_date, so a catch-up run over old days marks nothing urgent.
+create function app.evaluate_cost_alerts(tenant uuid, on_date date, today date default null) returns int
 language plpgsql set search_path = ''
 as $$
 declare
@@ -162,6 +185,7 @@ begin
     raise exception 'tenant and on_date are required' using errcode = '22023';
   end if;
   select * into k from app.cost_alert_settings();
+  today := coalesce(today, app.tenant_business_today(tenant));
   breach_above := app.food_cost_target() + k.breach_pts;
   -- one evaluation per tenant at a time
   perform pg_advisory_xact_lock(hashtextextended('cost_alerts:' || tenant::text, 0));
@@ -177,6 +201,7 @@ begin
   select tenant, 'price_jump', j.ingredient_id, j.started, round(j.change_pct, 4), j.threshold_pct,
          j.old_unit_price, j.new_unit_price, j.avg_unit_price,
          100 * (j.new_unit_price - j.old_unit_price) >= k.jump_vs_last_pct * j.old_unit_price
+           and j.started > today - k.fresh_days
            and j.ingredient_id in (select t.ingredient_id from top_spend t)
   from app.price_jumps(tenant, on_date - (k.fresh_days - 1), on_date) j
   on conflict (tenant_id, ingredient_id, as_of) where rule = 'price_jump' do nothing;
@@ -210,7 +235,7 @@ begin
   insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, urgent)
   select tenant, e.location_id, 'margin_breach', e.menu_item_id, e.started,
          round(100.0 * s.cost / s.price_net, 4), breach_above,
-         e.started > on_date - k.fresh_days
+         e.started > today - k.fresh_days
            and exists (select 1 from top_dish t where t.location_id = e.location_id and t.menu_item_id = e.menu_item_id)
   from episode e
   join public.dish_cost_snapshot s
@@ -230,7 +255,10 @@ $$;
 -- get_cost_alerts on the shared jump rule ----------------------------------------------------
 -- As in 20261104090000_read_rpcs_cost.sql, except price moves: per ingredient, the latest jump
 -- (app.price_jumps) that started in the window, while the ingredient still has a price of record
--- above zero at the window's end. `change` is the change that fired. Same output (C3).
+-- above zero at the window's end. `change` is the change that fired; `new_unit_price` is still the
+-- price of record at the window's end. A move the price has since undone (back across the price
+-- before the jump) is left out, so the change never shows the wrong sign. Breaches read the
+-- breach points from app.cost_alert_settings(). Same output (C3).
 create or replace function api.get_cost_alerts(since jsonb default '"last_7d"', location_id uuid default null) returns jsonb
 language plpgsql stable security invoker set search_path = ''
 as $$
@@ -244,6 +272,7 @@ declare
   suggestions jsonb;
   levels app.cost_confidence[];
   flags jsonb := '[]';
+  breach_above numeric := app.food_cost_target() + (select s.breach_pts from app.cost_alert_settings() s);
 begin
   if locs is null then
     return app.rpc_error('not_found', 'location not found');
@@ -263,12 +292,15 @@ begin
          order by m.started, m.name), '[]')
   into moves
   from (
-    select distinct on (j.ingredient_id) i.name, i.base_unit, j.new_unit_price as new_price, j.change_pct, j.started
+    select distinct on (j.ingredient_id) i.name, i.base_unit, j.old_unit_price as old_price,
+           cur.unit_price_net as new_price, j.change_pct, j.started
     from app.price_jumps((select app.current_tenant_id()), r[1], w_to) j
     join public.ingredient i on i.id = j.ingredient_id
-    where exists (select 1 from app.price_of_record(j.ingredient_id, w_to) cur where cur.unit_price_net > 0)
+    cross join lateral app.price_of_record(j.ingredient_id, w_to) cur
+    where cur.unit_price_net > 0
     order by j.ingredient_id, j.started desc
-  ) m;
+  ) m
+  where sign(m.new_price - m.old_price) = sign(m.change_pct);
 
   with latest as (
     select distinct on (s.menu_item_id, s.location_id) s.menu_item_id, s.cost, s.price_net, s.confidence
@@ -283,8 +315,8 @@ begin
                                                        'food_cost', app.pct(b.fc), 'target', app.pct(app.food_cost_target()))
                                     order by round(b.fc, 4) desc, m.name)
                    from worst b join public.menu_item m on m.id = b.menu_item_id
-                   where b.fc > app.food_cost_target() + 3), '[]'),
-         (select array_agg(distinct b.confidence) from worst b where b.fc > app.food_cost_target() + 3)
+                   where b.fc > breach_above), '[]'),
+         (select array_agg(distinct b.confidence) from worst b where b.fc > breach_above)
   into breaches, levels;
 
   select coalesce(jsonb_agg(jsonb_build_object(
@@ -320,8 +352,10 @@ $$;
 -- The RPC runs as the caller and needs the jump rule. The evaluator and its spend ranking are the
 -- backend's (service_role), with the helpers and the sales view they read.
 revoke all on function app.cost_alert_settings(), app.price_jumps(uuid, date, date),
-  app.ingredient_spend(uuid, date, date), app.evaluate_cost_alerts(uuid, date) from public, anon, authenticated;
+  app.ingredient_spend(uuid, date, date), app.tenant_business_today(uuid), app.evaluate_cost_alerts(uuid, date, date)
+  from public, anon, authenticated;
 grant execute on function app.cost_alert_settings(), app.price_jumps(uuid, date, date) to authenticated, service_role;
-grant execute on function app.ingredient_spend(uuid, date, date), app.evaluate_cost_alerts(uuid, date),
-  app.food_cost_target(), app.live_ingredients(date) to service_role;
+grant execute on function app.ingredient_spend(uuid, date, date), app.tenant_business_today(uuid),
+  app.evaluate_cost_alerts(uuid, date, date),
+  app.food_cost_target(), app.live_ingredients(date), app.business_today(uuid) to service_role;
 grant select on app.v_item_sales_daily to service_role;

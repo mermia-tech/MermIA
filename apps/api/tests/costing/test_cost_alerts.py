@@ -38,9 +38,9 @@ def conn() -> Iterator[psycopg.Connection[Any]]:
 
 @pytest.mark.db
 def test_the_seed_jumps_and_breaches_are_alerted_once(conn: psycopg.Connection[Any]) -> None:
-    assert evaluate_cost_alerts_range(conn, TENANT, START, TODAY) == 19
-    assert evaluate_cost_alerts_range(conn, TENANT, START, TODAY) == 0
-    assert evaluate_cost_alerts(conn, TENANT, TODAY) == 0
+    assert evaluate_cost_alerts_range(conn, TENANT, START, TODAY, TODAY) == 19
+    assert evaluate_cost_alerts_range(conn, TENANT, START, TODAY, TODAY) == 0
+    assert evaluate_cost_alerts(conn, TENANT, TODAY, TODAY) == 0
     jumps = conn.execute(
         """select i.name, a.as_of, a.value, a.urgent from public.alert a
            join public.ingredient i on i.id = a.ingredient_id
@@ -48,12 +48,40 @@ def test_the_seed_jumps_and_breaches_are_alerted_once(conn: psycopg.Connection[A
     ).fetchall()
     assert jumps == [
         ("Carne al pastor (adobada)", dt.date(2026, 9, 21), Decimal("14.7059"), False),
-        ("Aguacate Hass", dt.date(2026, 9, 28), Decimal("61.8182"), True),
+        # a catch-up on 10-12: the 09-28 jump is 15 days old, so not urgent
+        ("Aguacate Hass", dt.date(2026, 9, 28), Decimal("61.8182"), False),
     ]
     breaches = conn.execute(
         "select count(*) from public.alert where rule = 'margin_breach'"
     ).fetchone()
     assert breaches == (17,)
+
+
+def _avocado_urgent(conn: psycopg.Connection[Any]) -> bool:
+    row = conn.execute(
+        """select a.urgent from public.alert a join public.ingredient i on i.id = a.ingredient_id
+           where a.rule = 'price_jump' and i.name = 'Aguacate Hass'"""
+    ).fetchone()
+    assert row is not None
+    return bool(row[0])
+
+
+@pytest.mark.db
+def test_the_daily_run_marks_a_fresh_jump_urgent(conn: psycopg.Connection[Any]) -> None:
+    jump_day = dt.date(2026, 9, 28)
+    assert evaluate_cost_alerts(conn, TENANT, jump_day, jump_day) > 0
+    assert _avocado_urgent(conn)
+
+
+@pytest.mark.db
+def test_the_range_reads_the_business_today_once(conn: psycopg.Connection[Any]) -> None:
+    conn.execute("set local app.today = '2026-09-30'")
+    assert evaluate_cost_alerts_range(conn, TENANT, START, dt.date(2026, 9, 30)) > 0
+    assert _avocado_urgent(conn)  # 3 days old on 09-30
+    conn.execute("delete from public.alert")
+    conn.execute("set local app.today = '2026-10-12'")
+    assert evaluate_cost_alerts_range(conn, TENANT, START, dt.date(2026, 9, 30)) > 0
+    assert not _avocado_urgent(conn)  # the same days caught up on 10-12
 
 
 @pytest.mark.db
@@ -63,13 +91,13 @@ def test_nothing_is_applied(conn: psycopg.Connection[Any]) -> None:
         " (select count(*) from public.menu_item_price)"
     )
     before = conn.execute(counts).fetchone()
-    evaluate_cost_alerts_range(conn, TENANT, START, TODAY)
+    evaluate_cost_alerts_range(conn, TENANT, START, TODAY, TODAY)
     assert conn.execute(counts).fetchone() == before
 
 
 @pytest.mark.db
 def test_get_cost_alerts_keeps_its_contract(conn: psycopg.Connection[Any]) -> None:
-    evaluate_cost_alerts_range(conn, TENANT, START, TODAY)
+    evaluate_cost_alerts_range(conn, TENANT, START, TODAY, TODAY)
     conn.execute("reset role")
     conn.execute("set local role authenticated")
     claims = {"tenant_id": str(TENANT), "location_ids": None}
