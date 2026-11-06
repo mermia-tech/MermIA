@@ -316,5 +316,13 @@ select is((select count(*) from public.audit_log a join pc on pc.id = a.pending_
 select is((select count(*) from public.recipe), (select n from recipes_before), 'and none writes a recipe');
 select is(pg_temp.tap('pct over 100', 'pct over 100', :OWNER) ->> 'code', 'applied', 'a yield override over 100 % still applies');
 
+-- names that normalize to nothing ---------------------------------------------------------------
+select pg_temp.propose('empty name', :SUADERO, pg_temp.lines_of(:SUADERO) || pg_temp.new_line('味噌', '1.000000', 'g'));
+select is(pg_temp.tap('empty name', 'empty name', :OWNER) ->> 'code', 'failed', 'a new ingredient whose name normalizes to nothing fails');
+select is((select count(*) from public.audit_log a join pc on pc.id = a.pending_change_id
+           where pc.name = 'empty name' and a.action = 'pending_change.fail' and a.after ->> 'error' ~ 'letter or digit'), 1::bigint,
+          'with a fail audit row that says the name needs a letter or digit');
+select is((select count(*) from public.ingredient where tenant_id = :TENANT and name = '味噌'), 0::bigint, 'and creates no ingredient');
+
 select * from finish();
 rollback;

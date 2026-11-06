@@ -361,6 +361,18 @@ def test_an_unknown_ingredient_with_a_unit_that_is_not_a_base_unit_is_held(
     assert pending(conn, r.batch_id) == []
 
 
+@pytest.mark.parametrize("name", ["味噌", "🍞"])
+def test_an_ingredient_name_that_normalizes_to_nothing_is_held(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch, name: str
+) -> None:
+    odd = RecipeLineIn(ingredient_name=name, qty_base=Decimal(2), unit="g")
+    r = load(
+        conn, edit(sample, "P001", lambda r: lines(r, lambda ls: [*ls, odd])), source_id=source
+    )
+    assert "recipe.ingredient_name_empty" in codes(r)
+    assert pending(conn, r.batch_id) == []
+
+
 def test_one_ingredient_code_under_two_names_is_a_warning(
     conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
 ) -> None:
