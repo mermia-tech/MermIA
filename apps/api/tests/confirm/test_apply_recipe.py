@@ -21,6 +21,7 @@ from mermia_api.ingestion.loader import load
 from mermia_api.ingestion.registry import parse_file
 from mermia_contracts.batch import NormalizedBatch, RecipeIn, RecipeLineIn
 from mermia_contracts.db.models import PendingChangeStatus
+from mermia_contracts.keys import normalize_name
 from mermia_contracts.pending import ApplyCode, ApplyPendingChangeArgs, ApplyResult
 
 pytestmark = pytest.mark.db
@@ -170,3 +171,31 @@ def test_the_importer_s_manager_cannot_approve_a_recipe(
 
     assert (result.code, result.status) == (ApplyCode.forbidden_role, PendingChangeStatus.pending)
     assert recipe_of_record(conn)[1] == 1
+
+
+TRICKY_NAMES = [
+    "Chile jalapeño",
+    "Chile  Jalapeno",
+    "CHILE JALAPEÑO",
+    "  Tacos al pastor (orden de 3)  ",
+    "Salsa verde(preparada)",
+    "Piña\tmiel",
+    "Crème brûlée",
+    "Ñoño (Año)",
+    "Café\u00a0de\u00a0olla",  # no-break spaces
+    "\uff34\uff4f\uff52\uff54\uff49\uff4c\uff4c\uff41",  # full width "Tortilla"
+    "\ufb01deo",  # "fi" ligature
+    "Pan 🍞 dulce",
+    "Agua\x1fde\x0bjamaica",
+    "(())",
+    "",
+]
+
+
+@pytest.mark.parametrize("name", TRICKY_NAMES)
+def test_sql_normalize_name_agrees_with_the_importer(
+    conn: psycopg.Connection[Any], name: str
+) -> None:
+    row = conn.execute("select app.normalize_name(%s)", (name,)).fetchone()
+
+    assert row == (normalize_name(name),)
