@@ -469,3 +469,17 @@ def test_paused_model_rejected(no_network: None, capsys: pytest.CaptureFixture[s
         cli.main(["--models", "anthropic:claude-sonnet-5-5"])
     assert stop.value.code == 2
     assert "paused" in capsys.readouterr().err
+
+
+def test_broker_flag_runs_the_case_through_the_broker_and_counts_validator_results(
+    monkeypatch: pytest.MonkeyPatch, no_network: None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def broker_case(model: str, case: Any, backend: Any, **kw: Any) -> RunResult:
+        r = _ok(model)
+        r.validator = ["retry", "retry_pass"]
+        return r
+
+    monkeypatch.setattr(cli, "run_case", lambda *a, **k: pytest.fail("not the broker"))
+    monkeypatch.setattr(cli, "run_broker_case", broker_case)
+    assert cli.main(["--broker", "--models", LUNA]) == 0
+    assert "validator: retry 1, retry_pass 1" in capsys.readouterr().out

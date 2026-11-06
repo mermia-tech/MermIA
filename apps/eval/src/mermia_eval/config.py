@@ -20,6 +20,7 @@ MODELS: Final = (
     ModelSpec("anthropic:claude-haiku-5-5", PRICES["anthropic:claude-haiku-5-5"]),
     ModelSpec("google:gemini-3.8-flash", PRICES["google:gemini-3.8-flash"]),
     ModelSpec("google:gemini-3.5-flash-lite", PRICES["google:gemini-3.5-flash-lite"]),
+    ModelSpec("deepseek:deepseek-flash", PRICES["deepseek:deepseek-flash"]),  # MR-27 candidate
 )
 
 # Paused to keep eval spend low (MR-20 D5); move a line back to MODELS to run it.
