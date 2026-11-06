@@ -109,22 +109,24 @@ Unchanged (D4). If the final primary is not Haiku / Sonnet, migrate the enum to 
 
 ## MR-27 smoke run on the real broker (2026-11-05)
 
-`uv run --env-file .env mermia-eval --broker --models openai:gpt-5.6-luna,deepseek:deepseek-flash`, 40 cases, 1 run, no judge. Each case goes through `LlmBroker`: the MR-27 static prefix and tail, 400 output tokens, at most 4 tool calls, the validator and one retry. Dumps: `apps/eval/out/mr27-smoke.json` (first) and `mr27-smoke-2.json` (after the prompt fix). Spend: about US$0.06 for both runs.
+`uv run --env-file .env mermia-eval --broker --models openai:gpt-5.6-luna,deepseek:deepseek-flash` (and `deepseek:deepseek-v4-pro` alone after the fix), 40 cases, 1 run, no judge. Each case goes through `LlmBroker`: the MR-27 static prefix and tail, 400 output tokens, at most 4 tool calls, the validator and one retry. Dumps: `apps/eval/out/mr27-smoke.json` (first) and `mr27-smoke-2.json` and `mr27-smoke-v4pro.json` (after the prompt fix). Spend: about US$0.12 in all.
 
-| Check | Luna, run 1 | Luna, run 2 | DeepSeek Flash, run 2 | MR-20 Luna | Threshold |
-|---|---|---|---|---|---|
-| tool | 0.56 | 0.90 | 0.86 | 0.95 | >= 0.95 |
-| args | 0.54 | 0.82 | 0.86 | 0.95 | >= 0.95 |
-| numbers (sent replies) | 0.90 | 0.97 | 0.97 | 0.85 | 1.0 |
-| menu answers | 1 / 40 (provider) | 0 / 40 | 5 / 40 (reject) | - | <= 5 % |
-| p50 / p95 (s) | 3.0 / 8.6 | 4.1 / 7.3 | 2.9 / 4.4 | 4.3 / 7.0 | <= 3 / <= 8 |
-| mean USD per question | 0.00027 | 0.00037 | 0.00049 | 0.00034 | <= 0.003 |
+| Check | Luna, run 1 | Luna, run 2 | DeepSeek Flash, run 2 | DeepSeek V4 Pro | MR-20 Luna | Threshold |
+|---|---|---|---|---|---|---|
+| tool | 0.56 | 0.90 | 0.86 | 0.94 | 0.95 | >= 0.95 |
+| args | 0.54 | 0.82 | 0.86 | 0.89 | 0.95 | >= 0.95 |
+| numbers (sent replies) | 0.90 | 0.97 | 0.97 | 0.94 | 0.85 | 1.0 |
+| menu answers | 1 / 40 (provider) | 0 / 40 | 5 / 40 (reject) | 4 / 40 (2 reject, 2 cut at 400) | - | <= 5 % |
+| p50 / p95 (s) | 3.0 / 8.6 | 4.1 / 7.3 | 2.9 / 4.4 | 3.1 / 5.9 | 4.3 / 7.0 | <= 3 / <= 8 |
+| mean USD per question | 0.00027 | 0.00037 | 0.00049 | 0.00146 | 0.00034 | <= 0.003 |
 
 - **Run 1 found a prompt regression.** The prefix said "si la pregunta es ambigua (sucursal, periodo o platillo), pregunta antes de responder", which the MR-20 prompt did not have. Luna asked "¿de qué sucursal?" on 14 of 40 questions, "¿cuánto vendí ayer?" among them. The rule is now "si no dice sucursal, usa todas las suyas; pregunta solo si falta algo que no se puede suponer". The retry message also leaked: DeepSeek began a reply with "Tienes razón en el señalamiento"; the correction now says it is internal.
 - **Validator, run 2:** 63 pass, 17 retry (12 retry_pass, 5 reject). No sent reply carried an unsourced figure. The two numbers failures are the known scorer false positive on "09:00" and "100.0%" (MR-67), on replies the validator passed.
 - **Not met: tool and args >= 0.95,** and DeepSeek's menu share (12.5 %). Most of the remaining misses are the fixed-fixture mock (MR-67): the models notice that the data does not match the request ("la herramienta devolvió ventas netas, no ticket promedio", "no encontré tacos de bistec") and say so instead of answering. The other misses: Luna answers "¿cómo van mis sucursales?" without asking for the periods (the new rule lets it assume them), and DeepSeek asks for the price before calling a write tool.
 - **Not verified:** why DeepSeek's 5 replies were rejected twice. The dump keeps only the menu; the rejected texts are in the Langfuse traces. Read them before DeepSeek is considered for the primary route.
 - **Output cap:** DeepSeek reached the 400-token cap twice in run 1 (menu), none in run 2. Luna never did, so OpenAI's reasoning tokens fit in 400 at low effort.
+- **DeepSeek V4 Pro** is the closest to the bar (tool 0.94), at about 4 times Luna's cost per question. Its two numbers failures are a missing `must_contain` figure and the "09:00" scorer false positive, not invented figures. It still sends 10 % menus: 2 rejects on write questions and 2 replies cut at 400 tokens.
+- **Both DeepSeek models send their pre-tool text:** "Voy a revisar el estado de tus datos.Sí, tus datos están al día…". The run's `content` holds the text of every model turn, not only the last (seen in the dumps; Agno code not checked). Before a DeepSeek model serves owners, send only the last assistant message or tell the prompt not to narrate.
 - This is a smoke run (1 run each, fixed mock), not the model decision: that stays with the final run (MR-68).
 
 ## Follow-ups

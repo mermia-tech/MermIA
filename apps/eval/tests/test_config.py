@@ -12,6 +12,7 @@ ACTIVE = {
     "google:gemini-3.8-flash",
     "google:gemini-3.5-flash-lite",
     "deepseek:deepseek-flash",  # MR-27 candidate
+    "deepseek:deepseek-v4-pro",
 }
 PAUSED_IDS = {"openai:gpt-6.1-sol", "anthropic:claude-sonnet-5-5"}  # MR-20 D5: eval budget
 
