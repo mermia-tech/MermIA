@@ -501,10 +501,11 @@ def test_a_statement_timeout_fails_the_tenant_as_permanent_and_the_run_goes_on(
     def slow(c: psycopg.Connection[Any], t: UUID, lo: dt.date, hi: dt.date, today: Any) -> int:
         if t == SEED:
             with nightly._transaction(c, today):
+                # only this tenant gets a tight limit; the others keep the normal one
+                c.execute("set local statement_timeout = '100ms'")
                 c.execute("select pg_sleep(2)")
         return real(c, t, lo, hi, today)
 
-    monkeypatch.setattr(nightly, "STATEMENT_TIMEOUT", "100ms")
     monkeypatch.setattr(nightly, "_fill_chunk", slow)
 
     result = run_nightly_dish_costs(conn, only=[SEED, tenant])
