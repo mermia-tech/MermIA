@@ -137,6 +137,56 @@ def test_a_canonical_time_zone_is_accepted() -> None:
     assert s.locations[0].timezone == "America/Tijuana"
 
 
+def test_closed_days_become_sorted_iso_numbers_however_they_are_written() -> None:
+    s = OnboardingSpec.model_validate(
+        spec(
+            locations=[
+                {"name": "Centro", "closed_days": ["Domingo", "MIÉRCOLES", "lunes"]},
+                {"name": "Roma"},
+            ]
+        )
+    )
+    assert s.locations[0].closed_weekdays == [1, 3, 7]
+
+
+def test_no_closed_days_is_not_the_same_as_an_empty_list() -> None:
+    s = OnboardingSpec.model_validate(
+        spec(locations=[{"name": "Centro"}, {"name": "Roma", "closed_days": []}])
+    )
+    centro, roma = s.locations
+    assert centro.closed_weekdays is None, "not said: keep the stored days"
+    assert roma.closed_weekdays == [], "opens every day"
+
+
+@pytest.mark.parametrize("days", ["ninguno", "Ninguno", " NINGUNO ", ["ninguno"], ["Ningúno"]])
+def test_ninguno_means_it_opens_every_day(days: Any) -> None:
+    s = OnboardingSpec.model_validate(
+        spec(locations=[{"name": "Centro", "closed_days": days}, {"name": "Roma"}])
+    )
+    assert s.locations[0].closed_weekdays == []
+
+
+@pytest.mark.parametrize(
+    ("days", "message"),
+    [
+        (["ninguno", "lunes"], "va solo"),
+        (["lunes", "ninguno"], "va solo"),
+        (["ninguno", "ninguno"], "va solo"),
+        (["funday"], "o ninguno si abre todos los días"),
+        ([1], "día desconocido"),
+        (["funday"], "día desconocido.*lunes, martes, miércoles, jueves, viernes, sábado, domingo"),
+        (["lunes", "Lunes"], "día repetido"),
+        (["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"], "siete días"),
+        ("lunes", "debe ser una lista"),
+    ],
+)
+def test_bad_closed_days_are_refused(days: Any, message: str) -> None:
+    with pytest.raises(ValidationError, match=message):
+        OnboardingSpec.model_validate(
+            spec(locations=[{"name": "Centro", "closed_days": days}, {"name": "Roma"}])
+        )
+
+
 def test_the_spec_needs_a_location_and_a_user() -> None:
     with pytest.raises(ValidationError):
         OnboardingSpec.model_validate(spec(locations=[]))

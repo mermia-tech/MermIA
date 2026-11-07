@@ -12,7 +12,7 @@ from mermia_api.admin import cli
 OPERATOR = "test-operator"
 SPEC = {
     "tenant": {"name": "Taquería La Prueba"},
-    "locations": [{"name": "Centro"}],
+    "locations": [{"name": "Centro", "closed_days": []}],
     "users": [{"name": "Ana", "phone": "+525500000001", "role": "owner"}],
 }
 

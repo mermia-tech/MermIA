@@ -13,7 +13,13 @@ locations:
     timezone: America/Mexico_City  # default for a new location; left out = keep the stored one
     address: Av. Ejemplo 1, Centro, CDMX
     sr_version: "12"
+    # Asked of the founders: «¿Qué días de la semana cierra normalmente esta sucursal? Por
+    # ejemplo: los lunes. Si abre todos los días, dime "ninguno".» Required for a new location;
+    # left out on a rerun = keep the stored days. Days: lunes ... domingo; [] = opens every day
+    # ("ninguno" or [ninguno] also means that).
+    closed_days: [lunes]
   - name: Roma
+    closed_days: []
 
 users:
   - name: Rosa                     # checked against the phone: a rerun may change case or accents,

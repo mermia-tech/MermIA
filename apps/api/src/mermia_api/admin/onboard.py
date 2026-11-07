@@ -39,6 +39,7 @@ from psycopg.types.json import Jsonb
 
 from mermia_api.admin.spec import (
     DEFAULT_TIMEZONE,
+    WEEKDAY_NAMES,
     LocationSpec,
     OnboardingSpec,
     TenantSpec,
@@ -176,6 +177,12 @@ def _given(**values: Any) -> dict[str, Any]:
     return {k: v for k, v in values.items() if v is not None}
 
 
+def _closed_detail(days: Sequence[int]) -> str:
+    if not days:
+        return "abre todos los días"
+    return "cierra: " + ", ".join(WEEKDAY_NAMES[d - 1] for d in days)
+
+
 # Tenant and locations --------------------------------------------------------------------------
 
 
@@ -207,11 +214,12 @@ def _locations(
     notes: list[str],
 ) -> dict[str, UUID]:
     """Creates or updates each location; returns normalized name -> id."""
-    cols = ("name", "timezone", "address", "sr_version", "sr_edition")
+    cols = ("name", "timezone", "address", "sr_version", "sr_edition", "closed_weekdays")
     rows = {
         r[0]: dict(zip(cols, r[1:], strict=True))
         for r in conn.execute(
-            "select id, name, timezone, address, sr_version, sr_edition from public.location"
+            "select id, name, timezone, address, sr_version, sr_edition, closed_weekdays"
+            " from public.location"
             " where tenant_id = %s",
             (tenant_id,),
         )
@@ -224,6 +232,10 @@ def _locations(
                 f"{loc.name!r} and another spec location resolve to the same location"
                 f" ({rows[found_id]['name']!r}); rename in one run, add the new one in the next"
             )
+        if found_id is None and loc.closed_weekdays is None:
+            raise OnboardingError(
+                f"{loc.name}: di qué días cierra (closed_days: [] o ninguno si abre todos los días)"
+            )
         timezone = loc.timezone or (None if found_id else DEFAULT_TIMEZONE)
         desired = {
             "name": loc.name,
@@ -232,6 +244,7 @@ def _locations(
                 address=loc.address,
                 sr_version=loc.sr_version,
                 sr_edition=loc.sr_edition,
+                closed_weekdays=loc.closed_weekdays,  # a list: [] is a value, and == the stored one
             ),
         }
         found = (found_id, rows[found_id]) if found_id else None
@@ -239,7 +252,10 @@ def _locations(
             conn, "location", found, desired, {"tenant_id": tenant_id}
         )
         ids[normalize_name(loc.name)] = lid
-        changes.append(Change("location", loc.name, action, lid, before=before, after=after))
+        detail = _closed_detail(after["closed_weekdays"]) if "closed_weekdays" in after else ""
+        changes.append(
+            Change("location", loc.name, action, lid, detail, before=before, after=after)
+        )
     notes += [
         f"location {row['name']!r} is not in the spec (kept)"
         for lid, row in rows.items()

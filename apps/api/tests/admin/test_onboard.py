@@ -31,8 +31,8 @@ OPERATOR = "test-operator"
 SPEC: dict[str, Any] = {
     "tenant": {"name": "Taquería La Prueba", "rfc": "TLP200101AB1"},
     "locations": [
-        {"name": "Centro", "address": "Calle 1"},
-        {"name": "Roma", "sr_version": "11"},
+        {"name": "Centro", "address": "Calle 1", "closed_days": ["lunes"]},
+        {"name": "Roma", "sr_version": "11", "closed_days": []},
     ],
     "users": [
         {"name": "Rosa", "phone": "+525500000001", "role": "owner", "email": "rosa@example.com"},
@@ -290,7 +290,7 @@ def test_a_new_restaurant_named_like_an_existing_tenant_is_refused(
     spec = OnboardingSpec.model_validate(
         {
             "tenant": {"name": "TAQUERIA el guero", "rfc": "XYZ200101AB1"},
-            "locations": [{"name": "Sucursal Nueva"}],
+            "locations": [{"name": "Sucursal Nueva", "closed_days": []}],
             "users": [{"name": "Extraño", "phone": "+525599990001", "role": "owner"}],
         }
     )
@@ -442,7 +442,11 @@ def test_leaving_the_timezone_out_keeps_the_stored_one(conn: psycopg.Connection[
     spec = OnboardingSpec.model_validate(
         {
             "tenant": {"id": str(EL_GUERO), "name": "Taquería El Güero"},
-            "locations": [{"name": "Centro"}, {"name": "Polanco"}, {"name": "Nueva"}],
+            "locations": [
+                {"name": "Centro"},
+                {"name": "Polanco"},
+                {"name": "Nueva", "closed_days": []},
+            ],
             "users": [{"name": "Rodrigo", "phone": RODRIGO_PHONE, "role": "owner"}],
         }
     )
@@ -452,6 +456,70 @@ def test_leaving_the_timezone_out_keeps_the_stored_one(conn: psycopg.Connection[
     )
     assert zones["Centro"] == "America/Cancun"
     assert zones["Nueva"] == "America/Mexico_City", "the default applies to a new location"
+
+
+def closed(conn: psycopg.Connection[Any], tenant: UUID, name: str) -> list[int]:
+    return one(  # type: ignore[no-any-return]
+        conn,
+        "select closed_weekdays from public.location where tenant_id = %s and name = %s",
+        tenant,
+        name,
+    )
+
+
+def test_a_new_location_must_say_which_days_it_closes(conn: psycopg.Connection[Any]) -> None:
+    locations = [SPEC["locations"][0], {"name": "Roma"}]
+    with pytest.raises(OnboardingError, match=r"Roma: di qué días cierra \(closed_days: \[\]"):
+        apply(conn, make(locations=locations))
+
+
+def test_closed_days_are_stored_as_iso_numbers_and_shown_by_name(
+    conn: psycopg.Connection[Any],
+) -> None:
+    locations = [
+        {"name": "Centro", "closed_days": ["Domingo", "MIÉRCOLES", "lunes"]},
+        SPEC["locations"][1],
+    ]
+    s = apply(conn, make(locations=locations))
+    assert closed(conn, s.tenant_id, "Centro") == [1, 3, 7]
+    assert closed(conn, s.tenant_id, "Roma") == []
+    details = {c.label: c.detail for c in s.changes if c.entity == "location"}
+    assert details == {"Centro": "cierra: lunes, miércoles, domingo", "Roma": "abre todos los días"}
+
+
+def test_a_rerun_with_the_same_closed_days_is_unchanged(conn: psycopg.Connection[Any]) -> None:
+    first = apply(conn, make())
+    second = apply(conn, again(first))
+    assert {c.action for c in second.changes if c.entity == "location"} == {"unchanged"}
+
+
+def test_changing_the_closed_days_updates_and_audits(conn: psycopg.Connection[Any]) -> None:
+    first = apply(conn, make())
+    locations = [
+        {**SPEC["locations"][0], "closed_days": []},
+        {**SPEC["locations"][1], "closed_days": ["sábado", "domingo"]},
+    ]
+    second = apply(conn, again(first, locations=locations))
+    assert closed(conn, first.tenant_id, "Centro") == []
+    assert closed(conn, first.tenant_id, "Roma") == [6, 7]
+    details = {c.label: c.detail for c in second.changes if c.entity == "location"}
+    assert details == {"Centro": "abre todos los días", "Roma": "cierra: sábado, domingo"}
+    audited = one(
+        conn,
+        """select count(*) from public.audit_log where tenant_id = %s
+           and entity_type = 'location' and action like '%%update'
+           and after ? 'closed_weekdays'""",
+        first.tenant_id,
+    )
+    assert audited == 2
+
+
+def test_leaving_closed_days_out_keeps_the_stored_ones(conn: psycopg.Connection[Any]) -> None:
+    first = apply(conn, make())
+    locations = [{"name": "Centro", "address": "Calle 1"}, {"name": "Roma", "sr_version": "11"}]
+    second = apply(conn, again(first, locations=locations))
+    assert {c.action for c in second.changes if c.entity == "location"} == {"unchanged"}
+    assert closed(conn, first.tenant_id, "Centro") == [1]
 
 
 def test_the_audit_says_an_email_changed_without_the_email(conn: psycopg.Connection[Any]) -> None:
