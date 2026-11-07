@@ -86,6 +86,8 @@ def base_per_unit(
     clave: str, base_unit: str, pack: Pack | None, conversions: Conversions
 ) -> Decimal:
     """Base units of the ingredient in one invoiced unit. Raises UnitHeld."""
+    if pack is not None:
+        _pack_amount(pack)  # a pack that cannot be read holds the line, whatever the unit code
     kind, amount = _invoiced(clave, pack)
     if kind == base_unit:
         return amount

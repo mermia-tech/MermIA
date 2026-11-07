@@ -129,6 +129,23 @@ def test_another_rfc_never_borrows_a_known_supplier_name(
     assert conn.execute("select count(*) from public.supplier").fetchone() == (3,)
 
 
+def test_the_name_match_is_kept_when_its_rfc_is_the_invoices_and_the_rfc_lookup_is_ambiguous(
+    conn: psycopg.Connection[Any], source: UUID, invoice: NormalizedBatch
+) -> None:
+    conn.execute(
+        "update public.supplier set rfc = ' csx150301ab1 ' where name = 'Carnes Selectas del Bajío'"
+    )
+    conn.execute(
+        """insert into public.supplier (tenant_id, name, rfc, kind)
+           values (%s, 'Otra', 'CSX150301AB1', 'cfdi')""",
+        (TENANT,),
+    )
+    same = issuer("Carnes Selectas del Bajio", "CSX150301AB1")
+    r = load(conn, from_issuer(invoice, same), source_id=source)
+    assert "cfdi.supplier_unknown" not in codes(r)
+    assert diff(conn, r)["supplier_matched_by"] == "name"
+
+
 def test_a_person_issuer_is_masked_in_the_diff_and_left_out_of_the_notes(
     conn: psycopg.Connection[Any], source: UUID, invoice: NormalizedBatch
 ) -> None:

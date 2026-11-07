@@ -134,8 +134,11 @@ def find_supplier(
         ).fetchall()
         if normalize_name(row[1]) == key
     ]
-    if len(named) != 1 or (named[0][2] or "").strip():
-        return None  # none, several, or one with an RFC that is not the invoice's
+    if len(named) != 1:
+        return None  # none, or several
+    on_file = (named[0][2] or "").strip().upper()
+    if on_file and on_file != (supplier.rfc or "").strip().upper():
+        return None  # it has an RFC on file that is not the invoice's
     return Supplier(named[0][0], named[0][1], SUPPLIER_BY_NAME)
 
 
@@ -163,7 +166,14 @@ def load_catalog(
         ).fetchall():
             if ingredient_id not in by_id:
                 continue
-            pack = Pack(pack_qty, pack_unit) if pack_qty is not None and pack_unit else None
+            has_unit = pack_unit is not None and bool(pack_unit.strip())
+            # half a pack (a quantity without a readable unit, or a unit without a quantity)
+            # is kept as a Pack that cannot be read, so the line is held, not read as 1 piece
+            pack = (
+                Pack(pack_qty if pack_qty is not None else Decimal(0), pack_unit or "")
+                if pack_qty is not None or has_unit
+                else None
+            )
             aliases.setdefault(normalize_name(text), []).append((ingredient_id, pack))
     tenant_wide: list[tuple[str, str, Decimal]] = []
     own: dict[UUID, list[tuple[str, str, Decimal]]] = {}

@@ -171,6 +171,28 @@ def test_a_piece_uses_the_alias_pack_size(
     assert Decimal(found["diff"]["lines"][0]["base_per_unit"]) == 180
 
 
+@pytest.mark.parametrize("unit", ["H87", "XBX", "KGM"])
+@pytest.mark.parametrize(
+    ("pack_qty", "pack_unit"),
+    [(180, None), (180, "caja"), (None, "pza"), (0, "pza"), (-1, "pza")],
+)
+def test_an_alias_with_half_a_pack_holds_the_line(
+    conn: psycopg.Connection[Any],
+    source: UUID,
+    invoice: NormalizedBatch,
+    unit: str,
+    pack_qty: int | None,
+    pack_unit: str | None,
+) -> None:
+    conn.execute(
+        """update public.ingredient_alias set pack_qty = %s, pack_unit = %s
+           where supplier_id = %s and source_text = 'HUEVO'""",
+        (pack_qty, pack_unit, CARNES_SELECTAS),
+    )
+    r = load(conn, edited(invoice, line("HUEVO", "1", unit, "720")), source_id=source)
+    assert price(conn, r, HUEVO) is None and codes(r) == ["cfdi.unit_pack_unknown"]
+
+
 def test_two_ingredients_with_the_line_name_hold_it(
     conn: psycopg.Connection[Any], source: UUID, invoice: NormalizedBatch
 ) -> None:
