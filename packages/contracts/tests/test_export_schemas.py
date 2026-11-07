@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from mermia_contracts.agent_tools import tool_definitions
-from mermia_contracts.rpc import RPCS
+from mermia_contracts.rpc import ALL_RPCS
 from mermia_contracts.tools.export_schemas import DEFAULT_OUTPUT, main, stale_files
 
 
@@ -14,7 +14,7 @@ def test_committed_schemas_are_fresh() -> None:
 
 def test_one_args_and_response_schema_per_rpc() -> None:
     names = {p.name for p in DEFAULT_OUTPUT.glob("rpc.*.json")}
-    assert names == {f"rpc.{n}.{kind}.json" for n in RPCS for kind in ("args", "response")}
+    assert names == {f"rpc.{n}.{kind}.json" for n in ALL_RPCS for kind in ("args", "response")}
 
 
 def test_tools_file_matches_the_tool_definitions() -> None:

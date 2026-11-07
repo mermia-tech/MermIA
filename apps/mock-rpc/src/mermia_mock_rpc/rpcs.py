@@ -1,4 +1,5 @@
-"""The 11 read RPCs, answered once each with the C3 contract examples.
+"""The 11 read RPCs and the report RPCs (ALL_RPCS), answered once each with the C3 contract
+examples.
 
 The examples in `packages/contracts/tests/examples/rpc/` are the reference (aligned with the
 El Güero seed and, for four RPCs, pinned to the live SQL), so the mock serves them as they are:
@@ -13,7 +14,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from mermia_contracts.rpc import RPCS
+from mermia_contracts.rpc import ALL_RPCS
 
 Answer = dict[str, Any]
 EXAMPLES = (
@@ -32,10 +33,11 @@ def _examples() -> dict[tuple[str, str | None], dict[str, Any]]:
 _FILES = _examples()
 
 # The args of each base example are the query the fixed answer is for.
-CANONICAL: dict[str, Answer] = {name: _FILES[(name, None)]["args"] for name in RPCS}
+CANONICAL: dict[str, Answer] = {name: _FILES[(name, None)]["args"] for name in ALL_RPCS}
 
 VARIANTS: dict[str, tuple[str, ...]] = {
-    name: ("error", *(v for (n, v) in _FILES if n == name and v and v != "error")) for name in RPCS
+    name: ("error", *(v for (n, v) in _FILES if n == name and v and v != "error"))
+    for name in ALL_RPCS
 }
 
 

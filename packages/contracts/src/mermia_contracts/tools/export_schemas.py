@@ -2,7 +2,8 @@
 
     python -m mermia_contracts.tools.export_schemas [--output DIR] [--check]
 
-One file per RPC (`rpc.<name>.args.json`, `rpc.<name>.response.json`), plus `agent.tools.json`,
+One file per RPC of ALL_RPCS, the agent's and the report's (`rpc.<name>.args.json`,
+`rpc.<name>.response.json`), plus `agent.tools.json`,
 `pending.change_proposal.json`, `pending.apply_args.json`, `pending.apply_result.json`,
 `agent.request.json` and `agent.response.json`. Schemas describe what the models accept
 (validation mode). `--check` fails if the committed files differ.
@@ -19,7 +20,7 @@ from pydantic import TypeAdapter
 from mermia_contracts.agent import AgentRequest, AgentResponse
 from mermia_contracts.agent_tools import tool_definitions
 from mermia_contracts.pending import ApplyPendingChangeArgs, ApplyResult, ChangeProposal
-from mermia_contracts.rpc import RPCS, RpcEnvelope
+from mermia_contracts.rpc import ALL_RPCS, RpcEnvelope
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT = PACKAGE_ROOT / "schemas"
@@ -27,7 +28,7 @@ DEFAULT_OUTPUT = PACKAGE_ROOT / "schemas"
 
 def all_schemas() -> dict[str, Any]:
     schemas: dict[str, Any] = {}
-    for name, spec in RPCS.items():
+    for name, spec in ALL_RPCS.items():
         schemas[f"rpc.{name}.args"] = spec.args.model_json_schema()
         schemas[f"rpc.{name}.response"] = TypeAdapter(RpcEnvelope[spec.data]).json_schema()  # type: ignore[name-defined]
     schemas["agent.tools"] = tool_definitions()

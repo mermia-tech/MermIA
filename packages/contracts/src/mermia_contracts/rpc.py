@@ -1,9 +1,12 @@
-"""C3: the 11 read RPCs (09 section 4.1): arguments, response data and the shared envelope.
+"""C3: the 11 read RPCs (09 section 4.1) and the report RPCs: arguments, response data and the
+shared envelope.
 
 Wire format follows batch.py: snake_case JSON, unknown fields are an error, money is integer
 centavos, percentages are percent points. Every number the agent may quote travels twice: a raw
 value for charts and code, and the text the metric layer already formatted ("$184,320.50").
-RPC names are the agent tool names (agent_tools.py builds C4 from RPCS).
+RPC names are the agent tool names (agent_tools.py builds C4 from RPCS). The report RPCs
+(REPORT_RPCS: build_weekly_report, MR-34) are for code, not the agent: they are not tools, so the
+prompt prefix and the tool budget stay as they are. ALL_RPCS is both, for the schemas and the mock.
 
 Choices not fixed by 09 (my calls, open to change before the freeze): the `error` field and its
 closed code list, `Flag` carrying only a code and a message, and the ambiguous-dish answer being
@@ -588,6 +591,71 @@ class DataStatusData(Model):
     coverage: Pct
 
 
+# --- the weekly report (MR-34) ---------------------------------------------------------------
+
+WeekName = Literal["last_week", "prev_week"]
+
+WEEKLY_TOP_DISHES: Final = 3
+"""The weekly report lists the top 3 dishes by units (W4: the template names the first)."""
+
+
+def _is_week(r: DateRange) -> bool:
+    return r.from_.isoweekday() == 1 and r.to == r.from_ + dt.timedelta(days=6)
+
+
+class BuildWeeklyReportArgs(Model):
+    """The week to report: a named past week or an explicit Monday-to-Sunday {from, to} (W2).
+    The SQL also refuses a week that has not ended yet (it knows the business date)."""
+
+    period: WeekName | DateRange = "last_week"
+    location_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def _monday_to_sunday(self) -> BuildWeeklyReportArgs:
+        if not isinstance(self.period, str) and not _is_week(self.period):
+            raise ValueError("period must run Monday to Sunday")
+        return self
+
+
+class WeeklyReportData(Model):
+    """Everything the Monday report needs, for MR-38 to render (decisions W1-W4).
+
+    Each section is the data of the read RPC of the same shape over `week`: `sales` is
+    get_sales_summary (`change_vs_previous` is vs `previous_week`, W3), `top_dishes` get_top_dishes
+    by units (top 3), `food_cost` get_food_cost_pct (null when the week has no costed sales),
+    `cost_alerts` get_cost_alerts since the week's Monday (top 10 of each list; dishes over target
+    = `breaches_total`), `stale_costs` get_data_status today. `missing_business_days` are the days
+    of the week a location in scope has no sales data (W2: the report goes out and says so).
+    """
+
+    week: DateRange
+    previous_week: DateRange
+    sales: SalesSummaryData
+    top_dishes: TopDishesData
+    food_cost: FoodCostData | None
+    cost_alerts: CostAlertsData
+    missing_business_days: list[dt.date]
+    stale_costs: Count
+
+    @model_validator(mode="after")
+    def _one_week(self) -> WeeklyReportData:
+        if not _is_week(self.week):
+            raise ValueError("week must run Monday to Sunday")
+        week_before = dt.timedelta(days=7)
+        if (self.previous_week.from_, self.previous_week.to) != (
+            self.week.from_ - week_before,
+            self.week.to - week_before,
+        ):
+            raise ValueError("previous_week must be the week before week")
+        if self.top_dishes.metric != "units" or len(self.top_dishes.rows) > WEEKLY_TOP_DISHES:
+            raise ValueError(f"top_dishes are the top {WEEKLY_TOP_DISHES} by units")
+        if any(not self.week.from_ <= d <= self.week.to for d in self.missing_business_days):
+            raise ValueError("missing_business_days must fall in the week")
+        if self.missing_business_days != sorted(set(self.missing_business_days)):
+            raise ValueError("missing_business_days are distinct and in order")
+        return self
+
+
 # --- registry --------------------------------------------------------------------------------
 
 
@@ -609,3 +677,11 @@ RPCS: dict[str, RpcSpec] = {
     "get_cost_alerts": RpcSpec(GetCostAlertsArgs, CostAlertsData),
     "get_data_status": RpcSpec(GetDataStatusArgs, DataStatusData),
 }
+
+REPORT_RPCS: dict[str, RpcSpec] = {
+    "build_weekly_report": RpcSpec(BuildWeeklyReportArgs, WeeklyReportData),
+}
+"""RPCs for code (the report jobs, the dashboard), not agent tools: kept out of RPCS."""
+
+ALL_RPCS: Final[dict[str, RpcSpec]] = RPCS | REPORT_RPCS
+"""Every SQL RPC with a contract: the schemas and the mock serve these."""

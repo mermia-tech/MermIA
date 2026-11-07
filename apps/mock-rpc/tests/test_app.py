@@ -1,14 +1,14 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from mermia_contracts.rpc import RPCS
+from mermia_contracts.rpc import ALL_RPCS
 from mermia_mock_rpc import rpcs
 from mermia_mock_rpc.app import app
 
 client = TestClient(app)
 
 
-@pytest.mark.parametrize("name", list(RPCS))
+@pytest.mark.parametrize("name", list(ALL_RPCS))
 def test_each_rpc_answers_its_canonical_query(name: str) -> None:
     response = client.post(f"/rpc/{name}", json=rpcs.CANONICAL[name])
     assert response.status_code == 200
@@ -64,15 +64,26 @@ def _raws(node: object) -> list[object]:
     return []
 
 
-@pytest.mark.parametrize("name", list(RPCS))
+@pytest.mark.parametrize("name", list(ALL_RPCS))
 def test_raw_values_travel_as_json_numbers(name: str) -> None:
     body = client.post(f"/rpc/{name}", json=rpcs.CANONICAL[name]).json()
     assert all(isinstance(raw, int | float) for raw in _raws(body))
 
 
 def test_every_answer_says_it_is_a_fixed_mock_answer() -> None:
-    for name in RPCS:
+    for name in ALL_RPCS:
         for variant in (None, *rpcs.VARIANTS[name]):
             url = f"/rpc/{name}" + (f"?variant={variant}" if variant else "")
             flags = client.post(url, json=rpcs.CANONICAL[name]).json()["flags"]
             assert "mock_fixed_answer" in [f["code"] for f in flags]
+
+
+def test_the_weekly_report_is_served() -> None:
+    response = client.post("/rpc/build_weekly_report", json={"period": "last_week"})
+    assert response.status_code == 200
+    assert response.json()["data"]["sales"]["net_sales"]["raw"] == 34524130
+
+
+def test_the_weekly_report_rejects_a_week_that_is_not_monday_to_sunday() -> None:
+    week = {"period": {"from": "2026-10-06", "to": "2026-10-12"}}
+    assert client.post("/rpc/build_weekly_report", json=week).status_code == 422
