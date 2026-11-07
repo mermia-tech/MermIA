@@ -108,7 +108,9 @@ def fixtures() -> Iterator[None]:
             (
                 (
                     "insert into public.location (tenant_id, id, name, timezone) values "
-                    "(%s, %s, 'Centro', 'x'), (%s, %s, 'Polanco', 'x'), (%s, %s, 'B uno', 'x')"
+                    "(%s, %s, 'Centro', 'America/Mexico_City'), "
+                    "(%s, %s, 'Polanco', 'America/Mexico_City'), "
+                    "(%s, %s, 'B uno', 'America/Mexico_City')"
                 ),
                 (TA, A1, TA, A2, TB, B1),
             ),
@@ -272,7 +274,7 @@ def test_other_tenants_see_nothing(fixtures: None) -> None:
 
 
 def test_writes_are_refused(fixtures: None) -> None:
-    row = {"tenant_id": TA, "name": "Injected", "timezone": "x"}
+    row = {"tenant_id": TA, "name": "Injected", "timezone": "America/Mexico_City"}
     assert call("location", token(), "POST", row)[0] == 403
     assert call(f"location?id=eq.{A1}", token(), "PATCH", {"name": "Hacked"})[0] == 403
     assert call(f"location?id=eq.{A1}", token(), "DELETE")[0] == 403

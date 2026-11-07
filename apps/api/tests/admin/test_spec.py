@@ -122,6 +122,21 @@ def test_unknown_timezone_and_bad_rfc_are_refused() -> None:
         OnboardingSpec.model_validate(spec(tenant={"name": "X", "rfc": "123"}))
 
 
+@pytest.mark.parametrize(
+    "zone", ["america/mexico_city", "CST6CDT", "EST", "Etc/GMT+6", "Mars/Base"]
+)
+def test_time_zones_outside_the_db_rule_give_a_spec_error(zone: str) -> None:
+    with pytest.raises(ValidationError, match="unknown time zone"):
+        OnboardingSpec.model_validate(spec(locations=[{"name": "Centro", "timezone": zone}]))
+
+
+def test_a_canonical_time_zone_is_accepted() -> None:
+    s = OnboardingSpec.model_validate(
+        spec(locations=[{"name": "Roma", "timezone": "America/Tijuana"}])
+    )
+    assert s.locations[0].timezone == "America/Tijuana"
+
+
 def test_the_spec_needs_a_location_and_a_user() -> None:
     with pytest.raises(ValidationError):
         OnboardingSpec.model_validate(spec(locations=[]))

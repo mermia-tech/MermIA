@@ -3,11 +3,16 @@ begin;
 select * from no_plan();
 
 select is(app.is_valid_timezone('America/Mexico_City'), true, 'a real zone is valid');
-select is(app.is_valid_timezone('UTC'), true, 'UTC is valid');
+select is(app.is_valid_timezone('UTC'), false, 'UTC is not a region zone');
 select is(app.is_valid_timezone('America/Mexico City'), false, 'a space instead of underscore is invalid');
 select is(app.is_valid_timezone('Mars/Olympus'), false, 'an unknown zone is invalid');
 select is(app.is_valid_timezone(''), false, 'empty is invalid');
 select is(app.is_valid_timezone('+05'), false, 'a bare offset is invalid');
+select is(app.is_valid_timezone('America/Tijuana'), true, 'another canonical zone is valid');
+select is(app.is_valid_timezone('CST6CDT'), false, 'a US daylight-saving POSIX name is invalid');
+select is(app.is_valid_timezone('EST'), false, 'EST is invalid');
+select is(app.is_valid_timezone('Etc/GMT+6'), false, 'an Etc offset zone is invalid');
+select is(app.is_valid_timezone('america/mexico_city'), false, 'wrong case is invalid');
 select is(app.is_valid_timezone(null), false, 'null is not valid');
 
 select ok(has_function_privilege('service_role', 'app.is_valid_timezone(text)', 'execute')
