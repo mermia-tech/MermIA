@@ -361,6 +361,18 @@ def test_an_unknown_ingredient_with_a_unit_that_is_not_a_base_unit_is_held(
     assert pending(conn, r.batch_id) == []
 
 
+@pytest.mark.parametrize("name", ["味噌", "🍞"])
+def test_an_ingredient_name_that_normalizes_to_nothing_is_held(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch, name: str
+) -> None:
+    odd = RecipeLineIn(ingredient_name=name, qty_base=Decimal(2), unit="g")
+    r = load(
+        conn, edit(sample, "P001", lambda r: lines(r, lambda ls: [*ls, odd])), source_id=source
+    )
+    assert "recipe.ingredient_name_empty" in codes(r)
+    assert pending(conn, r.batch_id) == []
+
+
 def test_one_ingredient_code_under_two_names_is_a_warning(
     conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
 ) -> None:
@@ -595,6 +607,26 @@ def test_recipes_the_parser_held_count_as_held(
         "unchanged": 15,
         "held": 1,
     }
+
+
+def test_one_new_ingredient_under_two_spellings_is_proposed_under_the_first(
+    conn: psycopg.Connection[Any], source: UUID, sample: NormalizedBatch
+) -> None:
+    def oregano(name: str) -> Callable[[RecipeIn], RecipeIn]:
+        line = RecipeLineIn(ingredient_name=name, qty_base=Decimal(5), unit="g")
+        return lambda r: lines(r, lambda ls: [*ls, line])
+
+    batch = edit(edit(sample, "P001", oregano("Orégano")), "P002", oregano("OREGANO  ()"))
+    r = load(conn, batch, source_id=source)
+
+    changes = pending(conn, r.batch_id)
+    assert len(changes) == 2
+    for change in changes:
+        new = [x for x in change["diff"]["after"]["lines"] if x["new_ingredient"]]
+        values = RecipeUpsertProposal.model_validate(change["payload"]).values.lines
+        assert [x["ingredient_name"] for x in new] == ["Orégano"]
+        assert "Orégano" in [x.ingredient_name for x in values]
+        assert change["diff"]["added"] == ["Orégano"]
 
 
 def test_a_new_ingredient_in_two_units_holds_every_recipe_that_uses_it(
