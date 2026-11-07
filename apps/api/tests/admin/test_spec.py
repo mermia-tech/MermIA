@@ -158,9 +158,20 @@ def test_no_closed_days_is_not_the_same_as_an_empty_list() -> None:
     assert roma.closed_weekdays == [], "opens every day"
 
 
+@pytest.mark.parametrize("days", ["ninguno", "Ninguno", " NINGUNO ", ["ninguno"], ["Ningúno"]])
+def test_ninguno_means_it_opens_every_day(days: Any) -> None:
+    s = OnboardingSpec.model_validate(
+        spec(locations=[{"name": "Centro", "closed_days": days}, {"name": "Roma"}])
+    )
+    assert s.locations[0].closed_weekdays == []
+
+
 @pytest.mark.parametrize(
     ("days", "message"),
     [
+        (["ninguno", "lunes"], "no se puede mezclar"),
+        (["lunes", "ninguno"], "no se puede mezclar"),
+        (["funday"], "o ninguno si abre todos los días"),
         ([1], "día desconocido"),
         (["funday"], "día desconocido.*lunes, martes, miércoles, jueves, viernes, sábado, domingo"),
         (["lunes", "Lunes"], "día repetido"),

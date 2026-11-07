@@ -68,6 +68,9 @@ def mask_phone(phone: str) -> str:
     return phone[:MASK_KEEP_START] + "*" * hidden + phone[len(phone) - MASK_KEEP_END :]
 
 
+NONE_ANSWER = "ninguno"
+
+
 class TenantSpec(Model):
     id: UUID | None = None  # required to touch an existing tenant (reruns); its name may change
     name: Text
@@ -111,13 +114,26 @@ class LocationSpec(Model):
         if value is None:
             return None
         valid = ", ".join(WEEKDAY_NAMES)
+        if isinstance(value, str) and normalize_name(value) == NONE_ANSWER:
+            return []  # the founders' question tells the owner to answer "ninguno"
         if not isinstance(value, list):
             raise ValueError(f"closed_days debe ser una lista de días ({valid}); [] si abre todos")
+        is_none = [isinstance(d, str) and normalize_name(d) == NONE_ANSWER for d in value]
+        if any(is_none):
+            if len(value) > 1:
+                raise ValueError(
+                    "closed_days: «ninguno» no se puede mezclar con días; "
+                    "usa solo «ninguno» o la lista de días"
+                )
+            return []
         numbers: list[int] = []
         for day in value:
             number = WEEKDAYS.get(normalize_name(day)) if isinstance(day, str) else None
             if number is None:
-                raise ValueError(f"día desconocido {day!r} en closed_days; usa: {valid}")
+                raise ValueError(
+                    f"día desconocido {day!r} en closed_days; usa: {valid}; "
+                    "[] o ninguno si abre todos los días"
+                )
             if number in numbers:
                 raise ValueError(f"día repetido en closed_days: {WEEKDAY_NAMES[number - 1]}")
             numbers.append(number)
