@@ -59,6 +59,7 @@ alter table public.alert
   add column new_unit_price numeric(20, 6),
   add column avg_unit_price numeric(20, 6),
   add column confidence app.cost_confidence,
+  add column evaluated_on date,
   add foreign key (tenant_id, menu_item_id) references public.menu_item (tenant_id, id) on delete restrict,
   add foreign key (tenant_id, ingredient_id) references public.ingredient (tenant_id, id) on delete restrict;
 
@@ -99,6 +100,8 @@ comment on column public.alert.urgent is
 comment on column public.alert.awaits_confirmation is
   'margin_breach only: a new breach first recorded on an unconfirmed cost, waiting for its one chance at urgency (R2); '
   'cleared on the first confirmed fresh day, top 10 or not, and never set again (R4)';
+comment on column public.alert.evaluated_on is
+  'margin_breach: the last day the evaluator applied to the row (on_date); a rerun of an older day leaves the row as it is';
 comment on column public.alert.confidence is
   'margin_breach: the confidence of the dish cost snapshot value comes from (an estimated breach is never urgent); null for price_jump';
 
@@ -208,7 +211,8 @@ $$;
 
 -- Evaluator ----------------------------------------------------------------------------------
 -- Writes the tenant's alerts for one business day; returns how many rows it added. Idempotent: a
--- rerun adds nothing. Price jumps are looked for over the 7 days to on_date, so a price entered a
+-- rerun adds nothing, and a rerun of a day older than one already applied to a breach leaves that
+-- breach as it is (alert.evaluated_on). Price jumps are looked for over the 7 days to on_date, so a price entered a
 -- few days late is still caught by the next run. Urgency is judged against `today` (null: the
 -- tenant's business today), never on_date, so a catch-up run over old days marks nothing urgent.
 create function app.evaluate_cost_alerts(tenant uuid, on_date date, today date default null) returns int
@@ -270,6 +274,17 @@ begin
       where v.tenant_id = tenant and v.business_date between on_date - (k.ranking_days - 1) and on_date
       group by v.location_id, v.menu_item_id
     ) x where x.n <= k.top_dishes
+  ), open_row as (
+    -- the episode's row: its earliest open alert. A recompute can merge two episodes into one; the
+    -- later row is left as it is (one urgency per breach, R4)
+    select distinct on (a.location_id, a.menu_item_id) a.id, a.location_id, a.menu_item_id, a.urgent,
+           a.awaits_confirmation, a.evaluated_on
+    from episode e
+    join public.alert a
+      on a.tenant_id = tenant and a.rule = 'margin_breach' and a.status = 'open'
+     and a.location_id = e.location_id and a.menu_item_id = e.menu_item_id
+     and a.as_of between e.started and on_date
+    order by a.location_id, a.menu_item_id, a.as_of
   ), next_state as (
     -- an open alert of a breach still on (the episode only holds snapshots over the limit, so a
     -- breach that ended is left as it is) takes the confidence and the food cost of the on_date
@@ -281,30 +296,31 @@ begin
     -- - otherwise urgent stays as it is: a row that lost urgency, never had it or already used its
     --   chance cannot gain it; a catch-up over old days confirms the tag but leaves a waiting row
     --   waiting for a fresh day.
+    -- A rerun of a day older than the last one applied to the row (a range rerun) leaves it as it
+    -- is: an older day never undoes the state a later day set.
     select a.id, s.confidence, round(100.0 * s.cost / s.price_net, 4) as value,
            case when s.confidence <> 'confirmed' then false
                 when a.awaits_confirmation and on_date > today - k.fresh_days
                   then exists (select 1 from top_dish t where t.location_id = a.location_id and t.menu_item_id = a.menu_item_id)
                 else a.urgent end as urgent,
            a.awaits_confirmation and not (s.confidence = 'confirmed' and on_date > today - k.fresh_days) as awaits_confirmation
-    from episode e
+    from open_row a
     join public.dish_cost_snapshot s
-      on s.tenant_id = tenant and s.location_id = e.location_id and s.menu_item_id = e.menu_item_id and s.date = on_date
-    join public.alert a
-      on a.tenant_id = tenant and a.rule = 'margin_breach' and a.status = 'open'
-     and a.location_id = e.location_id and a.menu_item_id = e.menu_item_id
-     and a.as_of between e.started and on_date
+      on s.tenant_id = tenant and s.location_id = a.location_id and s.menu_item_id = a.menu_item_id and s.date = on_date
+    where a.evaluated_on is null or a.evaluated_on <= on_date
   ), refreshed as (
-    -- only rows that change: an identical rerun writes nothing and bumps no version
+    -- only rows that change: an identical rerun of the same day writes nothing and bumps no version
     update public.alert a
-    set confidence = n.confidence, value = n.value, urgent = n.urgent, awaits_confirmation = n.awaits_confirmation
+    set confidence = n.confidence, value = n.value, urgent = n.urgent, awaits_confirmation = n.awaits_confirmation,
+        evaluated_on = on_date
     from next_state n
     where a.id = n.id
-      and (a.confidence, a.value, a.urgent, a.awaits_confirmation)
-          is distinct from (n.confidence, n.value, n.urgent, n.awaits_confirmation)
+      and (a.confidence, a.value, a.urgent, a.awaits_confirmation, a.evaluated_on)
+          is distinct from (n.confidence, n.value, n.urgent, n.awaits_confirmation, on_date)
     returning 1
   )
-  insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, confidence, urgent, awaits_confirmation)
+  insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, confidence, urgent, awaits_confirmation,
+                            evaluated_on)
   -- as_of is the start of the episode; value and confidence come from the on_date snapshot
   select tenant, e.location_id, 'margin_breach', e.menu_item_id, e.started,
          round(100.0 * s.cost / s.price_net, 4), breach_above, s.confidence,
@@ -315,9 +331,11 @@ begin
            and s.confidence = 'confirmed'
            and on_date > today - k.fresh_days
            and exists (select 1 from top_dish t where t.location_id = e.location_id and t.menu_item_id = e.menu_item_id),
-         -- a new breach recorded on an unconfirmed cost waits for its one chance (R2); an existing
-         -- one never waits (R3), nor does one recorded confirmed (its chance is this insert, R4)
-         e.started > on_date - k.fresh_days and s.confidence <> 'confirmed'
+         -- a new breach recorded on an unconfirmed cost on a fresh day waits for its one chance (R2);
+         -- an existing one or one first recorded on a stale day (a catch-up) never waits (R3), nor
+         -- does one recorded confirmed (its chance is this insert, R4)
+         e.started > on_date - k.fresh_days and s.confidence <> 'confirmed' and on_date > today - k.fresh_days,
+         on_date
   from episode e
   join public.dish_cost_snapshot s
     on s.tenant_id = tenant and s.location_id = e.location_id and s.menu_item_id = e.menu_item_id and s.date = on_date

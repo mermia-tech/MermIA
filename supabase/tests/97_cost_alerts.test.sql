@@ -783,6 +783,71 @@ select is((select a.urgent from public.alert a where a.rule = 'margin_breach' an
           false, 'F4: in the top 10 now, still not urgent: its chance was used');
 rollback to savepoint f4_chance_used;
 
+savepoint s1_range_rerun;
+-- S1: the R2 daily runs (a breach from 10-08, estimated to 10-10, urgent on 10-11), then the
+-- backend reruns 10-08..10-12 on 10-12: the older days never undo the state a later day set
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'MEAT', 0.300, '2026-10-08', 'cfdi');
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-08', '2026-10-12') > 0, 'S1: five days recomputed');
+update public.dish_cost_snapshot set confidence = case when date >= '2026-10-11' then 'confirmed' else 'estimated' end::app.cost_confidence
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date >= '2026-10-08';
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-08', '2026-10-12');
+create temp table s1_before as
+  select a.as_of, a.confidence::text as confidence, a.urgent, a.awaits_confirmation, a.value, a.version, a.evaluated_on from public.alert a
+  where a.rule = 'margin_breach' and a.menu_item_id = :'PASTOR' and a.location_id = :'CENTRO';
+select results_eq($$select as_of, confidence, urgent, awaits_confirmation, evaluated_on from s1_before$$,
+                  $$values ('2026-10-08'::date, 'confirmed'::text, true, false, '2026-10-12'::date)$$,
+                  'S1: urgent after the daily runs, evaluated through 10-12');
+select is(pg_temp.evaluate(:'TENANT', '2026-10-08', '2026-10-12', '2026-10-12'), 0, 'S1: the range rerun adds nothing');
+select results_eq($$select a.as_of, a.confidence::text, a.urgent, a.awaits_confirmation, a.value, a.version, a.evaluated_on from public.alert a
+                    where a.rule = 'margin_breach' and a.menu_item_id = 'f496f051-9f85-5f8a-a4b6-c1a814d37c73'
+                      and a.location_id = '705e8e51-376b-5785-adbb-405eff4e2a22'$$,
+                  $$select * from s1_before$$, 'S1: still urgent, same value, no new version');
+rollback to savepoint s1_range_rerun;
+
+savepoint s2_catchup_estimated;
+-- S2 (R3): after an outage, one catch-up over 10-01..10-12 on 10-12 for a breach from 10-02. Every
+-- cost confirmed: recorded on a stale day, never urgent
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'MEAT', 0.300, '2026-10-02', 'cfdi');
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-01', '2026-10-12') > 0, 'S2: range recomputed');
+update public.dish_cost_snapshot set confidence = 'confirmed'
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date >= '2026-10-01';
+select pg_temp.evaluate(:'TENANT', '2026-10-01', '2026-10-12', '2026-10-12');
+select results_eq($$select * from pg_temp.pastor_centro()$$, $$values ('2026-10-02'::date, 'confirmed'::text, false, false)$$,
+                  'S2: all confirmed, first recorded on a stale day: not urgent');
+rollback to savepoint s2_catchup_estimated;
+savepoint s2_catchup_estimated;
+-- the same with 10-02 estimated: it does not wait either, so it never turns urgent on a fresh day
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'MEAT', 0.300, '2026-10-02', 'cfdi');
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-01', '2026-10-12') > 0, 'S2: range recomputed again');
+update public.dish_cost_snapshot set confidence = case when date = '2026-10-02' then 'estimated' else 'confirmed' end::app.cost_confidence
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date >= '2026-10-01';
+select pg_temp.evaluate(:'TENANT', '2026-10-01', '2026-10-12', '2026-10-12');
+select results_eq($$select * from pg_temp.pastor_centro()$$, $$values ('2026-10-02'::date, 'confirmed'::text, false, false)$$,
+                  'S2: 10-02 estimated, first recorded on a stale day: never waits, never urgent');
+rollback to savepoint s2_catchup_estimated;
+
+savepoint s5_episode_merge;
+-- S5 (R4): two breaches (10-05, 10-07..10-08) are recorded waiting; a recompute makes 10-06 breach
+-- too, so they are one episode from 10-05. Confirmed on a fresh 10-11: only the earliest row
+-- (the episode's) turns urgent, the later one is left as it was
+update public.dish_cost_snapshot set cost = price_net / 2,
+  confidence = case when date <= '2026-10-08' then 'estimated' else 'confirmed' end::app.cost_confidence
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date in ('2026-10-05', '2026-10-07', '2026-10-08', '2026-10-11', '2026-10-12');
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-05', '2026-10-08');
+select results_eq($$select * from pg_temp.pastor_centro() order by as_of$$,
+                  $$values ('2026-10-05'::date, 'estimated'::text, false, true), ('2026-10-07', 'estimated', false, true)$$,
+                  'S5: two breaches, both waiting');
+update public.dish_cost_snapshot set cost = price_net / 2, confidence = 'estimated'
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date in ('2026-10-06', '2026-10-09', '2026-10-10');
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-09', '2026-10-12');
+select results_eq($$select * from pg_temp.pastor_centro() order by as_of$$,
+                  $$values ('2026-10-05'::date, 'confirmed'::text, true, false), ('2026-10-07', 'estimated', false, true)$$,
+                  'S5: merged into one episode: one urgent row, the later row untouched');
+rollback to savepoint s5_episode_merge;
+
 -- the alert row's shape -------------------------------------------------------------------------
 select throws_ok(format($$insert into public.alert (tenant_id, rule, menu_item_id, as_of, value, threshold) values (%L, 'mix_shift', %L, '2026-10-12', 1, 1)$$, :'TENANT', :'PASTOR'),
                  '23514', null, 'only known rules');
