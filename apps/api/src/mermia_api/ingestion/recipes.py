@@ -42,6 +42,7 @@ from psycopg.types.json import Jsonb
 
 from mermia_api.ingestion.items import find_item
 from mermia_api.ingestion.parsers import mermia_recetas
+from mermia_api.ingestion.proposals import Proposals, audit
 from mermia_contracts.batch import IssueIn, NormalizedBatch, RecipeIn, RecipeLineIn
 from mermia_contracts.db.models import IssueSeverity
 from mermia_contracts.keys import normalize_name
@@ -63,16 +64,6 @@ SUPERSEDED = "superseded"  # resolved_via of a pending change a newer proposal r
 PARSER_HELD = ("sr.recipe_held", "plantilla.recipe_held")
 QTY_PLACES = Decimal("0.000001")
 YIELD_PLACES = Decimal("0.0001")
-
-
-@dataclass(frozen=True)
-class Proposals:
-    pending_change_ids: tuple[UUID, ...]
-    proposed: int
-    unchanged: int
-    already_pending: int  # identical to a pending proposal: not filed again
-    held: int
-    issues: tuple[IssueIn, ...]
 
 
 @dataclass(frozen=True)
@@ -126,9 +117,6 @@ class _Held(Exception):
     def __init__(self, issue: IssueIn) -> None:
         super().__init__(issue.message_es)
         self.issue = issue
-
-
-NO_PROPOSALS = Proposals((), 0, 0, 0, 0, ())
 
 
 def _str(value: UUID | None) -> str | None:
@@ -673,7 +661,7 @@ def _propose(
     ).fetchone()
     assert row is not None
     change_id = UUID(str(row[0]))
-    _audit(
+    audit(
         conn,
         tenant_id,
         proposed_by,
@@ -737,7 +725,7 @@ def _supersede(
         (SUPERSEDED, tenant_id, KIND.value, menu_item_id, change_id),
     ).fetchall()
     for old_id, _ in rows:
-        _audit(
+        audit(
             conn,
             tenant_id,
             proposed_by,
@@ -768,33 +756,3 @@ def _origin(conn: psycopg.Connection[Any], tenant_id: UUID, menu_item_id: UUID) 
         (tenant_id, KIND.value, menu_item_id),
     ).fetchone()
     return None if row is None else row[0]
-
-
-def _audit(
-    conn: psycopg.Connection[Any],
-    tenant_id: UUID,
-    actor: UUID | None,
-    action: str,
-    entity: tuple[str, UUID],
-    before: dict[str, Any] | None,
-    after: dict[str, Any],
-    change_id: UUID,
-    batch_id: UUID,
-) -> None:
-    conn.execute(
-        """insert into public.audit_log
-             (tenant_id, actor_user_id, actor_kind, action, entity_type, entity_id, before, after,
-              pending_change_id, batch_id)
-           values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-        (
-            tenant_id,
-            actor,
-            "user" if actor is not None else "system",
-            action,
-            *entity,
-            None if before is None else Jsonb(before),
-            Jsonb(after),
-            change_id,
-            batch_id,
-        ),
-    )

@@ -10,6 +10,7 @@
  "purchases": [
   {
    "supplier": {"name": "CARNES SELECTAS DEL BAJIO", "rfc": "CSB150301AB1", "kind": "cfdi"},
+   "buyer_rfc": "TEG190415MX2",
    "kind": "cfdi",
    "cfdi_uuid": "5d3e8a1c-7b2f-4e9a-9c61-0f4a2b7d8e13",
    "issued_at": "2026-10-08T09:15:00-06:00",
