@@ -6,8 +6,10 @@ savepoints in it). Needs MERMIA_DB_URL and the seed (supabase db reset loads it)
 
 import datetime as dt
 import itertools
+import logging
 import os
 from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -18,11 +20,16 @@ from mermia_api.costing import nightly
 from mermia_api.costing.nightly import (
     JOB_LOCK_KEY,
     MAX_CHUNK_DAYS,
+    NightlyResult,
+    ServiceRoleError,
     TenantFailure,
     TenantRun,
+    UnknownTenantError,
     become_service_role,
     main,
     plan_chunks,
+    refresh_tenant,
+    run_job,
     run_nightly_dish_costs,
     try_job_lock,
 )
@@ -41,6 +48,24 @@ def conn() -> Iterator[psycopg.Connection[Any]]:
     with psycopg.connect(url) as c, c.transaction(force_rollback=True):
         c.execute("delete from public.dish_cost_snapshot")  # a day nobody approved anything
         yield c
+
+
+@pytest.fixture
+def job_conn(conn: psycopg.Connection[Any], monkeypatch: pytest.MonkeyPatch) -> str:
+    """run_job and refresh_tenant connect to the test's rolled-back transaction; returns the URL.
+
+    The job lock is a session lock: it is released when the fixture's connection closes."""
+
+    @contextmanager
+    def connect(_url: str) -> Iterator[psycopg.Connection[Any]]:
+        yield conn
+
+    monkeypatch.setattr(nightly, "_connect", connect)
+    return os.environ["MERMIA_DB_URL"]
+
+
+def summary_lines(caplog: pytest.LogCaptureFixture, prefix: str) -> list[str]:
+    return [r.getMessage() for r in caplog.records if r.getMessage().startswith(prefix)]
 
 
 def add_two_zone_tenant(conn: psycopg.Connection[Any]) -> tuple[UUID, UUID]:
@@ -487,3 +512,198 @@ def test_a_statement_timeout_fails_the_tenant_as_permanent_and_the_run_goes_on(
     # 57014 is permanent in the backfill sweep's split (it fails the same way every time)
     assert result.failed == {SEED: TenantFailure("57014 QueryCanceled", is_transient=False)}
     assert result.done[tenant].snapshots > 0
+
+
+# --- run_job and refresh_tenant (MR-102) --------------------------------------------------------
+
+
+@pytest.mark.db
+def test_run_job_runs_nothing_while_another_session_holds_the_job_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    url = os.environ.get("MERMIA_DB_URL")
+    if not url:
+        pytest.skip("MERMIA_DB_URL is not set")
+    called = []
+    monkeypatch.setattr(nightly, "run_nightly_dish_costs", lambda *a, **k: called.append(1))
+    with psycopg.connect(url) as holder:
+        assert try_job_lock(holder) is True
+
+        assert run_job(url) is None
+
+    assert called == []
+
+
+@pytest.mark.db
+def test_run_job_runs_as_service_role_and_logs_one_summary_line(
+    job_conn: str,
+    conn: psycopg.Connection[Any],
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    real = nightly.run_nightly_dish_costs
+    users: list[Row | None] = []
+
+    def spy(c: psycopg.Connection[Any], **kwargs: Any) -> NightlyResult:
+        users.append(c.execute("select current_user").fetchone())
+        return real(c, **kwargs)
+
+    monkeypatch.setattr(nightly, "run_nightly_dish_costs", spy)
+    caplog.set_level(logging.INFO, logger=nightly.__name__)
+
+    result = run_job(job_conn, today=dt.date(2026, 10, 12))
+
+    assert result is not None
+    assert result.failed == {}
+    assert result.done[SEED].snapshots > 0
+    assert users == [("service_role",)]
+    summary = summary_lines(caplog, "nightly dish costs on ")
+    assert len(summary) == 1
+    assert f"{len(result.done)} tenants, {result.snapshots} rows, 0 failed" in summary[0]
+
+
+@pytest.mark.db
+def test_refresh_tenant_fills_only_that_tenant_and_logs_one_summary_line(
+    job_conn: str, conn: psycopg.Connection[Any], caplog: pytest.LogCaptureFixture
+) -> None:
+    tenant, _ = add_two_zone_tenant(conn)
+    caplog.set_level(logging.INFO, logger=nightly.__name__)
+
+    result = refresh_tenant(job_conn, tenant)
+
+    assert set(result.done) == {tenant}
+    assert result.failed == {}
+    assert len(today_rows(conn, tenant)) == 4
+    assert snapshot_ids(conn, SEED) == set()
+    summary = summary_lines(caplog, f"dish-cost refresh for tenant {tenant} on ")
+    assert len(summary) == 1
+    assert f"1 tenants, {result.snapshots} rows, 0 failed" in summary[0]
+
+
+@pytest.mark.db
+def test_refresh_tenant_runs_while_the_hourly_job_holds_the_job_lock(
+    job_conn: str, conn: psycopg.Connection[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tenant, _ = add_two_zone_tenant(conn)
+    tried: list[int] = []
+    real = nightly.try_job_lock
+
+    def spy(c: psycopg.Connection[Any]) -> bool:
+        tried.append(1)
+        return real(c)
+
+    monkeypatch.setattr(nightly, "try_job_lock", spy)
+    with psycopg.connect(job_conn) as holder:
+        assert try_job_lock(holder) is True
+
+        result = refresh_tenant(job_conn, tenant)
+
+    assert tried == []
+    assert result.done[tenant].snapshots > 0
+
+
+@pytest.mark.db
+def test_refresh_tenant_reports_a_busy_tenant_lock_as_transient(
+    job_conn: str, conn: psycopg.Connection[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    conn.execute(f"set local app.today = '{SEED_TODAY}'")
+    monkeypatch.setattr(nightly, "LOCK_TIMEOUT", "200ms")
+    with psycopg.connect(job_conn) as holder:
+        holder.execute("select app.lock_dish_costs(%s)", (SEED,))  # held until holder rolls back
+
+        result = refresh_tenant(job_conn, SEED)
+
+        holder.rollback()
+    assert result.failed == {SEED: TenantFailure("55P03 LockNotAvailable", is_transient=True)}
+    assert result.done == {}
+
+
+@pytest.mark.db
+def test_refresh_tenant_refuses_a_tenant_not_in_the_tenant_table(job_conn: str) -> None:
+    with pytest.raises(UnknownTenantError):
+        refresh_tenant(job_conn, uuid4())
+
+
+def test_refresh_tenant_refuses_anything_but_a_uuid_before_connecting() -> None:
+    with pytest.raises(TypeError, match="UUID"):
+        refresh_tenant("postgresql://nowhere", str(SEED))  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("days", [0, 401])
+def test_run_job_and_refresh_tenant_refuse_days_out_of_range_before_connecting(days: int) -> None:
+    with pytest.raises(ValueError, match="days"):
+        run_job("postgresql://nowhere", days=days)
+    with pytest.raises(ValueError, match="days"):
+        refresh_tenant("postgresql://nowhere", SEED, days=days)
+
+
+@pytest.mark.db
+def test_run_job_raises_when_the_session_cannot_become_service_role(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    url = os.environ.get("MERMIA_DB_URL")
+    if not url:
+        pytest.skip("MERMIA_DB_URL is not set")
+
+    def refuse(c: psycopg.Connection[Any]) -> None:
+        raise psycopg.errors.InsufficientPrivilege("permission denied to set role")
+
+    monkeypatch.setattr(nightly, "become_service_role", refuse)
+
+    with pytest.raises(ServiceRoleError, match="42501 InsufficientPrivilege") as raised:
+        run_job(url)
+
+    assert "permission denied" not in str(raised.value)
+
+
+def fake_run_job(
+    monkeypatch: pytest.MonkeyPatch, result: NightlyResult | None
+) -> list[dict[str, Any]]:
+    calls: list[dict[str, Any]] = []
+
+    def fake(db_url: str, **kwargs: Any) -> NightlyResult | None:
+        calls.append(kwargs)
+        return result
+
+    monkeypatch.setenv("MERMIA_DB_URL", "postgresql://nowhere")
+    monkeypatch.setattr(nightly, "run_job", fake)
+    return calls
+
+
+def test_main_passes_its_arguments_to_run_job_and_exits_0_when_done(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = fake_run_job(monkeypatch, NightlyResult(done={}, failed={}))
+
+    assert main(["--days", "5", "--today", "2026-10-12"]) == 0
+    assert calls == [{"today": dt.date(2026, 10, 12), "days": 5}]
+
+
+def test_main_exits_0_when_run_job_skips(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_run_job(monkeypatch, None)
+
+    assert main([]) == 0
+
+
+def test_main_exits_1_and_names_the_failed_tenant(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    failure = TenantFailure("55P03 LockNotAvailable", is_transient=True)
+    fake_run_job(monkeypatch, NightlyResult(done={}, failed={SEED: failure}))
+
+    assert main([]) == 1
+    assert f"failed {SEED}: 55P03 LockNotAvailable (transient)" in capsys.readouterr().err
+
+
+def test_main_exits_1_when_the_session_cannot_become_service_role(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("MERMIA_DB_URL", "postgresql://nowhere")
+
+    def refuse(db_url: str, **kwargs: Any) -> None:
+        raise ServiceRoleError("cannot switch to service_role: 42501 InsufficientPrivilege")
+
+    monkeypatch.setattr(nightly, "run_job", refuse)
+
+    assert main([]) == 1
+    assert "cannot switch to service_role: 42501" in capsys.readouterr().err
