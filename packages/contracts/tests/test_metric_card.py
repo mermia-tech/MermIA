@@ -16,7 +16,9 @@ from mermia_contracts.rpc import RPCS
 
 HERE = Path(__file__).parent / "examples"
 RPC_EXAMPLES = sorted(
-    p for p in (HERE / "rpc").glob("*.json") if not p.name.endswith(".error.json")
+    p
+    for p in (HERE / "rpc").glob("*.json")
+    if not p.name.endswith(".error.json") and p.name.split(".")[0] in RPCS
 )
 
 
@@ -53,6 +55,13 @@ FOREIGN_PAIRS = [(p, other) for p in RPC_EXAMPLES for other in sorted(RPCS) if o
 def test_data_of_another_rpc_is_rejected(path: Path, other: str) -> None:
     with pytest.raises(ValidationError, match=f"not a valid {other} result"):
         MetricCardMsg.model_validate(_card(other, _data(path)))
+
+
+def test_a_report_rpc_is_not_a_card() -> None:
+    """The weekly report goes to code (MR-38), not into an agent reply."""
+    data = _data(HERE / "rpc" / "build_weekly_report.json")
+    with pytest.raises(ValidationError, match="unknown rpc"):
+        MetricCardMsg.model_validate(_card("build_weekly_report", data))
 
 
 @pytest.mark.parametrize(

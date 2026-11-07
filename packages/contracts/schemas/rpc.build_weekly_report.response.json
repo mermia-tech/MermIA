@@ -1,0 +1,872 @@
+{
+  "$defs": {
+    "BasePrice": {
+      "additionalProperties": false,
+      "description": "A price per BASE unit. `raw` is pesos per `base_unit` (g, ml or pza), never per pack, as\ningredient_price.unit_price_net stores it. `text` is the amount in the unit the owner uses,\nformatted (\"$220.00/kg\"): quote it, do not convert `raw`.",
+      "properties": {
+        "base_unit": {
+          "$ref": "#/$defs/BaseUnit"
+        },
+        "raw": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=pesos_per_base_unit (g, ml or pza), never per purchase unit; greater than zero",
+          "title": "Raw"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "base_unit",
+        "text"
+      ],
+      "title": "BasePrice",
+      "type": "object"
+    },
+    "BaseUnit": {
+      "enum": [
+        "g",
+        "ml",
+        "pza"
+      ],
+      "title": "BaseUnit",
+      "type": "string"
+    },
+    "CategoryFoodCost": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "pattern": "\\S",
+          "title": "Category",
+          "type": "string"
+        },
+        "food_cost": {
+          "$ref": "#/$defs/Pct"
+        }
+      },
+      "required": [
+        "category",
+        "food_cost"
+      ],
+      "title": "CategoryFoodCost",
+      "type": "object"
+    },
+    "CostConfidence": {
+      "enum": [
+        "confirmed",
+        "estimated",
+        "missing"
+      ],
+      "title": "CostConfidence",
+      "type": "string"
+    },
+    "DishValue": {
+      "additionalProperties": false,
+      "properties": {
+        "menu_item_id": {
+          "format": "uuid",
+          "title": "Menu Item Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "rank": {
+          "minimum": 1,
+          "title": "Rank",
+          "type": "integer"
+        },
+        "value": {
+          "$ref": "#/$defs/Figure"
+        }
+      },
+      "required": [
+        "rank",
+        "menu_item_id",
+        "name",
+        "value"
+      ],
+      "title": "DishValue",
+      "type": "object"
+    },
+    "Figure": {
+      "additionalProperties": false,
+      "description": "A number whose unit depends on the metric asked for (compare_*, top dishes).\n\nThe unit is not a field: it follows from `metric` through METRIC_UNIT. Money is integer\ncentavos (as Money.raw), counts are whole numbers, units sold are quantities with up to six\ndecimals and percentages are percent points.",
+      "properties": {
+        "raw": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Raw"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "Figure",
+      "type": "object"
+    },
+    "Flag": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "pattern": "\\S",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "Flag",
+      "type": "object"
+    },
+    "FoodCostData": {
+      "additionalProperties": false,
+      "properties": {
+        "by_category": {
+          "items": {
+            "$ref": "#/$defs/CategoryFoodCost"
+          },
+          "title": "By Category",
+          "type": "array"
+        },
+        "coverage": {
+          "$ref": "#/$defs/Pct"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pct"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "theoretical": {
+          "$ref": "#/$defs/Pct"
+        }
+      },
+      "required": [
+        "theoretical",
+        "coverage"
+      ],
+      "title": "FoodCostData",
+      "type": "object"
+    },
+    "LocationRef": {
+      "additionalProperties": false,
+      "properties": {
+        "location_id": {
+          "format": "uuid",
+          "title": "Location Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "location_id",
+        "name"
+      ],
+      "title": "LocationRef",
+      "type": "object"
+    },
+    "Meta": {
+      "additionalProperties": false,
+      "description": "`period_resolved` is the one range a single-period RPC answered for (null for none, and\nfor compare_periods, which carries both ranges in its data).",
+      "properties": {
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "coverage_pct": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "unit=percent_points (calculated, 4 decimals)"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Coverage Pct"
+        },
+        "period_resolved": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Period"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "as_of"
+      ],
+      "title": "Meta",
+      "type": "object"
+    },
+    "Money": {
+      "additionalProperties": false,
+      "properties": {
+        "raw": {
+          "description": "unit=centavos",
+          "maximum": 9223372036854775807,
+          "minimum": -9223372036854775808,
+          "title": "Raw",
+          "type": "integer"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "Money",
+      "type": "object"
+    },
+    "Pct": {
+      "additionalProperties": false,
+      "description": "A calculated percentage in percent points (+7.2 is 7.2 %), not a database column.",
+      "properties": {
+        "raw": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "unit=percent_points (calculated, 4 decimals)",
+          "title": "Raw"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "Pct",
+      "type": "object"
+    },
+    "Period": {
+      "additionalProperties": false,
+      "description": "Business dates covered by the batch, both inclusive.",
+      "properties": {
+        "from": {
+          "format": "date",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "format": "date",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Period",
+      "type": "object"
+    },
+    "PositiveMoney": {
+      "additionalProperties": false,
+      "description": "Money greater than zero: a price a dish is sold at.",
+      "properties": {
+        "raw": {
+          "description": "unit=centavos, greater than zero",
+          "exclusiveMinimum": 0,
+          "maximum": 9223372036854775807,
+          "title": "Raw",
+          "type": "integer"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "PositiveMoney",
+      "type": "object"
+    },
+    "PriceMove": {
+      "additionalProperties": false,
+      "properties": {
+        "change": {
+          "$ref": "#/$defs/Pct"
+        },
+        "ingredient": {
+          "pattern": "\\S",
+          "title": "Ingredient",
+          "type": "string"
+        },
+        "new_unit_price": {
+          "$ref": "#/$defs/BasePrice"
+        }
+      },
+      "required": [
+        "ingredient",
+        "change",
+        "new_unit_price"
+      ],
+      "title": "PriceMove",
+      "type": "object"
+    },
+    "PriceSuggestion": {
+      "additionalProperties": false,
+      "description": "A menu price suggestion for a dish at a location that breaches the target (MR-33).\n\nEvery price here is a MENU price with IVA included, the price on the menu (settles MR-11 spec\n7.2): `current_price` is the menu price today, `target_price` the lowest price that reaches the\ntarget food cost (to the centavo, not rounded to a price point), `suggested_price` the price\npoint to propose. `change` is suggested vs current; `new_food_cost` the food cost (on the net\nprice, as everywhere) at the suggested price. A review (`review_portion_cost`) has no\nsuggested price, change or new food cost. `confidence` is the cost's (confirmed: fresh CFDI\nprices and confirmed recipes). Stars and resale items (bottled drinks) never appear.\n\"Cambiar precios\" proposes a `menu_item_price.set` pending change for `location_id`.",
+      "properties": {
+        "change": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pct"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confidence": {
+          "$ref": "#/$defs/CostConfidence"
+        },
+        "current_price": {
+          "$ref": "#/$defs/PositiveMoney"
+        },
+        "location_id": {
+          "format": "uuid",
+          "title": "Location Id",
+          "type": "string"
+        },
+        "menu_item_id": {
+          "format": "uuid",
+          "title": "Menu Item Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "new_food_cost": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pct"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rationale_code": {
+          "$ref": "#/$defs/SuggestionRationale"
+        },
+        "suggested_price": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PositiveMoney"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target_price": {
+          "$ref": "#/$defs/PositiveMoney"
+        }
+      },
+      "required": [
+        "menu_item_id",
+        "location_id",
+        "name",
+        "current_price",
+        "target_price",
+        "suggested_price",
+        "change",
+        "new_food_cost",
+        "confidence",
+        "rationale_code"
+      ],
+      "title": "PriceSuggestion",
+      "type": "object"
+    },
+    "RpcError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/RpcErrorCode"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "RpcError",
+      "type": "object"
+    },
+    "RpcErrorCode": {
+      "enum": [
+        "invalid_args",
+        "not_found",
+        "no_data",
+        "forbidden",
+        "internal"
+      ],
+      "title": "RpcErrorCode",
+      "type": "string"
+    },
+    "SalesSummaryData": {
+      "additionalProperties": false,
+      "description": "Every figure but `net_sales` is null when the data does not report it: not reported is not\nzero (`daily_sales_agg` and `daily_location_metrics` allow null). The keys stay required, so a\nfigure that is left out is an error. A real zero is 0.",
+      "properties": {
+        "avg_ticket": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Money"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cancellations": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Money"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "change_vs_previous": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pct"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "discounts": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Money"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "guests": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Guests"
+        },
+        "net_sales": {
+          "$ref": "#/$defs/Money"
+        },
+        "tickets": {
+          "anyOf": [
+            {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tickets"
+        }
+      },
+      "required": [
+        "net_sales",
+        "tickets",
+        "avg_ticket",
+        "guests",
+        "discounts",
+        "cancellations"
+      ],
+      "title": "SalesSummaryData",
+      "type": "object"
+    },
+    "SuggestionRationale": {
+      "description": "Why a dish gets this suggestion (03 \"Price-suggestion formula\", MR-33 decision U4).",
+      "enum": [
+        "raise_to_target",
+        "raise_capped",
+        "review_portion_cost"
+      ],
+      "title": "SuggestionRationale",
+      "type": "string"
+    },
+    "TopDishesData": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "enum": [
+            "units",
+            "revenue",
+            "margin",
+            "margin_pct"
+          ],
+          "title": "Metric",
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/$defs/DishValue"
+          },
+          "maxItems": 10,
+          "title": "Rows",
+          "type": "array"
+        }
+      },
+      "required": [
+        "metric",
+        "rows"
+      ],
+      "title": "TopDishesData",
+      "type": "object"
+    },
+    "WeeklyBreach": {
+      "additionalProperties": false,
+      "description": "A dish over target as `[Ver márgenes]` shows it: one entry in `at` per location in scope\nwhere the dish's latest snapshot of the week is over target, worst first (at most 10).\n`food_cost` is the worst location's, as in get_cost_alerts, so `breaches_total` still counts\ndishes. The report's only: get_cost_alerts keeps the compact TargetBreach (doc 13 budget).",
+      "properties": {
+        "at": {
+          "items": {
+            "$ref": "#/$defs/WeeklyBreachAt"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "At",
+          "type": "array"
+        },
+        "food_cost": {
+          "$ref": "#/$defs/Pct"
+        },
+        "menu_item_id": {
+          "format": "uuid",
+          "title": "Menu Item Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/Pct"
+        }
+      },
+      "required": [
+        "menu_item_id",
+        "name",
+        "food_cost",
+        "target",
+        "at"
+      ],
+      "title": "WeeklyBreach",
+      "type": "object"
+    },
+    "WeeklyBreachAt": {
+      "additionalProperties": false,
+      "description": "One location where a dish of `[Ver márgenes]` is over target (W4, doc 12 1b: \"*Costra de\npastor* — costo $29.80, precio $89.00 → *38.8%*\", then its suggestion).\n\nThe figures are the dish's latest snapshot of the week at `location_id`: `cost`,\n`net_price` (without IVA; `food_cost` = cost / net_price) and `price_gross` (the menu price\nwith IVA that day, the one to quote), with the cost's `confidence` (\"Receta estimada\").\n`suggestion` is that dish's suggestion at that location (one of `CostAlertsData.suggestions`\nor a lower-ranked one) only when it is priced on these figures: the dish's latest snapshot up\nto the report day has the same cost and net price, and the suggestion's current price is\n`price_gross`. Otherwise null (a resale item, a star, a cost not evaluated yet, or a cost or\nprice that moved after Sunday: that suggestion is in `suggestions` only).",
+      "properties": {
+        "confidence": {
+          "$ref": "#/$defs/CostConfidence"
+        },
+        "cost": {
+          "$ref": "#/$defs/Money"
+        },
+        "food_cost": {
+          "$ref": "#/$defs/Pct"
+        },
+        "location_id": {
+          "format": "uuid",
+          "title": "Location Id",
+          "type": "string"
+        },
+        "net_price": {
+          "$ref": "#/$defs/PositiveMoney"
+        },
+        "price_gross": {
+          "$ref": "#/$defs/PositiveMoney"
+        },
+        "suggestion": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PriceSuggestion"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "location_id",
+        "cost",
+        "net_price",
+        "price_gross",
+        "food_cost",
+        "confidence",
+        "suggestion"
+      ],
+      "title": "WeeklyBreachAt",
+      "type": "object"
+    },
+    "WeeklyCostAlerts": {
+      "additionalProperties": false,
+      "description": "CostAlertsData with the `[Ver márgenes]` detail on each breach (WeeklyBreach).",
+      "properties": {
+        "breaches": {
+          "items": {
+            "$ref": "#/$defs/WeeklyBreach"
+          },
+          "maxItems": 10,
+          "title": "Breaches",
+          "type": "array"
+        },
+        "breaches_total": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Breaches Total",
+          "type": "integer"
+        },
+        "price_moves": {
+          "items": {
+            "$ref": "#/$defs/PriceMove"
+          },
+          "maxItems": 10,
+          "title": "Price Moves",
+          "type": "array"
+        },
+        "price_moves_total": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Price Moves Total",
+          "type": "integer"
+        },
+        "suggestions": {
+          "items": {
+            "$ref": "#/$defs/PriceSuggestion"
+          },
+          "maxItems": 10,
+          "title": "Suggestions",
+          "type": "array"
+        },
+        "suggestions_total": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Suggestions Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "price_moves",
+        "price_moves_total",
+        "breaches",
+        "breaches_total",
+        "suggestions",
+        "suggestions_total"
+      ],
+      "title": "WeeklyCostAlerts",
+      "type": "object"
+    },
+    "WeeklyReportData": {
+      "additionalProperties": false,
+      "description": "Everything the Monday report needs, for MR-38 to render (decisions W1-W4).\n\nEach section is the data of the read RPC of the same shape over `week`: `sales` is\nget_sales_summary (`change_vs_previous` is vs `previous_week`, W3), `top_dishes` get_top_dishes\nby units (top 3), `food_cost` get_food_cost_pct (null when the week has no costed sales),\n`stale_costs` get_data_status today. `missing_business_days` are the days of the week on which a\nlocation in scope has no sales data on a day it normally opens (W2: the report goes out and\nsays so; a location's closed weekdays never count). `locations` are the locations in scope\nwith their names, to label a breach or a suggestion (\"Centro\"). The envelope carries one\nconfidence flag: `cost_estimated` when any cost figure in the report is estimated, else\n`cost_confirmed`.\n\n`cost_alerts` is get_cost_alerts' shape (top 10 of each list; dishes over target =\n`breaches_total`) with two differences. Price moves and breaches cover the week only, Monday to\nSunday, so a price dated after Sunday never shows and the report built at 9:00 and at 12:00\nsays the same. Suggestions are as of the day the report is built (open and fresh today, at\ntoday's menu price), as the owner would act on them. Each breach carries, per location over\ntarget, its cost, prices and the suggestion priced on those figures (WeeklyBreach), so\n`[Ver márgenes]` needs no other call. Breaches are every dish over target in the week's cost\nsnapshots, counted once per dish: estimated ones too (marked by each line's `confidence`), and\nones that already existed when the restaurant joined, whatever their alerts' urgency.",
+      "properties": {
+        "cost_alerts": {
+          "$ref": "#/$defs/WeeklyCostAlerts"
+        },
+        "food_cost": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FoodCostData"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locations": {
+          "items": {
+            "$ref": "#/$defs/LocationRef"
+          },
+          "minItems": 1,
+          "title": "Locations",
+          "type": "array"
+        },
+        "missing_business_days": {
+          "items": {
+            "format": "date",
+            "type": "string"
+          },
+          "title": "Missing Business Days",
+          "type": "array"
+        },
+        "previous_week": {
+          "$ref": "#/$defs/Period"
+        },
+        "sales": {
+          "$ref": "#/$defs/SalesSummaryData"
+        },
+        "stale_costs": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Stale Costs",
+          "type": "integer"
+        },
+        "top_dishes": {
+          "$ref": "#/$defs/TopDishesData"
+        },
+        "week": {
+          "$ref": "#/$defs/Period"
+        }
+      },
+      "required": [
+        "week",
+        "previous_week",
+        "locations",
+        "sales",
+        "top_dishes",
+        "food_cost",
+        "cost_alerts",
+        "missing_business_days",
+        "stale_costs"
+      ],
+      "title": "WeeklyReportData",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "data": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/WeeklyReportData"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RpcError"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "flags": {
+      "items": {
+        "$ref": "#/$defs/Flag"
+      },
+      "title": "Flags",
+      "type": "array"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    },
+    "ok": {
+      "title": "Ok",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "ok",
+    "meta"
+  ],
+  "title": "RpcEnvelope[WeeklyReportData]",
+  "type": "object"
+}
