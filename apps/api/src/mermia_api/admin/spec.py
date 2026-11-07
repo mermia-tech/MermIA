@@ -117,13 +117,14 @@ class LocationSpec(Model):
         if isinstance(value, str) and normalize_name(value) == NONE_ANSWER:
             return []  # the founders' question tells the owner to answer "ninguno"
         if not isinstance(value, list):
-            raise ValueError(f"closed_days debe ser una lista de días ({valid}); [] si abre todos")
+            raise ValueError(
+                f"closed_days debe ser una lista de días ({valid}); [] o ninguno si abre todos"
+            )
         is_none = [isinstance(d, str) and normalize_name(d) == NONE_ANSWER for d in value]
         if any(is_none):
             if len(value) > 1:
                 raise ValueError(
-                    "closed_days: «ninguno» no se puede mezclar con días; "
-                    "usa solo «ninguno» o la lista de días"
+                    "closed_days: «ninguno» va solo; usa solo «ninguno» o la lista de días"
                 )
             return []
         numbers: list[int] = []

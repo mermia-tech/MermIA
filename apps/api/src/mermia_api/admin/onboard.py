@@ -234,7 +234,7 @@ def _locations(
             )
         if found_id is None and loc.closed_weekdays is None:
             raise OnboardingError(
-                f"{loc.name}: di qué días cierra (closed_days: [] si abre todos los días)"
+                f"{loc.name}: di qué días cierra (closed_days: [] o ninguno si abre todos los días)"
             )
         timezone = loc.timezone or (None if found_id else DEFAULT_TIMEZONE)
         desired = {

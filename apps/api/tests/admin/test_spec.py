@@ -169,8 +169,9 @@ def test_ninguno_means_it_opens_every_day(days: Any) -> None:
 @pytest.mark.parametrize(
     ("days", "message"),
     [
-        (["ninguno", "lunes"], "no se puede mezclar"),
-        (["lunes", "ninguno"], "no se puede mezclar"),
+        (["ninguno", "lunes"], "va solo"),
+        (["lunes", "ninguno"], "va solo"),
+        (["ninguno", "ninguno"], "va solo"),
         (["funday"], "o ninguno si abre todos los días"),
         ([1], "día desconocido"),
         (["funday"], "día desconocido.*lunes, martes, miércoles, jueves, viernes, sábado, domingo"),
