@@ -17,9 +17,14 @@ import psycopg
 import pytest
 from psycopg.types.json import Jsonb
 
+from mermia_api.confirm import backfill as backfill_module
 from mermia_api.confirm.apply import apply_pending_change
 from mermia_api.confirm.backfill import (
+    MAX_BACKFILL_ATTEMPTS,
+    RESUME_BATCH,
     BackfillResult,
+    ResumeResult,
+    UnfinishedBackfill,
     backfill_dish_costs,
     resume_unfinished_backfills,
     unfinished_backfills,
@@ -260,7 +265,7 @@ def test_a_backdated_price_is_backfilled_in_short_chunks(conn: psycopg.Connectio
     change = propose(conn, PendingKind.ingredient_price_set, CARNE, price("0.50", "2026-09-22"))
     assert tap(conn, change, OWNER).code is ApplyCode.applied
 
-    assert change in unfinished_backfills(conn)
+    assert change in unfinished_ids(conn)
 
     first = backfill_dish_costs(conn, change)
     again = backfill_dish_costs(conn, change)
@@ -269,7 +274,7 @@ def test_a_backdated_price_is_backfilled_in_short_chunks(conn: psycopg.Connectio
     assert first.chunks == 3
     assert first.snapshots > 0
     assert again == BackfillResult(chunks=0, snapshots=0)  # done: a rerun does nothing
-    assert change not in unfinished_backfills(conn)
+    assert change not in unfinished_ids(conn)
     cost = count(
         conn,
         "select cost from public.dish_cost_snapshot where menu_item_id = %s "
@@ -294,6 +299,10 @@ def test_nothing_to_backfill_for_a_batch(conn: psycopg.Connection[Any]) -> None:
 
     assert backfill_dish_costs(conn, approve) == BackfillResult(chunks=0, snapshots=0)
     assert backfill_record(conn, approve) is None
+
+
+def unfinished_ids(conn: psycopg.Connection[Any]) -> list[UUID]:
+    return [b.pending_change_id for b in unfinished_backfills(conn)]
 
 
 def backfill_record(conn: psycopg.Connection[Any], change: UUID) -> tuple[Any, ...] | None:
@@ -327,7 +336,7 @@ def test_a_backfill_cut_short_resumes_where_it_stopped(conn: psycopg.Connection[
         dt.date(2026, 9, 22),
         True,
     )
-    assert change not in unfinished_backfills(conn)
+    assert change not in unfinished_ids(conn)
 
 
 def test_a_failing_backfill_is_reported_and_left_unfinished(conn: psycopg.Connection[Any]) -> None:
@@ -344,6 +353,7 @@ def test_a_failing_backfill_is_reported_and_left_unfinished(conn: psycopg.Connec
 
     assert "boom" in resumed.failed[change]
     assert change not in resumed.done
+    assert unfinished_backfills(conn)[0] == UnfinishedBackfill(change, 1, "P0001 RaiseException")
     assert backfill_record(conn, change) == (
         dt.date(2026, 9, 22),
         dt.date(2026, 10, 11),
@@ -426,3 +436,199 @@ def test_a_double_tap_at_once_applies_one_change() -> None:
     finally:
         with psycopg.connect(url) as c:
             c.execute("delete from public.ingredient_price where pending_change_id = %s", (change,))
+
+
+def add_poisoned_backfills(
+    conn: psycopg.Connection[Any], how_many: int, errcode: str = "P0001"
+) -> list[UUID]:
+    """Backfill records whose chunk always fails: a trigger raises P0001 when it moves the record
+    (only for from_date 2025-01-01, which no healthy backfill here uses)."""
+    conn.execute(
+        f"""create function pg_temp.poison() returns trigger language plpgsql as $$
+             begin raise exception 'poison' using errcode = '{errcode}'; end $$;
+           create trigger zz_poison before update on public.dish_cost_backfill
+             for each row
+             when (old.from_date = date '2025-01-01' and new.next_before <> old.next_before)
+             execute function pg_temp.poison()"""
+    )
+    conn.execute(
+        """create temp table poison_ids as
+           select app.uuid_v7() as id from generate_series(1, %s)""",
+        (how_many,),
+    )
+    conn.execute(
+        """insert into public.pending_change
+             (id, tenant_id, kind, proposed_via, status, created_at)
+           select id, %s, 'ingredient_price.set', 'agent', 'pending', now() - interval '1 day'
+           from poison_ids""",
+        (TENANT,),
+    )
+    rows = conn.execute(
+        """insert into public.dish_cost_backfill
+             (tenant_id, pending_change_id, from_date, to_date, next_before, created_at)
+           select %s, id, '2025-01-01', '2025-01-07', '2025-01-08', now() - interval '1 day'
+           from poison_ids returning pending_change_id""",
+        (TENANT,),
+    ).fetchall()
+    return [UUID(str(r[0])) for r in rows]
+
+
+def test_a_poisoned_backfill_is_given_up_after_five_attempts(
+    conn: psycopg.Connection[Any],
+) -> None:
+    (poisoned,) = add_poisoned_backfills(conn, 1)
+
+    for attempt in range(1, MAX_BACKFILL_ATTEMPTS + 1):
+        assert poisoned in resume_unfinished_backfills(conn).failed
+        row = conn.execute(
+            "select attempts, last_error from public.dish_cost_backfill "
+            "where pending_change_id = %s",
+            (poisoned,),
+        ).fetchone()
+        assert row == (attempt, "P0001 RaiseException")
+
+    assert resume_unfinished_backfills(conn) == ResumeResult(done={}, failed={})  # skipped now
+    assert unfinished_backfills(conn, include_given_up=False) == []
+    (listed,) = unfinished_backfills(conn)  # but still listed, marked
+    assert listed.pending_change_id == poisoned
+    assert listed.is_given_up
+
+
+def test_poisoned_backfills_do_not_block_a_newer_healthy_one(
+    conn: psycopg.Connection[Any],
+) -> None:
+    add_poisoned_backfills(conn, RESUME_BATCH + 1)
+    change = propose(conn, PendingKind.ingredient_price_set, CARNE, price("0.50", "2026-10-05"))
+    assert tap(conn, change, OWNER).code is ApplyCode.applied  # created now: newer than the rest
+
+    first = resume_unfinished_backfills(conn)  # the 100 oldest poisoned fill the batch
+    assert change not in first.done
+    assert len(first.failed) == RESUME_BATCH
+
+    second = resume_unfinished_backfills(conn)  # the failed ones moved behind: the healthy runs
+    assert change in second.done
+    assert backfill_record(conn, change) is not None
+    assert change not in unfinished_ids(conn)
+
+    # 101 records x 5 attempts, 100 per sweep: all are given up within 6 more sweeps
+    for _ in range(6):
+        resume_unfinished_backfills(conn)
+    assert resume_unfinished_backfills(conn) == ResumeResult(done={}, failed={})
+    assert all(b.is_given_up for b in unfinished_backfills(conn, limit=500))
+
+
+def test_a_transient_error_in_the_sweep_does_not_count_an_attempt(
+    conn: psycopg.Connection[Any],
+) -> None:
+    change = propose(conn, PendingKind.ingredient_price_set, CARNE, price("0.50", "2026-09-22"))
+    assert tap(conn, change, OWNER).code is ApplyCode.applied
+    conn.execute(
+        """create function pg_temp.deadlock() returns trigger language plpgsql as $$
+             begin raise exception 'deadlock' using errcode = '40P01'; end $$;
+           create trigger zz_deadlock after insert on public.dish_cost_snapshot
+             for each row execute function pg_temp.deadlock()"""
+    )
+
+    with pytest.raises(psycopg.errors.DeadlockDetected):
+        resume_unfinished_backfills(conn)
+
+    assert unfinished_backfills(conn)[0] == UnfinishedBackfill(change, 0, None)
+
+
+def test_a_non_transient_operational_error_is_counted_and_the_sweep_goes_on(
+    conn: psycopg.Connection[Any],
+) -> None:
+    """54001 (recipe nested too deep) is an OperationalError, but retrying never fixes it."""
+    first, second = add_poisoned_backfills(conn, 2, errcode="54001")
+
+    result = resume_unfinished_backfills(conn)
+
+    assert set(result.failed) == {first, second}
+    rows = conn.execute(
+        "select attempts, last_error from public.dish_cost_backfill "
+        "where pending_change_id = any(%s)",
+        ([first, second],),
+    ).fetchall()
+    assert rows == [(1, "54001 StatementTooComplex")] * 2
+
+
+def test_a_non_database_error_is_counted_and_the_sweep_goes_on(
+    conn: psycopg.Connection[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    first, second = add_poisoned_backfills(conn, 2)
+    real = backfill_module.backfill_dish_costs
+
+    def flaky(c: psycopg.Connection[Any], change: UUID, **kw: Any) -> BackfillResult:
+        if change == first:
+            raise RuntimeError("bug")
+        return real(c, change, **kw)
+
+    monkeypatch.setattr(backfill_module, "backfill_dish_costs", flaky)
+
+    result = resume_unfinished_backfills(conn, only=[first, second])
+
+    assert set(result.failed) == {first, second}
+    row = conn.execute(
+        "select attempts, last_error from public.dish_cost_backfill where pending_change_id = %s",
+        (first,),
+    ).fetchone()
+    assert row == (1, "unknown RuntimeError")
+
+
+@pytest.mark.parametrize(
+    ("sqlstate", "is_transient"),
+    [("53100", True), ("58030", True), ("53200", False), ("54001", False), ("08006", True)],
+)
+def test_sqlstate_classification(
+    conn: psycopg.Connection[Any], sqlstate: str, is_transient: bool
+) -> None:
+    error = psycopg.errors.lookup(sqlstate)("x")
+    assert backfill_module._is_transient(conn, error) is is_transient
+
+
+def test_a_failure_count_survives_the_chunk_rollback_on_a_real_connection() -> None:
+    """Commits for real. A trigger (only for from_date 2024-02-02, which nothing else uses) makes
+    the chunk fail inside its transaction, which rolls back; the attempt count is still there
+    afterwards. The trigger, its function and the record are dropped at the end (the pending
+    change stays: the audit log is append-only)."""
+    url = os.environ.get("MERMIA_DB_URL")
+    if not url:
+        pytest.skip("MERMIA_DB_URL is not set")
+    with psycopg.connect(url) as c:
+        change = propose(c, PendingKind.ingredient_price_set, CARNE, price("0.32", "2099-01-01"))
+        c.execute("drop trigger if exists zz_test_poison on public.dish_cost_backfill")
+        c.execute("delete from public.dish_cost_backfill where from_date = date '2024-02-02'")
+        c.execute(
+            """create or replace function public.zz_test_poison()
+                 returns trigger language plpgsql as $$
+                 begin raise exception 'poison' using errcode = 'P0001'; end $$;
+               create trigger zz_test_poison before update on public.dish_cost_backfill
+                 for each row when (old.from_date = date '2024-02-02'
+                                  and new.next_before <> old.next_before)
+                 execute function public.zz_test_poison()"""
+        )
+        c.execute(
+            """insert into public.dish_cost_backfill
+                 (tenant_id, pending_change_id, from_date, to_date, next_before)
+               values (%s, %s, '2024-02-02', '2024-02-08', '2024-02-09')""",
+            (TENANT, change),
+        )
+    try:
+        with psycopg.connect(url) as c:
+            assert change in resume_unfinished_backfills(c, only=[change]).failed
+        with psycopg.connect(url) as c:
+            row = c.execute(
+                "select attempts, last_error from public.dish_cost_backfill "
+                "where pending_change_id = %s",
+                (change,),
+            ).fetchone()
+        assert row is not None
+        assert row[0] == 1
+        assert row[1] == "P0001 RaiseException"
+    finally:
+        with psycopg.connect(url) as c:
+            c.execute(
+                "delete from public.dish_cost_backfill where pending_change_id = %s", (change,)
+            )
+            c.execute("drop trigger zz_test_poison on public.dish_cost_backfill")
+            c.execute("drop function public.zz_test_poison()")

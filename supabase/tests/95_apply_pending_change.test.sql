@@ -409,5 +409,17 @@ select pg_temp.propose('recipe', 'recipe.upsert', 'menu_item', :PASTOR,
 select is(pg_temp.tap('recipe', 'recipe', :OWNER) ->> 'code', 'failed', 'a recipe.upsert with no resolved lines fails');
 select is(pg_temp.audits('recipe', 'pending_change.fail'), 1::bigint, 'with a fail audit row');
 
+-- MR-87: the sweep counts failures per record and gives up after MAX_BACKFILL_ATTEMPTS
+select col_type_is('public', 'dish_cost_backfill', 'attempts', 'integer', 'a backfill counts its failed sweeps');
+select col_not_null('public', 'dish_cost_backfill', 'attempts', 'the count is never null');
+select col_default_is('public', 'dish_cost_backfill', 'attempts', '0', 'and starts at 0');
+select col_type_is('public', 'dish_cost_backfill', 'last_error', 'text', 'the last error is kept as text');
+select col_is_null('public', 'dish_cost_backfill', 'last_error', 'and is empty until a sweep fails');
+select is(pg_temp.backfill('backdated') is not null, true, 'existing records are untouched');
+select throws_ok(format('update public.dish_cost_backfill set attempts = -1 where pending_change_id = %L', pg_temp.pc('backdated')),
+                 '23514', null, 'the count cannot go negative');
+select is((select count(*) from pg_indexes where indexname = 'dish_cost_backfill_unfinished_idx'
+           and indexdef like '%(attempts, created_at)%'), 1::bigint, 'the sweep pick is indexed by (attempts, created_at)');
+
 select * from finish();
 rollback;

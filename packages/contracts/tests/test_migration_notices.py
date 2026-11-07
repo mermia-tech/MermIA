@@ -28,5 +28,6 @@ def test_migrations_are_timestamped_and_ordered() -> None:
         "costing_engine.sql",
         "apply_pending_change.sql",
         "apply_recipe_upsert.sql",
+        "backfill_attempts.sql",
     ]
     assert all(n.split("_", 1)[0].isdigit() and len(n.split("_", 1)[0]) == 14 for n in names)
