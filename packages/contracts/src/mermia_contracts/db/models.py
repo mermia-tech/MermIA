@@ -4,7 +4,7 @@ Regenerate with `python -m mermia_contracts.tools.gen_db_models` after
 `supabase db reset`. Source of truth: supabase/migrations.
 
 generator_version: 1
-migrations_sha256: a4dcced964248636d4b6fc3e100c3667d32c8c9fcb67b7fe7a9fec21fe62eb81
+migrations_sha256: 12e13e95434b1323ff505c71d77a5a7f0da7985763c21e201f535375f9bee0dd
 """
 
 import datetime as dt

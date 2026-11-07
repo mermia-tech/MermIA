@@ -115,7 +115,10 @@ select throws_ok($$update public.recipe set produces_ingredient_id = null, menu_
 select ok(has_function_privilege('service_role', 'app.recipe_cost(uuid, date, int)', 'execute')
           and has_function_privilege('service_role', 'app.recipe_of_record(uuid, uuid, date)', 'execute')
           and has_function_privilege('service_role', 'app.price_of_record(uuid, date)', 'execute'), 'service_role runs the helpers');
-select ok(not has_function_privilege('authenticated', 'app.recipe_cost(uuid, date, int)', 'execute'), 'clients do not');
+-- MR-24: clients run the read-only helpers (as the caller, under RLS) for get_dish_margin's cost drivers
+select ok(has_function_privilege('authenticated', 'app.recipe_cost(uuid, date, int)', 'execute'),
+          'clients run the read-only helpers, for the cost drivers (MR-24)');
+select ok(not has_function_privilege('authenticated', 'app.compute_dish_costs(uuid, date, date)', 'execute'), 'but never the writer');
 create function pg_temp.as_service_role() returns int language plpgsql as $$
 declare n int;
 begin
