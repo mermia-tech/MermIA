@@ -9,8 +9,8 @@ PR B turns the lines into price proposals).
 - unit_price_net is pesos per invoiced unit (ClaveUnidad), without IVA: (Importe - Descuento) /
   Cantidad for every line, rounded once to 6 decimals. Importe is what was charged; ValorUnitario
   may be rounded, so it is only checked against Importe (a real outlier is a warning).
-- SubTotal and Descuento may differ from the sum of the lines by up to a centavo per line (issuers
-  that round each line first): a warning. A larger gap is refused.
+- SubTotal and Descuento may differ from the sum of the lines by up to half a centavo per line
+  (issuers that round each line first): a warning. A larger gap is refused.
 - Text is untrusted: names and descriptions are cleaned and capped at MAX_TEXT characters, RFCs
   must have the SAT's format, and a refusal repeats at most ECHO_CHARS of a bad value.
 - IVA (002) is ignored. Itemized IEPS (003) is a warning: whether it is part of the cost is for the
