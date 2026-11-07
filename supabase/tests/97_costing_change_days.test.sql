@@ -20,9 +20,14 @@ select is((select count(*) from pg_proc p
                            'app.dish_cost_items_using(uuid, uuid)'::regprocedure,
                            'app.dish_cost_items(public.pending_change)'::regprocedure,
                            'app.tenant_days(uuid)'::regprocedure,
-                           'app.recompute_after_change(uuid, date, uuid[])'::regprocedure)
+                           'app.lock_dish_costs(uuid)'::regprocedure,
+                           'app.write_dish_cost_rows(uuid, uuid, date, date, uuid[])'::regprocedure,
+                           'app.fill_dish_costs_today(uuid)'::regprocedure,
+                           'app.recompute_after_change(uuid, date, public.pending_change)'::regprocedure)
              and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))),
           0::bigint, 'clients cannot call the new functions');
+select ok(not has_function_privilege('service_role', 'app.tenant_days(uuid)', 'execute'),
+          'nor the backend the tap-only helper (S1)');
 
 -- MR-25's engine, verbatim, as the reference ----------------------------------------------------
 create function app.compute_dish_costs_reference(tenant uuid, from_date date, to_date date) returns int
@@ -320,6 +325,41 @@ select app.compute_dish_costs_reference(:TENANT, '2026-10-01', '2026-10-12');
 select bag_eq(format('select * from pg_temp.rows(%L, ''2026-10-01'', ''2026-10-12'')', :TENANT), 'select x from seed_after',
               'the snapshots after tap and backfill are what a full recompute writes');
 
+-- J1: the tap also fills today for every dish without a row there (seed, as MR-32's tap did) -------
+set local app.today = '2026-10-11';
+delete from public.dish_cost_snapshot where tenant_id = :TENANT and date = '2026-10-11';
+select app.compute_dish_costs_for(:TENANT, array[:PASTOR]::uuid[], '2026-10-11', '2026-10-11');
+create temp table pastor_before as select id from public.dish_cost_snapshot where tenant_id = :TENANT and date = '2026-10-11';
+select (select i.id from public.ingredient i where i.tenant_id = :TENANT and i.name = 'Agua mineral 355 ml') as agua \gset
+select pg_temp.propose('ingredient_price.set', 'ingredient', :'agua',
+                       '{"unit_price": "13.00", "effective_from": "2026-10-11", "source": "manual"}') as agua_price \gset
+select is(cardinality(app.dish_cost_items(p)), 1, 'the water price moves one dish')
+from public.pending_change p where p.id = :'agua_price';
+select is(app.apply_pending_change(:'agua_price', :OWNER) ->> 'code', 'applied', 'a water price applies');
+select is((select count(*) from pastor_before b join public.dish_cost_snapshot s on s.id = b.id),
+          (select count(*) from pastor_before), 'a dish that already had today''s rows keeps them (same ids)');
+select cmp_ok((select count(*) from pastor_before), '>', 0::bigint, '(pastor had rows)');
+create temp table j1_after as select x from pg_temp.rows(:TENANT, '2026-10-11', '2026-10-11') x;
+create function pg_temp.top_dishes() returns jsonb language plpgsql as $$
+declare r jsonb;
+begin
+  set local role authenticated;
+  perform set_config('request.jwt.claims', json_build_object('role', 'authenticated',
+    'tenant_id', '03299e41-28bd-5779-bcc6-0e5e76580fad', 'location_ids', null,
+    'sub', 'eb52f6ad-4d75-5b06-9881-9f68f4fb05a0')::text, true);
+  r := api.get_top_dishes('{"from": "2026-10-11", "to": "2026-10-11"}', 'margin', 'desc', 10) - 'meta';
+  reset role;
+  return r;
+end
+$$;
+select pg_temp.top_dishes()::text as top_tap \gset
+select cmp_ok(jsonb_array_length(:'top_tap'::jsonb -> 'data' -> 'rows'), '>', 1, 'the ranking for today lists more than the changed dish');
+select app.compute_dish_costs_reference(:TENANT, '2026-10-11', '2026-10-11');
+select bag_eq(format('select * from pg_temp.rows(%L, ''2026-10-11'', ''2026-10-11'')', :TENANT), 'select x from j1_after',
+              'after the tap every dish has today''s rows at each location, as a full recompute writes');
+select is(:'top_tap'::jsonb, pg_temp.top_dishes(), 'and the dish ranking for today is the full one');
+set local app.today = '2026-10-12';
+
 -- a menu price moves only its dish ----------------------------------------------------------------
 select is(app.dish_cost_items(p), array[:PASTOR]::uuid[], 'a menu price change moves only its dish')
 from (select null::uuid as id, :TENANT::uuid as tenant_id, 'menu_item_price.set'::text as kind, :PASTOR::uuid as target_id) x,
@@ -336,17 +376,32 @@ where tenant_id = :SYN;  -- UTC-11 and UTC+14: always on different days
 select (t).first_day as first_day, (t).last_day as last_day from (select app.tenant_days(:SYN) t) x \gset
 select ok(:'last_day'::date - :'first_day'::date between 1 and 2, 'the two locations are on different days');
 select is(:'first_day'::date, app.business_today('cccccccc-0000-7000-8000-000000000102'), 'the earliest is Pago Pago''s');
-delete from public.dish_cost_snapshot where tenant_id = :SYN and menu_item_id = pg_temp.dish(7) and date >= :'first_day'::date - 3;
-select is(app.recompute_after_change(:SYN, :'first_day'::date - 3, array[pg_temp.dish(7)]) -> 'backfill',
+create function pg_temp.menu_change(tenant uuid, item uuid) returns public.pending_change language sql as $$
+  select jsonb_populate_record(null::public.pending_change,
+                               jsonb_build_object('tenant_id', tenant, 'kind', 'menu_item_price.set', 'target_id', item))
+$$;
+delete from public.dish_cost_snapshot where tenant_id = :SYN and date >= :'first_day'::date - 3;
+select is(app.recompute_after_change(:SYN, :'first_day'::date - 3, pg_temp.menu_change(:SYN, pg_temp.dish(7))) -> 'backfill',
           jsonb_build_object('from', :'first_day'::date - 3, 'to', :'first_day'::date - 1, 'requested_from', :'first_day'::date - 3,
                              'capped', false),
           'the backfill ends the day before the earliest today');
 select is((select count(*)::int from public.dish_cost_snapshot where tenant_id = :SYN and menu_item_id = pg_temp.dish(7)
            and date >= :'first_day'::date - 3),
           (:'last_day'::date - :'first_day'::date + 1) * 3, 'the tap writes every location''s today, the latest one included');
-select is(app.recompute_after_change(:SYN, :'last_day'::date, array[pg_temp.dish(7)]) -> 'backfill', 'null'::jsonb,
+select is((select count(*) from public.dish_cost_snapshot s where s.tenant_id = :SYN and s.menu_item_id <> pg_temp.dish(7)
+           and s.date >= :'first_day'::date - 3 and s.date <> app.business_today(s.location_id)), 0::bigint,
+          'the other dishes are filled on each location''s own today only');
+create function pg_temp.today_rows(tenant uuid) returns setof text language sql stable as $$
+  select x from pg_temp.rows(tenant, '-infinity', 'infinity') x
+  where split_part(trim(both '()' from x), ',', 3)::date = app.business_today(split_part(trim(both '()' from x), ',', 2)::uuid)
+$$;
+create temp table p6_after as select x from pg_temp.today_rows(:SYN) x;
+select app.compute_dish_costs_reference(:SYN, :'first_day', :'last_day');
+select bag_eq('select * from pg_temp.today_rows(''cccccccc-0000-7000-8000-000000000001'')', 'select x from p6_after',
+              'each location''s today holds what a full recompute writes there, for every dish');
+select is(app.recompute_after_change(:SYN, :'last_day'::date, pg_temp.menu_change(:SYN, pg_temp.dish(7))) -> 'backfill', 'null'::jsonb,
           'a change from the latest today leaves nothing to backfill');
-select is(app.recompute_after_change(:SYN, :'last_day'::date + 1, array[pg_temp.dish(7)]),
+select is(app.recompute_after_change(:SYN, :'last_day'::date + 1, pg_temp.menu_change(:SYN, pg_temp.dish(7))),
           '{"snapshots": null, "backfill": null}'::jsonb, 'a change after every location''s today is not costed yet');
 
 select * from finish();
