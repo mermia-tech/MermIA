@@ -404,14 +404,24 @@ def test_a_recipe_change_without_resolved_lines_fails(conn: psycopg.Connection[A
 
 def test_a_double_tap_at_once_applies_one_change() -> None:
     """Two connections tap Confirmar at the same moment: the row lock serializes them, so exactly
-    one applies and the other is already_applied. Commits for real; the price is in the future, so
-    no snapshot is recomputed, and the price row is removed at the end (the change and its audit
-    rows stay: the audit log is append-only)."""
+    one applies and the other is already_applied. Commits for real, on a throwaway ingredient the
+    test creates (used by no dish), so a killed run never leaves a price on seed data. The price is
+    in the future, so no snapshot is recomputed; the price row and the ingredient are removed at
+    the end (the change and its audit rows stay: the audit log is append-only)."""
     url = os.environ.get("MERMIA_DB_URL")
     if not url:
         pytest.skip("MERMIA_DB_URL is not set")
     with psycopg.connect(url) as c:
-        change = propose(c, PendingKind.ingredient_price_set, CARNE, price("0.31", "2099-01-01"))
+        row = c.execute(
+            "insert into public.ingredient (tenant_id, name, base_unit) "
+            "values (%s, 'Prueba doble toque ' || gen_random_uuid(), 'g') returning id",
+            (TENANT,),
+        ).fetchone()
+        assert row is not None
+        ingredient = UUID(str(row[0]))
+        change = propose(
+            c, PendingKind.ingredient_price_set, ingredient, price("0.31", "2099-01-01")
+        )
     gate = threading.Barrier(2)
 
     def confirm() -> ApplyCode:
@@ -435,7 +445,8 @@ def test_a_double_tap_at_once_applies_one_change() -> None:
             )
     finally:
         with psycopg.connect(url) as c:
-            c.execute("delete from public.ingredient_price where pending_change_id = %s", (change,))
+            c.execute("delete from public.ingredient_price where ingredient_id = %s", (ingredient,))
+            c.execute("delete from public.ingredient where id = %s", (ingredient,))
 
 
 def add_poisoned_backfills(
