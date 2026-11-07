@@ -77,6 +77,77 @@ language sql as $$
                   / (x.e #>> '{net_price,raw}')::numeric * 100 / x.target) > 2)
 $$;
 
+-- MR-98: the sections that differ from their own RPCs for the week of a report: sales, top dishes
+-- (no_data = no rows), food cost (no_data = null), cost alerts, stale costs and missing days
+-- (get_data_status, whose 30 days hold the week), the merged flags (each section's, first
+-- occurrence kept) and the coverage. The report reads the week's item sales once; each section
+-- must still be its RPC's.
+create function pg_temp.sections_off(claims text, period text default '"last_week"', today text default '2026-10-12')
+returns text[]
+language plpgsql as $$
+declare
+  rep jsonb := pg_temp.rpc(claims, format('api.build_weekly_report(%L)', period), today);
+  week text := rep #>> '{data,week}';
+  sales jsonb;
+  top jsonb;
+  food jsonb;
+  status jsonb;
+  alerts jsonb;
+  off text[] := '{}';
+begin
+  if not (rep ->> 'ok')::boolean then
+    return array['report: ' || (rep #>> '{error,code}')];
+  end if;
+  sales := pg_temp.rpc(claims, format('api.get_sales_summary(%L)', week), today);
+  top := pg_temp.rpc(claims, format('api.get_top_dishes(%L, ''units'', ''desc'', 3)', week), today);
+  food := pg_temp.rpc(claims, format('api.get_food_cost_pct(%L)', week), today);
+  status := pg_temp.rpc(claims, 'api.get_data_status()', today);
+  alerts := pg_temp.rpc(claims, format('app.cost_alerts(app.scope_locations(null), %L, %L, %L, true)',
+                                       rep #>> '{data,week,from}', rep #>> '{data,week,to}', today), today);
+  if rep #> '{data,sales}' is distinct from sales -> 'data' then off := off || 'sales'::text; end if;
+  if rep #> '{data,top_dishes}' is distinct from
+     (case when (top ->> 'ok')::boolean then top -> 'data' else '{"metric":"units","rows":[]}' end) then
+    off := off || 'top_dishes'::text;
+  end if;
+  if rep #> '{data,food_cost}' is distinct from
+     (case when (food ->> 'ok')::boolean then food -> 'data' else 'null' end) then
+    off := off || 'food_cost'::text;
+  end if;
+  if rep #> '{data,cost_alerts}' is distinct from alerts -> 'data' then off := off || 'cost_alerts'::text; end if;
+  if rep #> '{data,stale_costs}' is distinct from status #> '{data,stale_costs}' then off := off || 'stale_costs'::text; end if;
+  if rep #> '{data,missing_business_days}' is distinct from
+     (select coalesce(jsonb_agg(d order by d), '[]') from jsonb_array_elements(status #> '{data,missing_business_days}') d
+      where d #>> '{}' between rep #>> '{data,week,from}' and rep #>> '{data,week,to}') then
+    off := off || 'missing_business_days'::text;
+  end if;
+  if rep -> 'flags' is distinct from
+     (select coalesce(jsonb_agg(f.flag order by f.first), '[]')
+      from (select e.flag, min(e.n) as first
+            from jsonb_array_elements(sales -> 'flags' || (top -> 'flags') || (food -> 'flags') || (alerts -> 'flags'))
+                 with ordinality e(flag, n)
+            group by e.flag) f) then
+    off := off || 'flags'::text;
+  end if;
+  if rep #> '{meta,coverage_pct}' is distinct from sales #> '{meta,coverage_pct}' then off := off || 'coverage'::text; end if;
+  return off;
+end $$;
+
+-- MR-98: get_data_status' stale-cost count as it was before app.stale_costs, for one tenant (what
+-- RLS shows its members)
+create function pg_temp.stale_before(tenant uuid, today date) returns bigint
+language sql as $$
+  select count(*)
+  from public.ingredient i
+  where i.tenant_id = tenant
+    and exists (
+      select 1 from public.recipe_line rl join public.recipe rc on rc.id = rl.recipe_id
+      where rl.ingredient_id = i.id
+        and (rc.effective_from is null or rc.effective_from <= today)
+        and (rc.effective_to is null or rc.effective_to >= today))
+    and coalesce((select max(p.effective_from) from public.ingredient_price p
+                  where p.ingredient_id = i.id and p.effective_from <= today), '-infinity') < today - 45
+$$;
+
 \set OWNER '''{"tenant_id":"03299e41-28bd-5779-bcc6-0e5e76580fad","location_ids":null}'''
 \set POLANCO_MGR '''{"tenant_id":"03299e41-28bd-5779-bcc6-0e5e76580fad","location_ids":["fdda5e3b-6bcd-5c48-a6de-f524be37463e"]}'''
 \set OTHER '''{"tenant_id":"aaaaaaaa-0000-7000-8000-000000000009","location_ids":null}'''
@@ -128,11 +199,58 @@ select is((select pg_temp.plain(r #> '{data,cost_alerts}') from report),
 select is((select r #> '{data,stale_costs}' from report),
           pg_temp.rpc(:OWNER, 'api.get_data_status()') #> '{data,stale_costs}', 'stale costs = get_data_status');
 select is((select r #> '{data,missing_business_days}' from report), '[]'::jsonb, 'no day of the week is missing');
+select is(pg_temp.sections_off(:OWNER), '{}'::text[],
+          'one read of the week: every section, the flags and the coverage are still their RPCs''');
+select is(pg_temp.sections_off(:POLANCO_MGR), '{}'::text[], 'and for a Polanco manager');
+select is(pg_temp.sections_off(:OWNER, '"prev_week"'), '{}'::text[], 'and for the week before');
+select is(pg_temp.sections_off(:OWNER, '{"from":"2026-09-21","to":"2026-09-27"}'), '{}'::text[], 'and for the week of 09-21');
 select is((select r #> '{data,cost_alerts,breaches_total}' from report), '9'::jsonb, 'dishes over target: 9');
 select is((select count(*) from report, jsonb_array_elements(r -> 'flags') f group by f order by 1 desc limit 1), 1::bigint,
           'no flag twice');
 select is(pg_temp.rpc(:OWNER, format('api.build_weekly_report(%L)', :WEEK)) #- '{meta,as_of}',
           (select r #- '{meta,as_of}' from report), 'the named week and its explicit range answer the same');
+
+-- stale costs (MR-98 P1): app.stale_costs counts what get_data_status counted -----------------------
+select is((select count(*) from unnest(array['2026-08-01', '2026-10-12', '2026-11-30', '2027-01-15']::date[]) d
+           where app.stale_costs(d) is distinct from pg_temp.stale_before(:'TENANT', d)
+              or (pg_temp.rpc(:OWNER, 'api.get_data_status()', d::text) #>> '{data,stale_costs}')::bigint
+                 is distinct from pg_temp.stale_before(:'TENANT', d)),
+          0::bigint, 'app.stale_costs and get_data_status count the stale ingredients as before, on every day');
+select ok((select bool_or(pg_temp.stale_before(:'TENANT', d) > 0) and bool_or(pg_temp.stale_before(:'TENANT', d) = 0)
+           from unnest(array['2026-08-01', '2026-10-12', '2026-11-30', '2027-01-15']::date[]) d),
+          'those days include stale and fresh ones');
+select is((select r #> '{data,stale_costs}' from report), to_jsonb(pg_temp.stale_before(:'TENANT', '2026-10-12')),
+          'the report''s stale costs are the count as of the report day');
+select ok(has_function_privilege('authenticated', 'app.stale_costs(date)', 'execute')
+          and not has_function_privilege('anon', 'app.stale_costs(date)', 'execute'), 'members run app.stale_costs, anon does not');
+
+-- errors (MR-98 A1): only the argument checks answer invalid_args ------------------------------------
+savepoint section_error;
+create or replace function app.stale_costs(today date) returns bigint
+language plpgsql stable set search_path = '' as $$
+begin
+  raise exception 'stale costs failed' using errcode = '22023';
+end $$;
+select is(pg_temp.rpc(:OWNER, 'api.build_weekly_report()') -> 'error',
+          '{"code":"internal","message":"stale costs failed"}'::jsonb,
+          'a 22023 raised after the argument checks is internal, not invalid_args');
+select is(pg_temp.rpc(:OWNER, 'api.build_weekly_report(''"this_week"'')') #>> '{error,code}', 'invalid_args',
+          'while a bad week is still invalid_args');
+rollback to savepoint section_error;
+savepoint section_error;
+create or replace function app.sales_totals(locs uuid[], f date, t date)
+returns table (net_sales bigint, tickets bigint, guests bigint, discounts bigint, cancellations bigint,
+               covered_days int, item_only_days int, expected_days int, expected_covered int)
+language plpgsql stable set search_path = '' as $$
+begin
+  raise exception 'sales totals failed' using errcode = '22023';
+end $$;
+select is(pg_temp.rpc(:OWNER, 'api.get_sales_summary(''"last_week"'')') #>> '{error,code}', 'invalid_args',
+          'get_sales_summary answers its own 22023 as invalid_args');
+select is(pg_temp.rpc(:OWNER, 'api.build_weekly_report()') -> 'error',
+          '{"code":"internal","message":"sales: sales totals failed"}'::jsonb,
+          'but the report checked the week, so the sales section''s invalid_args is internal, naming the section');
+rollback to savepoint section_error;
 
 -- [Ver márgenes] (W4, doc 12 1b): each breach carries what its line needs ------------------------
 select is((select r #> '{data,locations}' from report),
@@ -188,6 +306,7 @@ select is((select jsonb_agg(jsonb_build_array(e ->> 'location_id', e #>> '{price
           jsonb_build_array(jsonb_build_array(:'CENTRO', '$45.00', '50.0%', null),
                             jsonb_build_array(:'POLANCO', '$50.00', '45.0%', '$55.00')),
           'the quesadilla: Centro 50.0 % at $45 (no suggestion), Polanco 45.0 % at $50 with $55');
+select is(pg_temp.sections_off(:OWNER), '{}'::text[], 'with the queso price, every section is still its RPC''s');
 rollback to savepoint queso;
 
 -- the week's cost alerts end on Sunday (suggestions are as of the report day) -----------------------
@@ -270,11 +389,14 @@ select is(pg_temp.rpc(:OWNER, 'api.build_weekly_report()') #> '{data,missing_bus
           'Polanco''s Sunday is missing');
 select is((select count(*) from jsonb_array_elements(pg_temp.rpc(:OWNER, 'api.build_weekly_report()') -> 'flags') f
            where f ->> 'code' = 'missing_days'), 1::bigint, 'one missing_days flag, not one per section');
+select is(pg_temp.sections_off(:OWNER), '{}'::text[], 'with Sunday missing, every section is still its RPC''s');
+select is(pg_temp.sections_off(:POLANCO_MGR), '{}'::text[], 'and for the Polanco manager');
 
 -- no costed sales: food cost is null, the report still goes out ------------------------------------
 delete from public.dish_cost_snapshot where date between '2026-10-05' and '2026-10-11';
 select is(pg_temp.rpc(:OWNER, 'api.build_weekly_report()') #> '{data,food_cost}', 'null'::jsonb, 'no costs: food_cost is null');
 select is(pg_temp.rpc(:OWNER, 'api.build_weekly_report()') ->> 'ok', 'true', 'and the report is still ok');
+select is(pg_temp.sections_off(:OWNER), '{}'::text[], 'with no costs, every section is still its RPC''s');
 
 -- no dish sales: top dishes is empty --------------------------------------------------------------
 delete from public.item_sales_agg where period_from between '2026-10-05' and '2026-10-11';
@@ -282,6 +404,7 @@ delete from public.sale_line l using public.sale_ticket t
 where t.id = l.ticket_id and t.business_date between '2026-10-05' and '2026-10-11';
 select is(pg_temp.rpc(:OWNER, 'api.build_weekly_report()') #> '{data,top_dishes}', '{"metric":"units","rows":[]}'::jsonb,
           'no dish sales: no top dishes');
+select is(pg_temp.sections_off(:OWNER), '{}'::text[], 'with no dish sales, every section is still its RPC''s');
 
 select * from finish();
 rollback;

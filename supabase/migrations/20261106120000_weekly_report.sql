@@ -7,7 +7,11 @@
 --   `prev_week` or an explicit {from, to}. Anything else is invalid_args.
 -- - Each section is the read RPC the agent uses, called with the explicit week, so the report says
 --   what the agent would say: sales and the change vs the previous week (W3), the top 3 dishes by
---   units, the food cost against the target and the stale costs of today.
+--   units, the food cost against the target and the stale costs of today. Sales is
+--   get_sales_summary itself; top dishes, food cost and the missing days come from one read of the
+--   week's item sales (app.report_item_sections, the same rows and rules as get_top_dishes and
+--   get_food_cost_pct), and the stale costs from app.stale_costs, get_data_status' count (MR-98:
+--   about 0.5 s less for a heavy tenant). 99_weekly_report pins each section to its RPC.
 -- - cost_alerts: get_cost_alerts' shape (top 10 with *_total; dishes over target =
 --   breaches_total) from app.cost_alerts, with price moves and breaches over the week only (a price
 --   dated after Sunday does not change last week's report) and the suggestions as of today; each
@@ -18,29 +22,140 @@
 --   report goes out anyway and says so).
 -- - Errors: a section error is one error envelope naming the section, except that no dish sales
 --   gives top_dishes.rows = [] and no costed sales gives food_cost = null (a new tenant without
---   recipes still gets its report). No sales at all is no_data.
+--   recipes still gets its report). No sales at all is no_data. Only the argument checks answer
+--   invalid_args (MR-98 A1): past them the week is valid, so a 22023 raised later, or a section
+--   answering invalid_args to that week, is internal (our data or our bug, not the caller's).
 -- - Flags: every section's flags, first occurrence kept, no duplicates. meta.coverage_pct is the
 --   sales coverage of the week.
 -- Security invoker like every RPC: RLS decides the tenant and the locations (W1: a manager sees
 -- only their location). It writes nothing.
 
--- The days of [f, t] on which at least one of the locations has no sales data (daily or item rows),
--- as in api.get_data_status.
-create function app.missing_business_days(locs uuid[], f date, t date) returns jsonb
+-- The ingredients used by a recipe in effect on `today` whose newest price is older than 45 days
+-- (03 C.3), or that have no price: get_data_status' stale_costs, which the report shows too (MR-98
+-- P1: the report no longer runs get_data_status' 30-day scans for this one count). Ingredients and
+-- recipes belong to the tenant, not to a location, so it takes no locations; RLS scopes the tenant.
+create function app.stale_costs(today date) returns bigint
 language sql stable set search_path = ''
 as $$
+  select count(*)
+  from public.ingredient i
+  where exists (
+      select 1 from public.recipe_line rl join public.recipe rc on rc.id = rl.recipe_id
+      where rl.ingredient_id = i.id
+        and (rc.effective_from is null or rc.effective_from <= today)
+        and (rc.effective_to is null or rc.effective_to >= today))
+    and coalesce((select max(p.effective_from) from public.ingredient_price p
+                  where p.ingredient_id = i.id and p.effective_from <= today), '-infinity') < today - 45
+$$;
+
+-- get_data_status with its stale-cost count from app.stale_costs (MR-98 P1), otherwise word for
+-- word 20261019200000_read_rpcs_first4.sql (merged, so it is replaced here): the same answer.
+create or replace function api.get_data_status(location_id uuid default null) returns jsonb
+language plpgsql stable security invoker set search_path = ''
+as $$
+declare
+  locs uuid[] := app.scope_locations(location_id);
+  today date;
+  sources jsonb;
+  missing jsonb;
+  stale bigint;
+  s record;
+  coverage numeric;
+begin
+  if locs is null then
+    return app.rpc_error('not_found', 'location not found');
+  end if;
+  today := app.business_today(location_id);
+
+  select coalesce(jsonb_agg(jsonb_build_object('source_kind', k.kind, 'last_batch_at', k.last_at) order by k.kind), '[]')
+  into sources
+  from (
+    select src.kind, max(b.applied_at) filter (where b.status = 'applied') as last_at
+    from public.source src
+    left join public.import_batch b on b.tenant_id = src.tenant_id and b.source_id = src.id
+      and (b.location_id = any (locs) or b.location_id is null)
+    where src.location_id = any (locs) or src.location_id is null
+    group by src.kind
+  ) k;
+
   with covered as (
+    select v.location_id, v.business_date from app.v_daily_sales v
+    where v.location_id = any (locs) and v.business_date between today - 30 and today - 1
+    union
+    select v.location_id, v.business_date from app.v_item_sales_daily v
+    where v.location_id = any (locs) and v.business_date between today - 30 and today - 1
+  )
+  select coalesce(jsonb_agg(d.day order by d.day), '[]') into missing
+  from (select g::date as day from generate_series(today - 30, today - 1, interval '1 day') g) d
+  where exists (
+    select 1 from unnest(locs) l(id)
+    where not exists (select 1 from covered c where c.location_id = l.id and c.business_date = d.day));
+
+  stale := app.stale_costs(today);
+
+  select * into s from app.sales_totals(locs, today - 30, today - 1);
+  coverage := round(100.0 * s.expected_covered / nullif(s.expected_days, 0), 4);
+
+  return app.rpc_ok(
+    jsonb_build_object(
+      'sources', sources,
+      'missing_business_days', missing,
+      'stale_costs', stale,
+      'coverage', jsonb_build_object('raw', trim_scale(coalesce(coverage, 0)), 'text', app.fmt_pct(coalesce(coverage, 0)))),
+    locs, '[]', null, null);
+end
+$$;
+
+-- Three report sections from one read of the week's item sales (MR-98 P3/P4; app.item_cost_rows
+-- has one row per app.item_rows row, the same sales and snapshot join plus the day's IVA rate):
+-- - top_rows: get_top_dishes(week, 'units', 'desc', 3)'s rows; null when no dish sold (its no_data);
+-- - food: get_food_cost_pct(week)'s data (group_by 'none'); null when no costed sales (its no_data);
+--   food_flags: its confidence flag (its missing_days flag is the sales section's, the same text);
+-- - missing: the days of [f, t] on which a location has no sales data (daily or item rows), the
+--   rule of get_data_status.
+-- The report used to call the two RPCs and a helper, which read the week four more times.
+create function app.report_item_sections(locs uuid[], f date, t date)
+returns table (top_rows jsonb, food jsonb, food_flags jsonb, missing jsonb)
+language sql stable set search_path = ''
+as $$
+  with c as materialized (
+    select * from app.item_cost_rows(locs, f, t)
+  ), ranked as (
+    select u.menu_item_id, u.name, u.value,
+           row_number() over (order by u.value desc nulls last, u.name, u.menu_item_id) as rank
+    from (select c.menu_item_id, m.name, sum(c.units) as value
+          from c join public.menu_item m on m.id = c.menu_item_id
+          group by c.menu_item_id, m.name) u
+    where u.value is not null
+  ), x as (
+    select sum(c.units * c.cost) filter (where c.cost is not null) as cost,
+           sum(c.net) filter (where c.cost is not null) as covered_net,
+           round(sum(c.net_ex_iva) filter (where c.cost is not null)) as covered_ex_iva,
+           sum(c.net) as total_net,
+           array_agg(distinct c.confidence) filter (where c.confidence is not null) as levels
+    from c
+  ), covered as (
     select v.location_id, v.business_date from app.v_daily_sales v
     where v.location_id = any (locs) and v.business_date between f and t
     union
-    select v.location_id, v.business_date from app.v_item_sales_daily v
-    where v.location_id = any (locs) and v.business_date between f and t
+    select c.location_id, c.day from c
   )
-  select coalesce(jsonb_agg(d.day order by d.day), '[]')
-  from (select g::date as day from generate_series(f, t, interval '1 day') g) d
-  where exists (
-    select 1 from unnest(locs) l(id)
-    where not exists (select 1 from covered c where c.location_id = l.id and c.business_date = d.day))
+  select
+    (select jsonb_agg(jsonb_build_object('rank', k.rank, 'menu_item_id', k.menu_item_id, 'name', k.name,
+                                         'value', app.figure('units', k.value)) order by k.rank)
+     from ranked k where k.rank <= 3),
+    case when coalesce(x.covered_ex_iva, 0) > 0 then jsonb_build_object(
+      'theoretical', app.pct(100 * x.cost / x.covered_ex_iva),
+      'target', app.pct(app.food_cost_target()),
+      'coverage', app.pct(100.0 * x.covered_net / x.total_net),
+      'by_category', '[]'::jsonb) end,
+    case when coalesce(x.covered_ex_iva, 0) > 0 then coalesce('[]'::jsonb || app.confidence_flag(x.levels), '[]') else '[]' end,
+    (select coalesce(jsonb_agg(d.day order by d.day), '[]')
+     from (select g::date as day from generate_series(f, t, interval '1 day') g) d
+     where exists (
+       select 1 from unnest(locs) l(id)
+       where not exists (select 1 from covered v where v.location_id = l.id and v.business_date = d.day)))
+  from x
 $$;
 
 -- The target price app.write_price_suggestions gives a cost at a menu price and IVA rate (its
@@ -275,53 +390,47 @@ declare
   r date[];
   week jsonb;
   sales jsonb;
-  top jsonb;
-  food jsonb;
+  items record;
   alerts jsonb;
-  status jsonb;
-  bad record;
   flags jsonb;
 begin
   if locs is null then
     return app.rpc_error('not_found', 'location not found');
   end if;
-  if period is null or jsonb_typeof(period) not in ('string', 'object')
-     or (jsonb_typeof(period) = 'string' and period #>> '{}' not in ('last_week', 'prev_week')) then
-    raise exception 'period must be last_week, prev_week or a Monday-to-Sunday {from, to}' using errcode = '22023';
-  end if;
   today := app.business_today(location_id);
-  r := app.resolve_period(period, today);
-  if extract(isodow from r[1]) <> 1 or r[2] <> r[1] + 6 then
-    raise exception 'the week must run Monday to Sunday' using errcode = '22023';
-  end if;
-  if r[2] >= today then
-    raise exception 'the week has not ended yet' using errcode = '22023';
-  end if;
+  -- the arguments: a 22023 here is the caller's
+  begin
+    if period is null or jsonb_typeof(period) not in ('string', 'object')
+       or (jsonb_typeof(period) = 'string' and period #>> '{}' not in ('last_week', 'prev_week')) then
+      raise exception 'period must be last_week, prev_week or a Monday-to-Sunday {from, to}' using errcode = '22023';
+    end if;
+    r := app.resolve_period(period, today);
+    if extract(isodow from r[1]) <> 1 or r[2] <> r[1] + 6 then
+      raise exception 'the week must run Monday to Sunday' using errcode = '22023';
+    end if;
+    if r[2] >= today then
+      raise exception 'the week has not ended yet' using errcode = '22023';
+    end if;
+  exception when sqlstate '22023' then
+    return app.rpc_error('invalid_args', sqlerrm, locs);
+  end;
   week := jsonb_build_object('from', r[1], 'to', r[2]);
 
+  -- the week is valid now, so a section rejecting it is our fault, not the caller's
   sales := api.get_sales_summary(week, location_id);
-  top := api.get_top_dishes(week, 'units', 'desc', 3, location_id);
-  food := api.get_food_cost_pct(week, location_id, 'none');
-  alerts := app.cost_alerts(locs, r[1], r[2], today, true);
-  status := api.get_data_status(location_id);
-
-  -- the first failing section decides the answer
-  select s.name, s.env into bad
-  from (values (1, 'sales', sales), (2, 'top_dishes', top), (3, 'food_cost', food),
-               (4, 'data_status', status)) s(n, name, env)
-  where not (s.env ->> 'ok')::boolean
-    and not (s.name in ('top_dishes', 'food_cost') and s.env #>> '{error,code}' = 'no_data')
-  order by s.n
-  limit 1;
-  if found then
-    return app.rpc_error(bad.env #>> '{error,code}', bad.name || ': ' || (bad.env #>> '{error,message}'), locs);
+  if not (sales ->> 'ok')::boolean then
+    return app.rpc_error(case when sales #>> '{error,code}' = 'invalid_args' then 'internal' else sales #>> '{error,code}' end,
+                         'sales: ' || (sales #>> '{error,message}'), locs);
   end if;
+  select * into items from app.report_item_sections(locs, r[1], r[2]);
+  alerts := app.cost_alerts(locs, r[1], r[2], today, true);
 
+  -- every section's flags, first occurrence kept (top dishes' and food cost's missing_days flag is
+  -- the sales section's)
   select coalesce(jsonb_agg(f.flag order by f.first), '[]') into flags
   from (
     select e.flag, min(e.n) as first
-    from jsonb_array_elements(sales -> 'flags' || (top -> 'flags') || (food -> 'flags') || (alerts -> 'flags'))
-         with ordinality e(flag, n)
+    from jsonb_array_elements(sales -> 'flags' || items.food_flags || (alerts -> 'flags')) with ordinality e(flag, n)
     group by e.flag
   ) f;
 
@@ -332,25 +441,25 @@ begin
       'locations', (select jsonb_agg(jsonb_build_object('location_id', l.id, 'name', l.name) order by l.name, l.id)
                     from public.location l where l.id = any (locs)),
       'sales', sales -> 'data',
-      'top_dishes', case when (top ->> 'ok')::boolean then top -> 'data'
-                         else jsonb_build_object('metric', 'units', 'rows', '[]'::jsonb) end,
-      'food_cost', case when (food ->> 'ok')::boolean then food -> 'data' end,
+      'top_dishes', jsonb_build_object('metric', 'units', 'rows', coalesce(items.top_rows, '[]')),
+      'food_cost', items.food,
       'cost_alerts', alerts -> 'data',
-      'missing_business_days', app.missing_business_days(locs, r[1], r[2]),
-      'stale_costs', status #> '{data,stale_costs}'),
+      'missing_business_days', items.missing,
+      'stale_costs', app.stale_costs(today)),
     locs, flags, (sales #>> '{meta,coverage_pct}')::numeric, r);
 exception when sqlstate '22023' then
-  return app.rpc_error('invalid_args', sqlerrm, coalesce(locs, '{}'));
+  -- past the argument checks: bad data or a bug of ours (a bad location time zone, a section)
+  return app.rpc_error('internal', sqlerrm, coalesce(locs, '{}'));
 end
 $$;
 
 -- Privileges ---------------------------------------------------------------------------------
 -- Runs as the caller, like the section RPCs it calls.
-revoke all on function app.missing_business_days(uuid[], date, date), app.cost_alerts(uuid[], date, date, date, boolean),
+revoke all on function app.stale_costs(date), app.report_item_sections(uuid[], date, date), app.cost_alerts(uuid[], date, date, date, boolean),
   app.suggestion_target_price(bigint, bigint, numeric), app.breach_at(uuid, uuid, date, bigint, bigint, app.cost_confidence, date, jsonb),
   api.build_weekly_report(jsonb, uuid)
   from public, anon;
-grant execute on function app.missing_business_days(uuid[], date, date), app.cost_alerts(uuid[], date, date, date, boolean),
+grant execute on function app.stale_costs(date), app.report_item_sections(uuid[], date, date), app.cost_alerts(uuid[], date, date, date, boolean),
   app.suggestion_target_price(bigint, bigint, numeric), app.breach_at(uuid, uuid, date, bigint, bigint, app.cost_confidence, date, jsonb),
   api.build_weekly_report(jsonb, uuid)
   to authenticated;
