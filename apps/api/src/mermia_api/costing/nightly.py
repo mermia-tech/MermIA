@@ -20,7 +20,10 @@ today, and a short catch-up window before it (`days`, default 2: yesterday and t
   next run (the job is idempotent).
 
 One run at a time: `main` takes a job-wide advisory lock and exits 0 when another run holds it.
-It also switches to `service_role`, so the job never runs as a superuser.
+Every transaction (`_transaction`) runs `set local role service_role` and sets `lock_timeout` and
+`statement_timeout` (60 s), so the job never runs as a superuser even if the session role is lost.
+The job lock is a session lock: it needs a direct or session-mode DB URL (not the transaction-mode
+pooler on port 6543), or the lock and the role could land on different backends.
 
 Run it on a service-role connection with no transaction open (inside an open transaction each
 chunk is only a savepoint and the locks are held until the caller commits).
@@ -58,6 +61,7 @@ DEFAULT_DAYS = 2  # yesterday and today
 MAX_DAYS = 400  # the engine's longest range
 MAX_CHUNK_DAYS = 7  # days per transaction (app.fill_dish_costs allows 31): lock held ~1-3 s
 LOCK_TIMEOUT = "5s"  # a chunk (or a tap behind it) waits this long for the tenant lock
+STATEMENT_TIMEOUT = "60s"  # one chunk's longest run; 57014 is permanent in the sweep's split
 JOB_LOCK_KEY = "mermia:nightly_dish_costs"  # job-wide advisory lock: one run at a time
 JOB_ROLE = "service_role"
 EXIT_OK, EXIT_FAILED, EXIT_USAGE = 0, 1, 2
@@ -133,7 +137,7 @@ def plan_chunks(from_date: dt.date, to_date: dt.date) -> list[tuple[dt.date, dt.
 
 def _tenants(conn: psycopg.Connection[Any], only: Collection[UUID] | None) -> list[UUID]:
     ids = None if only is None else list(only)
-    with conn.transaction():
+    with _transaction(conn, None):
         rows = conn.execute(
             "select id from public.tenant where %s::uuid[] is null or id = any(%s::uuid[]) "
             "order by created_at, id",
@@ -181,8 +185,11 @@ def _fill_chunk(
 
 @contextmanager
 def _transaction(conn: psycopg.Connection[Any], today: dt.date | None) -> Iterator[None]:
-    """One transaction with a short lock_timeout; app.today is set if the caller fixed the date."""
+    """One transaction as service_role with short lock and statement timeouts; app.today is set
+    if the caller fixed the date."""
     with conn.transaction():
+        conn.execute(f"set local role {JOB_ROLE}")
+        conn.execute(f"set local statement_timeout = '{STATEMENT_TIMEOUT}'")
         conn.execute(f"set local lock_timeout = '{LOCK_TIMEOUT}'")
         if today is not None:
             conn.execute("select set_config('app.today', %s, true)", (today.isoformat(),))
@@ -212,7 +219,8 @@ def _date(value: str) -> dt.date:
 def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="python -m mermia_api.costing.nightly",
-        description="Fills every tenant's dish costs up to each location's own business today.",
+        description="Fills every tenant's dish costs up to each location's own business today. "
+        "MERMIA_DB_URL must be a direct or session-mode URL, not the pooler on port 6543.",
     )
     parser.add_argument(
         "--days", type=_days, default=DEFAULT_DAYS, help="window ending today (1-400, default 2)"
@@ -251,7 +259,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"cannot switch to {JOB_ROLE}: {failure_reason(error)}", file=sys.stderr)
             return EXIT_FAILED
         if not try_job_lock(conn):
-            log.info("another nightly dish-cost run holds the job lock; exiting")
+            log.warning("another nightly dish-cost run holds the job lock; skipping this run")
             return EXIT_OK
         result = run_nightly_dish_costs(conn, today=args.today, days=args.days)
     print(

@@ -107,6 +107,7 @@ def today_rows(conn: psycopg.Connection[Any], tenant: UUID) -> set[Row]:
 
 def engine_today_rows(conn: psycopg.Connection[Any], tenant: UUID) -> set[Row]:
     """What app.compute_dish_costs writes on each location's today (its rows are then dropped)."""
+    conn.execute("reset role")  # the job's `set local role` outlives its savepoint in a test
     conn.execute("savepoint engine")
     conn.execute(
         "select app.compute_dish_costs(%s, t.first_day, t.last_day) from app.tenant_days(%s) t",
@@ -449,3 +450,40 @@ def test_the_cli_refuses_bad_arguments(argv: list[str]) -> None:
 def test_the_cli_needs_a_database(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("MERMIA_DB_URL", raising=False)
     assert main([]) == 2
+
+
+@pytest.mark.db
+def test_every_transaction_runs_as_service_role_with_a_statement_timeout(
+    conn: psycopg.Connection[Any],
+) -> None:
+    assert conn.execute("select current_user").fetchone() != ("service_role",)
+
+    with nightly._transaction(conn, None):
+        user = conn.execute("select current_user").fetchone()
+        timeout = conn.execute("show statement_timeout").fetchone()
+
+    assert user == ("service_role",)
+    assert timeout == (nightly.STATEMENT_TIMEOUT.replace("60s", "1min"),)
+
+
+@pytest.mark.db
+def test_a_statement_timeout_fails_the_tenant_as_permanent_and_the_run_goes_on(
+    conn: psycopg.Connection[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tenant, _ = add_two_zone_tenant(conn)
+    real = nightly._fill_chunk
+
+    def slow(c: psycopg.Connection[Any], t: UUID, lo: dt.date, hi: dt.date, today: Any) -> int:
+        if t == SEED:
+            with nightly._transaction(c, today):
+                c.execute("select pg_sleep(2)")
+        return real(c, t, lo, hi, today)
+
+    monkeypatch.setattr(nightly, "STATEMENT_TIMEOUT", "100ms")
+    monkeypatch.setattr(nightly, "_fill_chunk", slow)
+
+    result = run_nightly_dish_costs(conn, only=[SEED, tenant])
+
+    # 57014 is permanent in the backfill sweep's split (it fails the same way every time)
+    assert result.failed == {SEED: TenantFailure("57014 QueryCanceled", is_transient=False)}
+    assert result.done[tenant].snapshots > 0
