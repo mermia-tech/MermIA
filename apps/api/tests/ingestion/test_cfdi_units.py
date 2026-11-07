@@ -48,6 +48,13 @@ def test_a_pack_in_an_unknown_unit_is_held(unit: str) -> None:
     assert e.value.code == PACK_UNKNOWN
 
 
+@pytest.mark.parametrize("clave", ["KGM", "H87"])
+def test_a_nan_pack_is_held(clave: str) -> None:
+    with pytest.raises(UnitHeld) as e:
+        base_per_unit(clave, "g", Pack(Decimal("NaN"), "pza"), {})
+    assert e.value.code == PACK_UNKNOWN
+
+
 def test_a_pack_of_zero_is_held() -> None:
     with pytest.raises(UnitHeld) as e:
         base_per_unit("XBX", "pza", Pack(Decimal(0), "pza"), {})

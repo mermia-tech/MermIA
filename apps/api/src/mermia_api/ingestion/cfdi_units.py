@@ -1,7 +1,8 @@
 """How many base units (g, ml, pza) one invoiced unit of a CFDI line holds (MR-36). Pure.
 
 - The SAT's measurement units are fixed: KGM is 1000 g, GRM 1 g, LTR 1000 ml and MLT 1 ml; the
-  alias's pack is ignored for them.
+  alias's pack is ignored for them when it is complete; a broken pack (no size, unknown unit,
+  zero or NaN) holds the line.
 - H87, EA and XUN (a piece) are what the supplier alias's pack_qty and pack_unit say one piece
   holds (a "piece" of 180 eggs, a 1 kg cheese); with no pack on the alias, one piece.
 - Any other ClaveUnidad (a box, a pack, a bag) is a pack: it needs the supplier alias's pack_qty
@@ -76,7 +77,7 @@ def _invoiced(clave: str, pack: Pack | None) -> tuple[str, Decimal]:
 def _pack_amount(pack: Pack | None) -> tuple[str, Decimal]:
     """What the alias says one invoiced unit holds. Raises UnitHeld when it doesn't say."""
     pack_name = None if pack is None else _unit_name(pack.unit)
-    if pack is None or pack_name is None or pack.qty <= 0:
+    if pack is None or pack_name is None or not pack.qty.is_finite() or pack.qty <= 0:
         raise UnitHeld(PACK_UNKNOWN)
     kind, size = MEASURES[pack_name]
     return kind, pack.qty * size
