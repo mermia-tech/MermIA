@@ -30,6 +30,9 @@ QUESO_DOUBLES = (
     f" values ('{TENANT}', '5268568b-3d45-535f-9197-4b2f1873700e', 0.280, '2026-09-28', 'cfdi')",
 )
 
+# the same price dated Monday 10-12, the day the report is built: after the week's Sunday
+QUESO_DOUBLES_ON_MONDAY = (QUESO_DOUBLES[0].replace("'2026-09-28'", "'2026-10-12'"),)
+
 
 def call(
     db_url: str, args: dict[str, Any], claims: dict[str, Any], setup: tuple[str, ...] = ()
@@ -85,10 +88,51 @@ def test_the_week_of_the_aguacate_jump(db_url: str) -> None:
     assert [(m["ingredient"], m["change"]["text"]) for m in moves] == [("Aguacate Hass", "+61.8%")]
 
 
+def test_the_week_of_09_21_stops_on_its_sunday(db_url: str) -> None:
+    """The aguacate jump of 09-28 belongs to the next week, not to this one."""
+    r = report(db_url, OWNER, period={"from": "2026-09-21", "to": "2026-09-27"})
+    moves = r["data"]["cost_alerts"]["price_moves"]
+    assert [m["ingredient"] for m in moves] == ["Carne al pastor (adobada)"]
+    assert r["meta"]["period_resolved"] == {"from": "2026-09-21", "to": "2026-09-27"}
+
+
+def _week_costs(r: Any) -> Any:
+    alerts = r["data"]["cost_alerts"]
+    breaches = [{k: v for k, v in b.items() if k != "suggestion"} for b in alerts["breaches"]]
+    return (alerts["price_moves"], alerts["price_moves_total"], breaches, alerts["breaches_total"])
+
+
+def test_a_price_dated_after_sunday_does_not_move_last_weeks_report(db_url: str) -> None:
+    """W2: the 9:00 and the 12:00 report agree even if a Monday-dated price lands in between."""
+    before = call(db_url, {}, OWNER)
+    after = call(db_url, {}, OWNER, QUESO_DOUBLES_ON_MONDAY)
+    assert _week_costs(after) == _week_costs(before)
+    assert after["data"]["cost_alerts"]["price_moves_total"] == 0
+
+
+def test_ver_margenes_comes_from_the_payload(db_url: str) -> None:
+    """Doc 12 1b: "*1. Costra de pastor* — costo $29.80, precio $89.00 → *38.8%*", then the
+    suggestion."""
+    data = report(db_url, OWNER)["data"]
+    names = {loc["location_id"]: loc["name"] for loc in data["locations"]}
+    assert names == {CENTRO: "Centro", POLANCO: "Polanco"}
+    torta = next(b for b in data["cost_alerts"]["breaches"] if b["name"] == "Torta de pastor")
+    line = (
+        f"{torta['name']} ({names[torta['location_id']]}) — costo {torta['cost']['text']},"
+        f" precio {torta['price_gross']['text']} → {torta['food_cost']['text']}"
+    )
+    assert line == "Torta de pastor (Centro) — costo $34.49, precio $80.00 → 50.0%"
+    assert torta["net_price"]["raw"] == round(8000 / 1.16)
+    assert torta["suggestion"]["location_id"] == torta["location_id"] == CENTRO
+    assert torta["suggestion"]["rationale_code"] == "review_portion_cost"
+
+
 def test_a_polanco_manager_gets_polanco_only(db_url: str) -> None:
     r = report(db_url, POLANCO_MANAGER)
     assert r["data"]["sales"]["net_sales"]["raw"] == 16092080
     assert {s["location_id"] for s in r["data"]["cost_alerts"]["suggestions"]} == {POLANCO}
+    assert {b["location_id"] for b in r["data"]["cost_alerts"]["breaches"]} == {POLANCO}
+    assert r["data"]["locations"] == [{"location_id": POLANCO, "name": "Polanco"}]
     denied = report(db_url, POLANCO_MANAGER, location_id=CENTRO)
     assert denied["ok"] is False and denied["error"]["code"] == "not_found"
 

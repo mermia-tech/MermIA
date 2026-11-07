@@ -7,8 +7,12 @@
 --   `prev_week` or an explicit {from, to}. Anything else is invalid_args.
 -- - Each section is the read RPC the agent uses, called with the explicit week, so the report says
 --   what the agent would say: sales and the change vs the previous week (W3), the top 3 dishes by
---   units, the food cost against the target, the cost alerts since the week's Monday (top 10 with
---   *_total; dishes over target = breaches_total) and the stale costs of today.
+--   units, the food cost against the target and the stale costs of today.
+-- - cost_alerts: get_cost_alerts' shape (top 10 with *_total; dishes over target =
+--   breaches_total) from app.cost_alerts, with price moves and breaches over the week only (a price
+--   dated after Sunday does not change last week's report) and the suggestions as of today; each
+--   breach carries its location, cost, prices and suggestion for [Ver márgenes] (W4).
+-- - locations: the locations in scope with their names, to label breaches and suggestions.
 -- - missing_business_days: the days of the week a visible location has no sales data (W2: the
 --   report goes out anyway and says so).
 -- - Errors: a section error is one error envelope naming the section, except that no dish sales
@@ -36,6 +40,181 @@ as $$
   where exists (
     select 1 from unnest(locs) l(id)
     where not exists (select 1 from covered c where c.location_id = l.id and c.business_date = d.day))
+$$;
+
+-- The cost alerts of the locations, as get_cost_alerts lists them, returned as {data, flags}:
+-- - price moves and breaches over [f, t] (the ingredient prices of record up to t, the dish
+--   snapshots of [f, t]);
+-- - suggestions as of `today`: the rows evaluated from f to today that are still open (or pending)
+--   and fresh today, at today's menu price, whose dish's latest snapshot up to today still
+--   breaches (the rules of 20261106110000_price_suggestions.sql).
+-- get_cost_alerts is t = today. The weekly report passes the week's Sunday as t, so a price dated
+-- after Sunday never moves last week's figures (the 9:00 and the 12:00 report agree), and
+-- `detailed`: each breach also gets the location where its food cost is highest, the snapshot's
+-- cost, net price and menu price (with IVA) that day, its confidence and that location's
+-- suggestion or null ([Ver márgenes], doc 12 1b). The agent's breaches stay compact (doc 13).
+create function app.cost_alerts(locs uuid[], f date, t date, today date, detailed boolean default false)
+returns jsonb
+language plpgsql stable security invoker set search_path = ''
+as $$
+declare
+  top_n int := app.cost_alerts_top_n();
+  moves jsonb;
+  moves_total int;
+  breaches jsonb;
+  breaches_total int;
+  shown jsonb;
+  levels app.cost_confidence[];
+  flags jsonb := '[]';
+  breach_above numeric := app.food_cost_target() + (select s.breach_pts from app.cost_alert_settings() s);
+begin
+  with moved as (
+    select i.name, i.base_unit, cur.unit_price_net as new_price, j.started,
+           100 * (cur.unit_price_net - coalesce(nullif(pre.unit_price_net, 0), j.first_old))
+             / coalesce(nullif(pre.unit_price_net, 0), j.first_old) as change_pct
+    from (select x.ingredient_id, max(x.started) as started,
+                 (array_agg(x.old_unit_price order by x.started))[1] as first_old
+          from app.price_jumps((select app.current_tenant_id()), f, t) x
+          group by x.ingredient_id) j
+    join public.ingredient i on i.id = j.ingredient_id
+    cross join lateral app.price_of_record(j.ingredient_id, t) cur
+    left join lateral app.price_of_record(j.ingredient_id, f - 1) pre on true
+    where cur.unit_price_net > 0
+  ), ranked as (
+    select m.*, row_number() over (order by abs(m.change_pct) desc, m.name) as n
+    from moved m
+    where abs(m.change_pct) >= (select s.jump_vs_avg_pct from app.cost_alert_settings() s)
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'ingredient', m.name,
+           'change', app.pct(m.change_pct, true),
+           'new_unit_price', jsonb_build_object('raw', trim_scale(m.new_price), 'base_unit', m.base_unit,
+                                                'text', app.price_text(m.new_price, m.base_unit)))
+         order by m.started, m.name) filter (where m.n <= top_n), '[]'),
+         count(*)
+  into moves, moves_total
+  from ranked m;
+
+  -- every suggestion shown, highest value first (the listed ones are the first top_n)
+  with shown as (
+    select x.*, m.name
+    from (
+      select distinct on (p.location_id, p.menu_item_id) p.*
+      from public.price_suggestion p
+      where p.location_id = any (locs) and p.as_of between f and today
+      order by p.location_id, p.menu_item_id, p.as_of desc, p.id desc
+    ) x
+    join public.menu_item m on m.id = x.menu_item_id
+    where x.status in ('open', 'pending')
+      and (x.status = 'pending' or not exists (
+             select 1 from public.price_suggestion d
+             where d.tenant_id = x.tenant_id and d.location_id = x.location_id and d.menu_item_id = x.menu_item_id
+               and d.status <> 'open' and d.episode_start >= x.episode_start
+               and not app.suggestion_reopens(d.current_price, d.suggested_price, x.current_price, x.suggested_price)))
+      -- an open row only while fresh: evaluated on or after the dish's latest snapshot (the evaluator
+      -- ran since) and within the writer's observation week (a dish no longer costed shows nothing)
+      and (x.status = 'pending' or (
+             x.as_of > today - (select k.observation_days from app.price_suggestion_settings() k)
+             and x.as_of >= (select max(s.date) from public.dish_cost_snapshot s
+                             where s.location_id = x.location_id and s.menu_item_id = x.menu_item_id
+                               and s.date <= today)))
+      and x.current_price = app.menu_price_on(x.menu_item_id, x.location_id, today)
+      and (select 100.0 * s.cost / s.price_net > breach_above
+           from public.dish_cost_snapshot s
+           where s.location_id = x.location_id and s.menu_item_id = x.menu_item_id
+             and s.date between f and today and s.price_net > 0
+           order by s.date desc limit 1)
+  ), ranked as (
+    select x.*, row_number() over (order by x.value desc, x.name, x.location_id) as n from shown x
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'menu_item_id', x.menu_item_id,
+           'location_id', x.location_id,
+           'name', x.name,
+           'current_price', app.money(x.current_price),
+           'target_price', app.money(x.target_price),
+           'suggested_price', case when x.suggested_price is not null then app.money(x.suggested_price) end,
+           'change', case when x.suggested_price is not null
+                          then app.pct(100.0 * (x.suggested_price - x.current_price) / x.current_price, true) end,
+           'new_food_cost', case when x.new_food_cost_pct is not null then app.pct(x.new_food_cost_pct) end,
+           'confidence', x.confidence,
+           'rationale_code', x.rationale_code)
+         order by x.n), '[]')
+  into shown
+  from ranked x;
+
+  with latest as (
+    select distinct on (s.menu_item_id, s.location_id) s.menu_item_id, s.location_id, s.date, s.cost, s.price_net,
+           s.confidence
+    from public.dish_cost_snapshot s
+    where s.location_id = any (locs) and s.date between f and t and s.price_net > 0
+    order by s.menu_item_id, s.location_id, s.date desc
+  ), worst as (
+    select distinct on (l.menu_item_id) l.*, 100.0 * l.cost / l.price_net as fc
+    from latest l order by l.menu_item_id, 100.0 * l.cost / l.price_net desc, l.location_id
+  ), ranked as (
+    select b.*, m.name, row_number() over (order by round(b.fc, 4) desc, m.name, b.menu_item_id) as n
+    from worst b join public.menu_item m on m.id = b.menu_item_id
+    where b.fc > breach_above
+  )
+  -- the top N by food cost; the confidence covers every breach, listed or not
+  select coalesce(jsonb_agg(
+           jsonb_build_object('menu_item_id', b.menu_item_id, 'name', b.name,
+                              'food_cost', app.pct(b.fc), 'target', app.pct(app.food_cost_target()))
+           || case when detailed then jsonb_build_object(
+                'location_id', b.location_id,
+                'cost', app.money(b.cost),
+                'net_price', app.money(b.price_net),
+                'price_gross', app.money(app.menu_price_on(b.menu_item_id, b.location_id, b.date)),
+                'confidence', b.confidence,
+                'suggestion', (select s from jsonb_array_elements(shown) s
+                               where s ->> 'menu_item_id' = b.menu_item_id::text
+                                 and s ->> 'location_id' = b.location_id::text))
+              else '{}' end
+           order by b.n) filter (where b.n <= top_n), '[]'),
+         count(*),
+         array_agg(distinct b.confidence)
+  into breaches, breaches_total, levels
+  from ranked b;
+
+  if breaches <> '[]' then
+    flags := flags || app.confidence_flag(levels);
+  end if;
+  return jsonb_build_object(
+    'data', jsonb_build_object(
+      'price_moves', moves, 'price_moves_total', moves_total, 'breaches', breaches,
+      'breaches_total', breaches_total,
+      'suggestions', (select coalesce(jsonb_agg(s order by i), '[]')
+                      from jsonb_array_elements(shown) with ordinality x(s, i) where i <= top_n),
+      'suggestions_total', jsonb_array_length(shown)),
+    'flags', flags);
+end
+$$;
+
+-- get_cost_alerts on the shared body, up to today: the same answer as in
+-- 20261106110000_price_suggestions.sql (its tests and examples pin it).
+create or replace function api.get_cost_alerts(since jsonb default '"last_7d"', location_id uuid default null) returns jsonb
+language plpgsql stable security invoker set search_path = ''
+as $$
+declare
+  locs uuid[] := app.scope_locations(location_id);
+  today date;
+  r date[];
+  alerts jsonb;
+begin
+  if locs is null then
+    return app.rpc_error('not_found', 'location not found');
+  end if;
+  today := app.business_today(location_id);
+  r := app.resolve_period(coalesce(since, '"last_7d"'), today);
+  if r[1] > today then
+    raise exception 'since must start on or before today' using errcode = '22023';
+  end if;
+  alerts := app.cost_alerts(locs, r[1], today, today);
+  return app.rpc_ok(alerts -> 'data', locs, alerts -> 'flags', null, array[r[1], today]);
+exception when sqlstate '22023' then
+  return app.rpc_error('invalid_args', sqlerrm, coalesce(locs, '{}'));
+end
 $$;
 
 create function api.build_weekly_report(period jsonb default '"last_week"', location_id uuid default null)
@@ -75,13 +254,13 @@ begin
   sales := api.get_sales_summary(week, location_id);
   top := api.get_top_dishes(week, 'units', 'desc', 3, location_id);
   food := api.get_food_cost_pct(week, location_id, 'none');
-  alerts := api.get_cost_alerts(week, location_id);
+  alerts := app.cost_alerts(locs, r[1], r[2], today, true);
   status := api.get_data_status(location_id);
 
   -- the first failing section decides the answer
   select s.name, s.env into bad
   from (values (1, 'sales', sales), (2, 'top_dishes', top), (3, 'food_cost', food),
-               (4, 'cost_alerts', alerts), (5, 'data_status', status)) s(n, name, env)
+               (4, 'data_status', status)) s(n, name, env)
   where not (s.env ->> 'ok')::boolean
     and not (s.name in ('top_dishes', 'food_cost') and s.env #>> '{error,code}' = 'no_data')
   order by s.n
@@ -102,6 +281,8 @@ begin
     jsonb_build_object(
       'week', week,
       'previous_week', jsonb_build_object('from', r[1] - 7, 'to', r[2] - 7),
+      'locations', (select jsonb_agg(jsonb_build_object('location_id', l.id, 'name', l.name) order by l.name, l.id)
+                    from public.location l where l.id = any (locs)),
       'sales', sales -> 'data',
       'top_dishes', case when (top ->> 'ok')::boolean then top -> 'data'
                          else jsonb_build_object('metric', 'units', 'rows', '[]'::jsonb) end,
@@ -117,7 +298,9 @@ $$;
 
 -- Privileges ---------------------------------------------------------------------------------
 -- Runs as the caller, like the section RPCs it calls.
-revoke all on function app.missing_business_days(uuid[], date, date), api.build_weekly_report(jsonb, uuid)
+revoke all on function app.missing_business_days(uuid[], date, date), app.cost_alerts(uuid[], date, date, date, boolean),
+  api.build_weekly_report(jsonb, uuid)
   from public, anon;
-grant execute on function app.missing_business_days(uuid[], date, date), api.build_weekly_report(jsonb, uuid)
+grant execute on function app.missing_business_days(uuid[], date, date), app.cost_alerts(uuid[], date, date, date, boolean),
+  api.build_weekly_report(jsonb, uuid)
   to authenticated;

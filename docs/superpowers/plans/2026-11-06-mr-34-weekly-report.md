@@ -40,7 +40,8 @@
 
 ## Risks / notes for MR-38
 
-- `get_cost_alerts` looks from the period start to today, and suggestions show only while under a week old, so re-running an old week does not reproduce what was sent: MR-38 should store the sent payload in `report_run`.
+- Review round 1 (P2): the report's price moves and breaches stop on the week's Sunday (`app.cost_alerts`, shared with `get_cost_alerts`, which still runs to today), so a Monday-dated price does not change the 9:00 vs 12:00 report. Suggestions stay as of the report day and only show while under a week old, so re-running an old week does not reproduce what was sent: MR-38 should store the sent payload in `report_run`.
+- `[Ver márgenes]` (W4): each report breach (`WeeklyBreach`) carries `location_id` (where its food cost is highest), `cost`, `net_price`, `price_gross`, `confidence` and that location's `suggestion` (or null); `locations` gives the names. A dish's suggestion at another location is only in `suggestions`. The agent's `TargetBreach` is unchanged (doc 13 budget).
 - Doc 12 sample numbers are made up; tests pin the seed's figures.
 - The MR-38 issue says suggestions go behind `Ver detalle`; decision W4 puts them behind `Ver márgenes`.
 - Doc 13's ~400-token cap is for agent tool results; the report goes to code, but stays compact via top-N + `*_total`.

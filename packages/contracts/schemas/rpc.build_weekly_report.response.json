@@ -62,64 +62,6 @@
       "title": "CategoryFoodCost",
       "type": "object"
     },
-    "CostAlertsData": {
-      "additionalProperties": false,
-      "description": "Ingredient price moves, dishes over target and price suggestions (MR-33).\n\nDoc 13 keeps tool results small (top N only): `price_moves` holds the 10 largest moves (by\nsize, either way; listed by start day), `breaches` and `suggestions` the 10 highest food costs;\nthe `*_total` fields count every row, so the agent can say how many more there are.",
-      "properties": {
-        "breaches": {
-          "items": {
-            "$ref": "#/$defs/TargetBreach"
-          },
-          "maxItems": 10,
-          "title": "Breaches",
-          "type": "array"
-        },
-        "breaches_total": {
-          "maximum": 2147483647,
-          "minimum": 0,
-          "title": "Breaches Total",
-          "type": "integer"
-        },
-        "price_moves": {
-          "items": {
-            "$ref": "#/$defs/PriceMove"
-          },
-          "maxItems": 10,
-          "title": "Price Moves",
-          "type": "array"
-        },
-        "price_moves_total": {
-          "maximum": 2147483647,
-          "minimum": 0,
-          "title": "Price Moves Total",
-          "type": "integer"
-        },
-        "suggestions": {
-          "items": {
-            "$ref": "#/$defs/PriceSuggestion"
-          },
-          "maxItems": 10,
-          "title": "Suggestions",
-          "type": "array"
-        },
-        "suggestions_total": {
-          "maximum": 2147483647,
-          "minimum": 0,
-          "title": "Suggestions Total",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "price_moves",
-        "price_moves_total",
-        "breaches",
-        "breaches_total",
-        "suggestions",
-        "suggestions_total"
-      ],
-      "title": "CostAlertsData",
-      "type": "object"
-    },
     "CostConfidence": {
       "enum": [
         "confirmed",
@@ -248,6 +190,27 @@
         "coverage"
       ],
       "title": "FoodCostData",
+      "type": "object"
+    },
+    "LocationRef": {
+      "additionalProperties": false,
+      "properties": {
+        "location_id": {
+          "format": "uuid",
+          "title": "Location Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "location_id",
+        "name"
+      ],
+      "title": "LocationRef",
       "type": "object"
     },
     "Meta": {
@@ -620,35 +583,6 @@
       "title": "SuggestionRationale",
       "type": "string"
     },
-    "TargetBreach": {
-      "additionalProperties": false,
-      "properties": {
-        "food_cost": {
-          "$ref": "#/$defs/Pct"
-        },
-        "menu_item_id": {
-          "format": "uuid",
-          "title": "Menu Item Id",
-          "type": "string"
-        },
-        "name": {
-          "pattern": "\\S",
-          "title": "Name",
-          "type": "string"
-        },
-        "target": {
-          "$ref": "#/$defs/Pct"
-        }
-      },
-      "required": [
-        "menu_item_id",
-        "name",
-        "food_cost",
-        "target"
-      ],
-      "title": "TargetBreach",
-      "type": "object"
-    },
     "TopDishesData": {
       "additionalProperties": false,
       "properties": {
@@ -678,12 +612,133 @@
       "title": "TopDishesData",
       "type": "object"
     },
+    "WeeklyBreach": {
+      "additionalProperties": false,
+      "description": "A dish over target as `[Ver márgenes]` shows it (W4, doc 12 1b: \"*Costra de pastor* — costo\n$29.80, precio $89.00 → *38.8%*\", then its suggestion).\n\nThe report's only: get_cost_alerts keeps the compact TargetBreach (doc 13 budget). The figures\nare the dish's latest snapshot of the week at `location_id`, the location where its food cost\nis highest: `cost`, `net_price` (without IVA; `food_cost` = cost / net_price) and\n`price_gross` (the menu price with IVA that day, the one to quote), with the cost's\n`confidence` (\"Receta estimada\"). `suggestion` is that dish's suggestion at that location (one\nof `CostAlertsData.suggestions` or a lower-ranked one), or null when it has none (a resale\nitem, a star, a cost not evaluated yet).",
+      "properties": {
+        "confidence": {
+          "$ref": "#/$defs/CostConfidence"
+        },
+        "cost": {
+          "$ref": "#/$defs/Money"
+        },
+        "food_cost": {
+          "$ref": "#/$defs/Pct"
+        },
+        "location_id": {
+          "format": "uuid",
+          "title": "Location Id",
+          "type": "string"
+        },
+        "menu_item_id": {
+          "format": "uuid",
+          "title": "Menu Item Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "net_price": {
+          "$ref": "#/$defs/PositiveMoney"
+        },
+        "price_gross": {
+          "$ref": "#/$defs/PositiveMoney"
+        },
+        "suggestion": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PriceSuggestion"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target": {
+          "$ref": "#/$defs/Pct"
+        }
+      },
+      "required": [
+        "menu_item_id",
+        "name",
+        "food_cost",
+        "target",
+        "location_id",
+        "cost",
+        "net_price",
+        "price_gross",
+        "confidence",
+        "suggestion"
+      ],
+      "title": "WeeklyBreach",
+      "type": "object"
+    },
+    "WeeklyCostAlerts": {
+      "additionalProperties": false,
+      "description": "CostAlertsData with the `[Ver márgenes]` detail on each breach (WeeklyBreach).",
+      "properties": {
+        "breaches": {
+          "items": {
+            "$ref": "#/$defs/WeeklyBreach"
+          },
+          "maxItems": 10,
+          "title": "Breaches",
+          "type": "array"
+        },
+        "breaches_total": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Breaches Total",
+          "type": "integer"
+        },
+        "price_moves": {
+          "items": {
+            "$ref": "#/$defs/PriceMove"
+          },
+          "maxItems": 10,
+          "title": "Price Moves",
+          "type": "array"
+        },
+        "price_moves_total": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Price Moves Total",
+          "type": "integer"
+        },
+        "suggestions": {
+          "items": {
+            "$ref": "#/$defs/PriceSuggestion"
+          },
+          "maxItems": 10,
+          "title": "Suggestions",
+          "type": "array"
+        },
+        "suggestions_total": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Suggestions Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "price_moves",
+        "price_moves_total",
+        "breaches",
+        "breaches_total",
+        "suggestions",
+        "suggestions_total"
+      ],
+      "title": "WeeklyCostAlerts",
+      "type": "object"
+    },
     "WeeklyReportData": {
       "additionalProperties": false,
-      "description": "Everything the Monday report needs, for MR-38 to render (decisions W1-W4).\n\nEach section is the data of the read RPC of the same shape over `week`: `sales` is\nget_sales_summary (`change_vs_previous` is vs `previous_week`, W3), `top_dishes` get_top_dishes\nby units (top 3), `food_cost` get_food_cost_pct (null when the week has no costed sales),\n`cost_alerts` get_cost_alerts since the week's Monday (top 10 of each list; dishes over target\n= `breaches_total`), `stale_costs` get_data_status today. `missing_business_days` are the days\nof the week a location in scope has no sales data (W2: the report goes out and says so).",
+      "description": "Everything the Monday report needs, for MR-38 to render (decisions W1-W4).\n\nEach section is the data of the read RPC of the same shape over `week`: `sales` is\nget_sales_summary (`change_vs_previous` is vs `previous_week`, W3), `top_dishes` get_top_dishes\nby units (top 3), `food_cost` get_food_cost_pct (null when the week has no costed sales),\n`stale_costs` get_data_status today. `missing_business_days` are the days of the week a\nlocation in scope has no sales data (W2: the report goes out and says so). `locations` are the\nlocations in scope with their names, to label a breach or a suggestion (\"Centro\").\n\n`cost_alerts` is get_cost_alerts' shape (top 10 of each list; dishes over target =\n`breaches_total`) with two differences. Price moves and breaches cover the week only, Monday to\nSunday, so a price dated after Sunday never shows and the report built at 9:00 and at 12:00\nsays the same. Suggestions are as of the day the report is built (open and fresh today, at\ntoday's menu price), as the owner would act on them. Each breach carries its cost, prices,\nlocation and suggestion (WeeklyBreach), so `[Ver márgenes]` needs no other call.",
       "properties": {
         "cost_alerts": {
-          "$ref": "#/$defs/CostAlertsData"
+          "$ref": "#/$defs/WeeklyCostAlerts"
         },
         "food_cost": {
           "anyOf": [
@@ -694,6 +749,14 @@
               "type": "null"
             }
           ]
+        },
+        "locations": {
+          "items": {
+            "$ref": "#/$defs/LocationRef"
+          },
+          "minItems": 1,
+          "title": "Locations",
+          "type": "array"
         },
         "missing_business_days": {
           "items": {
@@ -725,6 +788,7 @@
       "required": [
         "week",
         "previous_week",
+        "locations",
         "sales",
         "top_dishes",
         "food_cost",

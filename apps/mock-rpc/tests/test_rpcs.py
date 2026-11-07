@@ -158,3 +158,25 @@ def test_weekly_report_raise_variant_has_a_price_to_suggest() -> None:
     assert [(s["name"], s["suggested_price"]["text"]) for s in raises] == [
         ("Quesadilla de queso", "$55.00")
     ]
+
+
+def test_weekly_report_has_what_ver_margenes_needs() -> None:
+    """W4: the top breaches with cost, menu price, location name and suggestion, no other call."""
+    d = _data("build_weekly_report")
+    names = {loc["location_id"]: loc["name"] for loc in d["locations"]}
+    top = d["cost_alerts"]["breaches"][:3]
+    lines = [
+        (
+            names[b["location_id"]],
+            b["cost"]["text"],
+            b["price_gross"]["text"],
+            b["food_cost"]["text"],
+        )
+        for b in top
+    ]
+    assert lines[1] == ("Centro", "$34.49", "$80.00", "50.0%")
+    assert [b["suggestion"] and b["suggestion"]["rationale_code"] for b in top] == [
+        None,
+        "review_portion_cost",
+        "review_portion_cost",
+    ]

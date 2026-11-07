@@ -361,6 +361,14 @@ class CostDriver(Model):
     share: Pct
 
 
+def _check_food_cost(food_cost: Pct, cost: int, net: int) -> None:
+    """food_cost = cost / net x 100 on the net price (without IVA), within centavo rounding."""
+    # centavo rounding of cost and net_price moves a percentage by at most this much
+    slack = Decimal("50") * (1 + abs(Decimal(cost) / net)) / net + _PCT_ROUNDING
+    if abs(food_cost.raw - Decimal(cost) / net * 100) > slack:
+        raise ValueError("food_cost must follow cost / net_price (net, without IVA)")
+
+
 class DishMarginResolved(Model):
     """Margin and food cost on the NET price (without IVA), the basis of 03 and 09.
 
@@ -392,10 +400,7 @@ class DishMarginResolved(Model):
             raise ValueError("margin must equal net_price - cost")
         if abs(self.margin_pct.raw + self.food_cost.raw - 100) > _PCT_ROUNDING:
             raise ValueError("margin_pct and food_cost must add up to 100")
-        # centavo rounding of cost and net_price moves a percentage by at most this much
-        slack = Decimal("50") * (1 + abs(Decimal(cost) / net)) / net + _PCT_ROUNDING
-        if abs(self.food_cost.raw - Decimal(cost) / net * 100) > slack:
-            raise ValueError("food_cost must follow cost / net_price (net, without IVA)")
+        _check_food_cost(self.food_cost, cost, net)
         return self
 
 
@@ -617,23 +622,71 @@ class BuildWeeklyReportArgs(Model):
         return self
 
 
+class WeeklyBreach(TargetBreach):
+    """A dish over target as `[Ver márgenes]` shows it (W4, doc 12 1b: "*Costra de pastor* — costo
+    $29.80, precio $89.00 → *38.8%*", then its suggestion).
+
+    The report's only: get_cost_alerts keeps the compact TargetBreach (doc 13 budget). The figures
+    are the dish's latest snapshot of the week at `location_id`, the location where its food cost
+    is highest: `cost`, `net_price` (without IVA; `food_cost` = cost / net_price) and
+    `price_gross` (the menu price with IVA that day, the one to quote), with the cost's
+    `confidence` ("Receta estimada"). `suggestion` is that dish's suggestion at that location (one
+    of `CostAlertsData.suggestions` or a lower-ranked one), or null when it has none (a resale
+    item, a star, a cost not evaluated yet).
+    """
+
+    location_id: UUID
+    cost: Money
+    net_price: PositiveMoney
+    price_gross: PositiveMoney
+    confidence: CostConfidence
+    suggestion: PriceSuggestion | None
+
+    @model_validator(mode="after")
+    def _priced(self) -> WeeklyBreach:
+        if self.net_price.raw > self.price_gross.raw:
+            raise ValueError("net_price must not exceed price_gross")
+        _check_food_cost(self.food_cost, self.cost.raw, self.net_price.raw)
+        s = self.suggestion
+        if s is not None and (s.menu_item_id, s.location_id) != (
+            self.menu_item_id,
+            self.location_id,
+        ):
+            raise ValueError("a breach's suggestion is for the same dish and location")
+        return self
+
+
+class WeeklyCostAlerts(CostAlertsData):
+    """CostAlertsData with the `[Ver márgenes]` detail on each breach (WeeklyBreach)."""
+
+    breaches: Annotated[list[WeeklyBreach], Field(max_length=COST_ALERTS_TOP_N)]  # type: ignore[assignment]
+
+
 class WeeklyReportData(Model):
     """Everything the Monday report needs, for MR-38 to render (decisions W1-W4).
 
     Each section is the data of the read RPC of the same shape over `week`: `sales` is
     get_sales_summary (`change_vs_previous` is vs `previous_week`, W3), `top_dishes` get_top_dishes
     by units (top 3), `food_cost` get_food_cost_pct (null when the week has no costed sales),
-    `cost_alerts` get_cost_alerts since the week's Monday (top 10 of each list; dishes over target
-    = `breaches_total`), `stale_costs` get_data_status today. `missing_business_days` are the days
-    of the week a location in scope has no sales data (W2: the report goes out and says so).
+    `stale_costs` get_data_status today. `missing_business_days` are the days of the week a
+    location in scope has no sales data (W2: the report goes out and says so). `locations` are the
+    locations in scope with their names, to label a breach or a suggestion ("Centro").
+
+    `cost_alerts` is get_cost_alerts' shape (top 10 of each list; dishes over target =
+    `breaches_total`) with two differences. Price moves and breaches cover the week only, Monday to
+    Sunday, so a price dated after Sunday never shows and the report built at 9:00 and at 12:00
+    says the same. Suggestions are as of the day the report is built (open and fresh today, at
+    today's menu price), as the owner would act on them. Each breach carries its cost, prices,
+    location and suggestion (WeeklyBreach), so `[Ver márgenes]` needs no other call.
     """
 
     week: DateRange
     previous_week: DateRange
+    locations: Annotated[list[LocationRef], Field(min_length=1)]
     sales: SalesSummaryData
     top_dishes: TopDishesData
     food_cost: FoodCostData | None
-    cost_alerts: CostAlertsData
+    cost_alerts: WeeklyCostAlerts
     missing_business_days: list[dt.date]
     stale_costs: Count
 
@@ -653,6 +706,15 @@ class WeeklyReportData(Model):
             raise ValueError("missing_business_days must fall in the week")
         if self.missing_business_days != sorted(set(self.missing_business_days)):
             raise ValueError("missing_business_days are distinct and in order")
+        ids = [loc.location_id for loc in self.locations]
+        if len(set(ids)) != len(ids):
+            raise ValueError("locations are distinct")
+        alerts = self.cost_alerts
+        placed = [b.location_id for b in alerts.breaches] + [
+            s.location_id for s in alerts.suggestions
+        ]
+        if not set(placed) <= set(ids):
+            raise ValueError("every breach and suggestion is at a location of the report")
         return self
 
 
