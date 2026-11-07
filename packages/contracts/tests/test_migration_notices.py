@@ -32,5 +32,6 @@ def test_migrations_are_timestamped_and_ordered() -> None:
         "costing_change_days.sql",
         "nightly_dish_costs.sql",
         "location_timezone_check.sql",
+        "rpc_arg_errors.sql",
     ]
     assert all(n.split("_", 1)[0].isdigit() and len(n.split("_", 1)[0]) == 14 for n in names)
