@@ -94,7 +94,7 @@ def base_per_unit(
         return amount
     for name, (name_kind, size) in MEASURES.items():
         factor = conversions.get((name, base_unit))
-        if name_kind == kind and factor is not None and factor > 0:
+        if name_kind == kind and factor is not None and factor.is_finite() and factor > 0:
             return amount / size * factor
     raise UnitHeld(UNIT_MISMATCH)
 

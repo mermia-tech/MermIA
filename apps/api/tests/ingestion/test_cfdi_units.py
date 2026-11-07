@@ -55,6 +55,13 @@ def test_a_nan_pack_is_held(clave: str) -> None:
     assert e.value.code == PACK_UNKNOWN
 
 
+@pytest.mark.parametrize("factor", ["NaN", "Infinity"])
+def test_a_non_finite_conversion_factor_is_held(factor: str) -> None:
+    with pytest.raises(UnitHeld) as e:
+        base_per_unit("KGM", "ml", None, {("kg", "ml"): Decimal(factor)})
+    assert e.value.code == UNIT_MISMATCH
+
+
 def test_a_pack_of_zero_is_held() -> None:
     with pytest.raises(UnitHeld) as e:
         base_per_unit("XBX", "pza", Pack(Decimal(0), "pza"), {})
