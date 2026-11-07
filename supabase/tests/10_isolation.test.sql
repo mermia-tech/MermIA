@@ -32,6 +32,7 @@ begin
            when a.attname = 'sha256' then quote_literal(repeat('a', 64))
            when a.attname = 'parser' then quote_literal('sr.test@v1')
            when a.attname = 'code' then quote_literal('ok')
+           when a.attname = 'timezone' then quote_literal('America/Mexico_City')
            when a.attname = 'currency' then quote_literal('MXN')
            when t.typtype = 'e' then quote_literal((select enumlabel from pg_enum where enumtypid = t.oid order by enumsortorder limit 1)) || '::' || format_type(a.atttypid, a.atttypmod)
            when t.typcategory = 'A' then quote_literal('{}') || '::' || format_type(a.atttypid, a.atttypmod)
