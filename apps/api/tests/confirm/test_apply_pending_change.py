@@ -594,7 +594,7 @@ def test_sqlstate_classification(
     conn: psycopg.Connection[Any], sqlstate: str, is_transient: bool
 ) -> None:
     error = psycopg.errors.lookup(sqlstate)("x")
-    assert backfill_module._is_transient(conn, error) is is_transient
+    assert backfill_module.is_transient(conn, error) is is_transient
 
 
 def test_a_failure_count_survives_the_chunk_rollback_on_a_real_connection() -> None:

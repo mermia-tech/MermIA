@@ -142,7 +142,7 @@ def resume_unfinished_backfills(
         try:
             done[change] = backfill_dish_costs(conn, change, max_days=max_days)
         except psycopg.Error as error:
-            if _is_transient(conn, error):
+            if is_transient(conn, error):
                 raise
             log.exception("dish cost backfill failed for pending change %s", change)
             failed[change] = str(error)
@@ -154,7 +154,7 @@ def resume_unfinished_backfills(
     return ResumeResult(done=done, failed=failed)
 
 
-def _is_transient(conn: psycopg.Connection[Any], error: psycopg.Error) -> bool:
+def is_transient(conn: psycopg.Connection[Any], error: psycopg.Error) -> bool:
     """A failure of the connection or a passing condition: retry the sweep, count nothing."""
     if conn.broken or conn.closed:
         return True
@@ -164,11 +164,16 @@ def _is_transient(conn: psycopg.Connection[Any], error: psycopg.Error) -> bool:
     return state in TRANSIENT_SQLSTATES or state[:2] in TRANSIENT_SQLSTATE_CLASSES
 
 
+def failure_reason(error: Exception) -> str:
+    """The SQLSTATE and exception class of a failure, never its message (it can carry values)."""
+    state = error.sqlstate if isinstance(error, psycopg.Error) else None
+    return f"{state or 'unknown'} {type(error).__name__}"
+
+
 def _record_failure(conn: psycopg.Connection[Any], change: UUID, error: Exception) -> None:
     """Count the failed attempt in its own transaction. The message is not stored: it can carry
     payload values, so only the SQLSTATE and the exception class are."""
-    state = error.sqlstate if isinstance(error, psycopg.Error) else None
-    reason = f"{state or 'unknown'} {type(error).__name__}"
+    reason = failure_reason(error)
     with conn.transaction():
         row = conn.execute(
             "update public.dish_cost_backfill set attempts = attempts + 1, last_error = %s "
