@@ -25,7 +25,7 @@ from mermia_api.ingestion.parsers import (
     sr_ventas_por_dia,
 )
 from mermia_api.ingestion.xlsx import open_workbook
-from mermia_api.ingestion.xmldoc import looks_like_xml, parse_xml
+from mermia_api.ingestion.xmldoc import SR_HINT, looks_like_xml, parse_xml
 from mermia_contracts.batch import NormalizedBatch
 
 logger = logging.getLogger(__name__)
@@ -131,15 +131,16 @@ def _parse_xml(data: bytes) -> NormalizedBatch:
         for parser in XML_PARSERS:
             if parser.matches(root):
                 return parser.parse(root)
-    raise _unknown()
+    # an Excel 2003 XML export or an HTML ".xls" lands here
+    raise _unknown(f" {SR_HINT}")
 
 
-def _unknown() -> UnknownReport:
+def _unknown(hint: str = "") -> UnknownReport:
     ours = "".join(f"{p.report_es}, " for p in XLSX_PARSERS if not p.from_sr)
     known = ", ".join(f"«{p.report_es}»" for p in XLSX_PARSERS if p.from_sr)
     xml = " o ".join(p.doc_es for p in XML_PARSERS)
     return UnknownReport(
         f"No reconocí este reporte. Por ahora puedo leer {ours}estos reportes de Soft "
-        f"Restaurant: {known}; o {xml}.",
+        f"Restaurant: {known}; o {xml}.{hint}",
         "no parser fingerprint matched",
     )

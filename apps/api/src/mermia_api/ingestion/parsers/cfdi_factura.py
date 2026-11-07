@@ -6,8 +6,13 @@ PR B turns the lines into price proposals).
 
 - Only CFDI 4.0, type I (ingreso), in MXN. Credit notes, payment complements, transfers, payroll,
   CFDI 3.3 and other currencies are refused with a Spanish message.
-- unit_price_net is pesos per invoiced unit (ClaveUnidad), without IVA, as ValorUnitario already
-  is. A line discount is netted in: (Importe - Descuento) / Cantidad, rounded once to 6 decimals.
+- unit_price_net is pesos per invoiced unit (ClaveUnidad), without IVA: (Importe - Descuento) /
+  Cantidad for every line, rounded once to 6 decimals. Importe is what was charged; ValorUnitario
+  may be rounded, so it is only checked against Importe (a real outlier is a warning).
+- SubTotal and Descuento may differ from the sum of the lines by up to a centavo per line (issuers
+  that round each line first): a warning. A larger gap is refused.
+- Text is untrusted: names and descriptions are cleaned and capped at MAX_TEXT characters, RFCs
+  must have the SAT's format, and a refusal repeats at most ECHO_CHARS of a bad value.
 - IVA (002) is ignored. Itemized IEPS (003) is a warning: whether it is part of the cost is for the
   accountant to confirm.
 - Numbers must be written as the SAT writes them (digits and a decimal point): never guessed.
@@ -26,6 +31,7 @@ from xml.etree.ElementTree import Element
 from zoneinfo import ZoneInfo
 
 from mermia_api.ingestion.errors import MalformedReport
+from mermia_api.ingestion.safe_text import clean, shown
 from mermia_api.ingestion.xlsx import MAX_NUMBER
 from mermia_contracts.batch import (
     Grain,
@@ -52,9 +58,11 @@ SAT_UUID = re.compile(
 )
 PLAIN = re.compile(r"\d+(\.\d+)?")  # the SAT's own pattern: no sign, comma, exponent or space
 MAX_LINES = 500  # far above a real supplier invoice; bounds the work per file
+MAX_TEXT = 200  # supplier names and line descriptions; longer ones are cut
+# The SAT's RFC: 3 letters (company) or 4 (person), the date yymmdd, a 3-character homoclave.
+RFC = re.compile(r"[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}")
 PRICE = Decimal("0.000001")
 CENT = Decimal("0.01")
-IMPORTE_TOLERANCE = Decimal("0.01")
 IEPS = "003"
 OTHER_TYPES = {
     "E": "una nota de crédito (egreso)",
@@ -90,24 +98,45 @@ def _required(el: Element, name: str, where: str) -> str:
 def _decimal(el: Element, name: str, where: str, places: int) -> Decimal:
     """A non-negative amount with at most `places` decimals, written as the SAT writes it."""
     raw = _required(el, name, where)
+    bad = shown(raw)
     if not PLAIN.fullmatch(raw):
         raise MalformedReport(
-            f"El valor «{raw}» de {name} {where} no está escrito como lo pide el SAT: solo "
+            f"El valor «{bad}» de {name} {where} no está escrito como lo pide el SAT: solo "
             "dígitos y punto decimal, sin signos, comas ni espacios (por ejemplo 1250.50).",
-            f"not a plain number: {name} {where} = {raw!r}",
+            f"not a plain number: {name} {where} = {bad!r}",
         )
     value = Decimal(raw)
     if value >= MAX_NUMBER:
         raise MalformedReport(
-            f"El valor {raw} de {name} {where} es demasiado grande.",
-            f"out of range: {name} {where} = {raw!r}",
+            f"El valor «{bad}» de {name} {where} es demasiado grande.",
+            f"out of range: {name} {where} = {bad!r}",
         )
     if value != value.quantize(Decimal(1).scaleb(-places)):
         raise MalformedReport(
-            f"El valor {raw} de {name} {where} tiene más de {places} decimales.",
-            f"more than {places} decimals: {name} {where} = {raw!r}",
+            f"El valor «{bad}» de {name} {where} tiene más de {places} decimales.",
+            f"more than {places} decimals: {name} {where} = {bad!r}",
         )
     return value
+
+
+def _text(el: Element, name: str, where: str) -> str:
+    """A required text value, cleaned (no control or bidi characters) and capped at MAX_TEXT."""
+    text = clean(_required(el, name, where), MAX_TEXT)
+    if not text:
+        raise MalformedReport(f"Falta {name} {where}.", f"no visible text in {name} {where}")
+    return text
+
+
+def _rfc(el: Element, who: str) -> str:
+    """The RFC of the Emisor or Receptor; never echoed, it identifies a taxpayer."""
+    rfc = _required(el, "Rfc", f"del {who}").strip()
+    if not RFC.fullmatch(rfc):
+        raise MalformedReport(
+            f"El RFC del {who} no tiene el formato del SAT. Pídele a tu proveedor el XML "
+            "original de la factura.",
+            f"Rfc del {who} not in the SAT format ({len(rfc)} characters)",
+        )
+    return rfc
 
 
 def _optional(el: Element, name: str, where: str, places: int) -> Decimal:
@@ -132,11 +161,11 @@ def _check_kind(root: Element) -> None:
     m = ANY_COMPROBANTE.fullmatch(root.tag)
     version = (root.get("Version") or "").strip()
     if m is None or m[1] != "4" or version != "4.0":
-        shown = f"CFDI {version}" if version else "de otra versión de CFDI"
+        label = f"CFDI {shown(version)}" if version else "de otra versión de CFDI"
         raise MalformedReport(
-            f"Esta factura es {shown}; necesito la versión 4.0. Pídele a tu proveedor la "
+            f"Esta factura es {label}; necesito la versión 4.0. Pídele a tu proveedor la "
             "factura en CFDI 4.0.",
-            f"CFDI namespace {root.tag!r}, Version {version!r}",
+            f"CFDI namespace {shown(root.tag)!r}, Version {shown(version)!r}",
         )
     tipo = _required(root, "TipoDeComprobante", "del comprobante")
     if tipo in OTHER_TYPES:
@@ -147,22 +176,22 @@ def _check_kind(root: Element) -> None:
         )
     if tipo != "I":
         raise MalformedReport(
-            f"El TipoDeComprobante «{tipo}» de la factura no es válido.",
-            f"TipoDeComprobante {tipo!r}",
+            f"El TipoDeComprobante «{shown(tipo)}» de la factura no es válido.",
+            f"TipoDeComprobante {shown(tipo)!r}",
         )
     moneda = _required(root, "Moneda", "del comprobante")
     if moneda != "MXN":
         raise MalformedReport(
-            f"Esta factura está en {moneda}; por ahora solo leo facturas en pesos (MXN).",
-            f"Moneda {moneda!r}",
+            f"Esta factura está en «{shown(moneda)}»; por ahora solo leo facturas en pesos (MXN).",
+            f"Moneda {shown(moneda)!r}",
         )
 
 
 def _issued_at(root: Element) -> dt.datetime:
     raw = _required(root, "Fecha", "del comprobante")
     bad = MalformedReport(
-        f"La Fecha de la factura «{raw}» no tiene el formato del SAT (aaaa-mm-ddThh:mm:ss).",
-        f"bad Fecha {raw!r}",
+        f"La Fecha de la factura «{shown(raw)}» no tiene el formato del SAT (aaaa-mm-ddThh:mm:ss).",
+        f"bad Fecha {shown(raw)!r}",
     )
     if not FECHA.fullmatch(raw):
         raise bad
@@ -183,7 +212,8 @@ def _uuid(root: Element) -> UUID:
         )
     if not SAT_UUID.fullmatch(raw):
         raise MalformedReport(
-            f"El UUID del timbre «{raw}» no es válido.", f"bad TimbreFiscalDigital UUID {raw!r}"
+            f"El UUID del timbre «{shown(raw)}» no es válido.",
+            f"bad TimbreFiscalDigital UUID {shown(raw)!r}",
         )
     return UUID(raw)
 
@@ -191,15 +221,15 @@ def _uuid(root: Element) -> UUID:
 def _supplier(root: Element) -> SupplierIn:
     emisor = _child(root, "Emisor")
     return SupplierIn(
-        name=_required(emisor, "Nombre", "del Emisor").strip(),
-        rfc=_required(emisor, "Rfc", "del Emisor").strip(),
+        name=_text(emisor, "Nombre", "del Emisor"),
+        rfc=_rfc(emisor, "Emisor"),
         kind=SupplierKind.cfdi,
     )
 
 
 def _require_buyer(root: Element) -> None:
     # PR B checks this RFC against the tenant's (needs PurchaseIn.buyer_rfc, a contract change).
-    _required(_child(root, "Receptor"), "Rfc", "del Receptor")
+    _rfc(_child(root, "Receptor"), "Receptor")
 
 
 # --- the Conceptos -----------------------------------------------------------------------
@@ -209,13 +239,28 @@ def _warning(code: str, message_es: str, n: int) -> IssueIn:
     return IssueIn(severity=IssueSeverity.warning, code=code, message_es=message_es, row_ref=str(n))
 
 
-def _line_issues(el: Element, n: int, off_by: Decimal) -> tuple[IssueIn, ...]:
+def _half_unit(amount: Decimal) -> Decimal:
+    """Half a unit of the last decimal written: 0.005 for 26.00, 0.5 for 26."""
+    exponent = amount.as_tuple().exponent
+    return Decimal(5).scaleb((exponent if isinstance(exponent, int) else 0) - 1)
+
+
+def _importe_tolerance(qty: Decimal, valor: Decimal, importe: Decimal) -> Decimal:
+    """How far Cantidad x ValorUnitario may be from Importe before the line is a real outlier.
+    ValorUnitario may be rounded at its last written decimal (an error times Cantidad) and Importe
+    at its own; Cantidad is taken as exact. Never below a centavo. 3.5 kg at 33.334 written as
+    33.33 with Importe 116.67 is 0.015 off, within 3.5 x 0.005 + 0.005."""
+    return max(CENT, qty * _half_unit(valor) + _half_unit(importe))
+
+
+def _line_issues(el: Element, which: str, n: int, is_outlier: bool) -> tuple[IssueIn, ...]:
     issues: list[IssueIn] = []
-    if off_by > IMPORTE_TOLERANCE:
+    if is_outlier:
         issues.append(
             _warning(
                 "cfdi.importe_mismatch",
-                f"En el concepto {n}, Cantidad por ValorUnitario no coincide con Importe.",
+                f"En el {which}, Cantidad por ValorUnitario no coincide con Importe; tomo el "
+                "precio del Importe.",
                 n,
             )
         )
@@ -224,7 +269,7 @@ def _line_issues(el: Element, n: int, off_by: Decimal) -> tuple[IssueIn, ...]:
         issues.append(
             _warning(
                 "cfdi.ieps_listed",
-                f"El concepto {n} trae IEPS desglosado; por ahora no lo sumo al costo.",
+                f"El {which} trae IEPS desglosado; por ahora no lo sumo al costo.",
                 n,
             )
         )
@@ -233,13 +278,13 @@ def _line_issues(el: Element, n: int, off_by: Decimal) -> tuple[IssueIn, ...]:
 
 def _line(el: Element, n: int) -> _Line:
     where = f"del concepto {n}"
-    description = _required(el, "Descripcion", where).strip()
+    description = _text(el, "Descripcion", where)
     qty = _decimal(el, "Cantidad", where, 6)
     if qty == 0:
         raise MalformedReport(
             f"La Cantidad del concepto {n} es cero.", f"zero Cantidad at concepto {n}"
         )
-    unit = _required(el, "ClaveUnidad", where).strip()
+    unit = _text(el, "ClaveUnidad", where)
     valor = _decimal(el, "ValorUnitario", where, 6)
     importe = _decimal(el, "Importe", where, 6)
     descuento = _optional(el, "Descuento", where, 6)
@@ -248,16 +293,14 @@ def _line(el: Element, n: int) -> _Line:
             f"El Descuento del concepto {n} es mayor que su Importe.",
             f"Descuento > Importe at concepto {n}",
         )
-    price = valor
-    if descuento:
-        price = ((importe - descuento) / qty).quantize(PRICE, ROUND_HALF_UP)
     line = PurchaseLineIn(
         description=description,
         qty=qty.quantize(PRICE),
         unit=unit,
-        unit_price_net=price.quantize(PRICE),
+        unit_price_net=((importe - descuento) / qty).quantize(PRICE, ROUND_HALF_UP),
     )
-    issues = _line_issues(el, n, abs(qty * valor - importe))
+    is_outlier = abs(qty * valor - importe) > _importe_tolerance(qty, valor, importe)
+    issues = _line_issues(el, f"concepto {n} ({shown(description)})", n, is_outlier)
     return _Line(line, importe, descuento, issues)
 
 
@@ -273,14 +316,24 @@ def _lines(root: Element) -> list[_Line]:
     return [_line(el, n) for n, el in enumerate(conceptos, start=1)]
 
 
-def _check_sum(given: Decimal, name: str, parts: list[Decimal], label: str) -> None:
-    """The Comprobante's `name` must be the sum of the lines' amounts, rounded to centavos."""
-    summed = sum(parts, Decimal(0)).quantize(CENT, ROUND_HALF_UP)
-    if given != summed:
+def _check_sum(given: Decimal, name: str, parts: list[Decimal], label: str) -> list[IssueIn]:
+    """The Comprobante's `name` must be the sum of the lines' amounts. An issuer that rounds each
+    line before adding may be off by up to a centavo per line (at most MAX_LINES centavos): that
+    gap is a warning and the invoice's own figure is kept. A larger gap is refused."""
+    summed = sum(parts, Decimal(0))
+    rounded = summed.quantize(CENT, ROUND_HALF_UP)
+    if abs(given - summed) > CENT * len(parts):
         raise MalformedReport(
-            f"El {name} de la factura ({given}) no es la suma de {label} ({summed}).",
+            f"El {name} de la factura ({given}) no es la suma de {label} ({rounded}).",
             f"{name} {given} != sum of lines {summed}",
         )
+    if given == rounded:
+        return []
+    message = (
+        f"El {name} de la factura ({given}) difiere por centavos de la suma de {label} "
+        f"({rounded}); tomo el de la factura."
+    )
+    return [IssueIn(severity=IssueSeverity.warning, code="cfdi.sum_gap", message_es=message)]
 
 
 # --- the batch ---------------------------------------------------------------------------
@@ -294,9 +347,10 @@ def parse(root: Element) -> NormalizedBatch:
     cfdi_uuid = _uuid(root)
     lines = _lines(root)
     subtotal = _decimal(root, "SubTotal", "del comprobante", 2)
-    _check_sum(subtotal, "SubTotal", [x.importe for x in lines], "los Importe de los conceptos")
     descuento = _optional(root, "Descuento", "del comprobante", 2)
-    _check_sum(
+    gaps = _check_sum(
+        subtotal, "SubTotal", [x.importe for x in lines], "los Importe de los conceptos"
+    ) + _check_sum(
         descuento, "Descuento", [x.descuento for x in lines], "los descuentos de los conceptos"
     )
     total = _decimal(root, "Total", "del comprobante", 2)
@@ -317,5 +371,5 @@ def parse(root: Element) -> NormalizedBatch:
         grain=Grain.purchase,
         totals=Totals(lines=len(lines)),
         purchases=[doc],
-        issues=[issue for x in lines for issue in x.issues],
+        issues=[issue for x in lines for issue in x.issues] + gaps,
     )

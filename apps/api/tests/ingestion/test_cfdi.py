@@ -136,10 +136,26 @@ def test_a_netted_price_is_rounded_once_to_six_decimals() -> None:
     assert batch.purchases[0].lines[0].unit_price_net == Decimal("96.666667")
 
 
-def test_a_six_decimal_unit_value_is_kept_exactly() -> None:
+def test_the_price_is_importe_over_cantidad_even_without_a_discount() -> None:
+    line = concepto("HUEVO", "3", "26.00", "78.01")
+    batch = parse_file(cfdi(line, subtotal="78.01", total="78.01"))
+    assert batch.purchases[0].lines[0].unit_price_net == Decimal("26.003333")
+    assert batch.issues == []
+
+
+def test_a_six_decimal_unit_value_gives_way_to_the_importe() -> None:
     line = concepto("HUEVO", "1", "45.123456", "45.12")
     batch = parse_file(cfdi(line, subtotal="45.12", total="45.12"))
-    assert batch.purchases[0].lines[0].unit_price_net == Decimal("45.123456")
+    assert batch.purchases[0].lines[0].unit_price_net == Decimal("45.120000")
+    assert batch.issues == []
+
+
+def test_a_unit_value_rounded_to_centavos_is_not_an_outlier() -> None:
+    # 3.5 kg at 33.3343 a kilo: ValorUnitario is written 33.33, so 3.5 x 33.33 = 116.655
+    line = concepto("QUESO", "3.5", "33.33", "116.67")
+    batch = parse_file(cfdi(line, subtotal="116.67", total="116.67"))
+    assert batch.purchases[0].lines[0].unit_price_net == Decimal("33.334286")
+    assert batch.issues == []
 
 
 def test_a_seven_decimal_unit_value_is_refused() -> None:
@@ -161,6 +177,15 @@ def test_a_line_whose_importe_is_off_is_a_warning() -> None:
         "cfdi.importe_mismatch",
         "1",
     )
+    assert "En el concepto 1 (CEBOLLA BLANCA)" in issue.message_es
+    assert batch.purchases[0].lines[0].unit_price_net == Decimal("26.200000")
+
+
+def test_a_line_warning_shows_a_long_description_cut_short() -> None:
+    line = concepto("Q" * 300, importe="131.00")
+    (issue,) = parse_file(cfdi(line, subtotal="131.00", total="131.00")).issues
+    assert "Q" * 39 + "…" in issue.message_es
+    assert "Q" * 41 not in issue.message_es
 
 
 def test_ieps_on_a_line_is_a_warning_and_iva_is_not() -> None:
@@ -168,6 +193,7 @@ def test_ieps_on_a_line_is_a_warning_and_iva_is_not() -> None:
     ieps = concepto("REFRESCO", impuestos=traslado("003", importe="10.40"))
     batch = parse_file(cfdi(iva, ieps, subtotal="260.00", total="270.40"))
     assert [(i.code, i.row_ref) for i in batch.issues] == [("cfdi.ieps_listed", "2")]
+    assert "(REFRESCO)" in batch.issues[0].message_es
 
 
 # --- refusals ----------------------------------------------------------------------------
@@ -205,6 +231,25 @@ def test_subtotal_must_be_the_sum_of_the_lines() -> None:
     assert "SubTotal" in malformed(cfdi(subtotal="131.00", total="131.00"))
 
 
+def test_subtotal_within_a_centavo_per_line_is_a_warning() -> None:
+    # each Importe of 10.005 rounded up by the issuer: 20.02 against a sum of 20.01
+    lines = [concepto("A", "1", "10.005", "10.005"), concepto("B", "1", "10.005", "10.005")]
+    batch = parse_file(cfdi(*lines, subtotal="20.02", total="20.02"))
+    (issue,) = batch.issues
+    assert (issue.severity, issue.code, issue.row_ref) == (
+        IssueSeverity.warning,
+        "cfdi.sum_gap",
+        None,
+    )
+    assert "SubTotal" in issue.message_es
+    assert batch.purchases[0].subtotal == 2002
+
+
+def test_subtotal_beyond_a_centavo_per_line_is_refused() -> None:
+    lines = [concepto("A", "1", "10.005", "10.005"), concepto("B", "1", "10.005", "10.005")]
+    assert "SubTotal" in malformed(cfdi(*lines, subtotal="20.04", total="20.04"))
+
+
 def test_descuento_must_be_the_sum_of_the_line_discounts() -> None:
     line = concepto("QUESO OAXACA", "4", "150.00", "600.00", descuento="40.00")
     message = malformed(cfdi(line, subtotal="600.00", descuento="30.00", total="570.00"))
@@ -239,6 +284,11 @@ def test_a_missing_emisor_rfc_is_refused() -> None:
     assert "Emisor" in malformed(data)
 
 
+def test_a_missing_receptor_rfc_is_refused() -> None:
+    data = cfdi().replace(b'Rfc="TEG190415MX2" ', b"")
+    assert "Receptor" in malformed(data)
+
+
 def test_an_invoice_without_lines_is_refused() -> None:
     data = cfdi().replace(concepto().encode(), b"")
     assert "conceptos" in malformed(data)
@@ -262,6 +312,16 @@ def test_unrelated_xml_is_an_unknown_report() -> None:
     with pytest.raises(UnknownReport) as e:
         parse_file(b'<?xml version="1.0"?><factura><total>1</total></factura>')
     assert "CFDI" in e.value.message_es
+
+
+def test_excel_2003_xml_is_asked_for_as_xlsx() -> None:
+    data = (
+        b'<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>'
+        b'<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet/></Workbook>'
+    )
+    with pytest.raises(UnknownReport) as e:
+        parse_file(data)
+    assert "Soft Restaurant, envíamelo en Excel (.xlsx)" in e.value.message_es
 
 
 def test_the_unknown_report_message_names_the_cfdi() -> None:
