@@ -24,7 +24,9 @@ select set_eq($$select p.proname::text from pg_proc p where p.pronamespace = 'ap
                     'menu_quadrants',
                     -- MR-33b: get_cost_alerts' list size, the sticky rule for acted-on suggestions and the
                     -- observation week (an open suggestion is shown while fresh)
-                    'cost_alerts_top_n', 'suggestion_reopens', 'price_suggestion_settings'],
+                    'cost_alerts_top_n', 'suggestion_reopens', 'price_suggestion_settings',
+                    -- MR-34: the weekly report's missing days of the week
+                    'missing_business_days'],
               'authenticated executes only the policy helpers and the read-RPC helpers');
 select ok(has_function_privilege('service_role', 'app.uuid_v7(timestamptz)', 'execute'), 'service_role can run the uuid default');
 select ok(has_schema_privilege('authenticated', 'app', 'usage'), 'authenticated has usage on app');
