@@ -1,7 +1,9 @@
 """How many base units (g, ml, pza) one invoiced unit of a CFDI line holds (MR-36). Pure.
 
-- The SAT's measurement units are fixed: KGM is 1000 g, GRM 1 g, LTR 1000 ml, MLT 1 ml, and H87,
-  EA and XUN one piece.
+- The SAT's measurement units are fixed: KGM is 1000 g, GRM 1 g, LTR 1000 ml and MLT 1 ml; the
+  alias's pack is ignored for them.
+- H87, EA and XUN (a piece) are what the supplier alias's pack_qty and pack_unit say one piece
+  holds (a "piece" of 180 eggs, a 1 kg cheese); with no pack on the alias, one piece.
 - Any other ClaveUnidad (a box, a pack, a bag) is a pack: it needs the supplier alias's pack_qty
   and pack_unit (what one invoiced unit holds). Without them the line is held (decision 14).
 - When the invoiced unit and the ingredient's base unit are of different kinds (kilos of a
@@ -24,7 +26,7 @@ MEASURES: dict[str, tuple[str, Decimal]] = {
     "l": ("ml", Decimal(1000)),
     "pza": ("pza", Decimal(1)),
 }
-SAT_UNITS: dict[str, str] = {  # the SAT's ClaveUnidad that are a measurement, to a unit name
+SAT_UNITS: dict[str, str] = {  # the SAT's ClaveUnidad that name a unit, to its unit name
     "KGM": "kg",
     "GRM": "g",
     "LTR": "l",
@@ -33,6 +35,7 @@ SAT_UNITS: dict[str, str] = {  # the SAT's ClaveUnidad that are a measurement, t
     "EA": "pza",
     "XUN": "pza",
 }
+MEASURE_CODES = frozenset({"KGM", "GRM", "LTR", "MLT"})  # a fixed amount: the pack is ignored
 PACK_UNKNOWN = "cfdi.unit_pack_unknown"
 UNIT_MISMATCH = "cfdi.unit_mismatch"
 
@@ -64,9 +67,14 @@ def _unit_name(text: str) -> str | None:
 
 def _invoiced(clave: str, pack: Pack | None) -> tuple[str, Decimal]:
     """One invoiced unit as (kind, amount in the kind's base unit)."""
-    name = SAT_UNITS.get(clave.strip().upper())
-    if name is not None:
-        return MEASURES[name]
+    code = clave.strip().upper()
+    if code in MEASURE_CODES or (code in SAT_UNITS and pack is None):
+        return MEASURES[SAT_UNITS[code]]
+    return _pack_amount(pack)
+
+
+def _pack_amount(pack: Pack | None) -> tuple[str, Decimal]:
+    """What the alias says one invoiced unit holds. Raises UnitHeld when it doesn't say."""
     pack_name = None if pack is None else _unit_name(pack.unit)
     if pack is None or pack_name is None or pack.qty <= 0:
         raise UnitHeld(PACK_UNKNOWN)

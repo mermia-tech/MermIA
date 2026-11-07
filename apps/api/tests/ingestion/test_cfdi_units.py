@@ -67,8 +67,40 @@ def test_a_pack_with_its_size_converts(pack: Pack, base: str, expected: Decimal)
     assert base_per_unit("XBX", base, pack, {}) == expected
 
 
-def test_a_pack_is_ignored_for_a_sat_measurement_unit() -> None:
-    assert base_per_unit("KGM", "g", Pack(Decimal(12), "pza"), {}) == Decimal(1000)
+@pytest.mark.parametrize(
+    ("clave", "base", "expected"),
+    [
+        ("KGM", "g", Decimal(1000)),
+        ("GRM", "g", Decimal(1)),
+        ("LTR", "ml", Decimal(1000)),
+        ("MLT", "ml", Decimal(1)),
+    ],
+)
+def test_a_pack_is_ignored_for_a_sat_measurement_unit(
+    clave: str, base: str, expected: Decimal
+) -> None:
+    assert base_per_unit(clave, base, Pack(Decimal(12), "pza"), {}) == expected
+
+
+@pytest.mark.parametrize("clave", ["H87", "EA", "XUN"])
+def test_a_piece_uses_the_alias_pack_in_pieces(clave: str) -> None:
+    assert base_per_unit(clave, "pza", Pack(Decimal(180), "pza"), {}) == Decimal(180)
+
+
+def test_a_piece_uses_the_alias_pack_in_grams() -> None:
+    assert base_per_unit("H87", "g", Pack(Decimal(1), "kg"), {}) == Decimal(1000)
+
+
+def test_a_piece_with_an_unreadable_pack_is_held() -> None:
+    with pytest.raises(UnitHeld) as e:
+        base_per_unit("H87", "pza", Pack(Decimal(12), "caja"), {})
+    assert e.value.code == PACK_UNKNOWN
+
+
+def test_a_piece_without_a_pack_of_a_grams_ingredient_needs_a_conversion() -> None:
+    with pytest.raises(UnitHeld) as e:
+        base_per_unit("H87", "g", None, KG_G)
+    assert e.value.code == UNIT_MISMATCH
 
 
 def test_kilos_of_a_pieces_ingredient_need_a_conversion() -> None:

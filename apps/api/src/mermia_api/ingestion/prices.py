@@ -4,7 +4,8 @@ Nothing here writes ingredient_price: a person approves each change and
 app.apply_pending_change writes the price (and recomputes dish costs). For every invoice:
 
 - The buyer's RFC must be the tenant's (decision 11: another buyer rejects the batch; a tenant
-  without an RFC is a warning). See buyer_issues.
+  without an RFC, or an invoice without a buyer RFC, is a warning: the check is skipped and the
+  proposals are still filed). See buyer_issues.
 - Lines are matched to ingredients (price_match) and put in base units (cfdi_units). Unmatched
   lines get one summary note (decision 1); ambiguous ones, packs without a size (decision 14) and
   units without a conversion are held with a note.
@@ -15,14 +16,15 @@ app.apply_pending_change writes the price (and recomputes dish costs). For every
   (decision 9, IEPS_POLICY). Discounts are already netted by the parser.
 - Per ingredient, the invoice date is the effective date and nothing is filed when: the price of
   record that day is the same (decision 4); the ingredient already has a price dated after the
-  invoice (decision 8); an import proposal from a later invoice is pending; or an identical one
-  is pending. Otherwise one pending_change (decision 5: one per ingredient; MR-37 groups them by
-  diff.batch_id) with a FLAT payload, `IngredientPriceSet(...).model_dump(mode="json")`, which is
-  what app.apply_ingredient_price reads, and its audit_log row. It supersedes older pending
-  import proposals of the ingredient (never an agent's or the dashboard's).
-- The diff keeps the CFDI UUID (apply_ingredient_price has no source_ref), the supplier's cleaned
-  name and the invoice lines with their price per invoiced unit (decision 3, shown by MR-37).
-  No RFC ever goes in the diff, the audit row or a note.
+  invoice (decision 8); a CFDI proposal from a later invoice (by date and time) is pending; or an
+  identical one is pending. Otherwise one pending_change (decision 5: one per ingredient; MR-37
+  groups them by diff.batch_id) with a FLAT payload, `IngredientPriceSet(...).model_dump(
+  mode="json")`, which is what app.apply_ingredient_price reads, and its audit_log row. It
+  supersedes older pending CFDI proposals of the ingredient (never an agent's or the dashboard's).
+- The diff keeps the CFDI UUID (apply_ingredient_price has no source_ref), the invoice's date and
+  time, the supplier's name and how it was found (price_match: by RFC, by name, or not at all;
+  a person's name is masked) and the invoice lines with their price per invoiced unit
+  (decision 3, shown by MR-37). No RFC ever goes in the diff, the audit row or a note.
 """
 
 from __future__ import annotations
@@ -32,20 +34,27 @@ from collections import Counter
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 from uuid import UUID
-from zoneinfo import ZoneInfo
 
 import psycopg
 from pydantic import ValidationError
 
 from mermia_api.ingestion import price_issues as notes
+from mermia_api.ingestion.batch_checks import INVOICE_ZONE
 from mermia_api.ingestion.cfdi_units import PACK_UNKNOWN, UnitHeld, base_per_unit
 from mermia_api.ingestion.price_file import Invoice, Priced, file_price
-from mermia_api.ingestion.price_match import Ambiguous, Catalog, find_supplier, load_catalog
+from mermia_api.ingestion.price_match import (
+    SUPPLIER_UNKNOWN,
+    Ambiguous,
+    Catalog,
+    find_supplier,
+    invoice_supplier_name,
+    is_person,
+    load_catalog,
+)
 from mermia_api.ingestion.proposals import Proposals
 from mermia_contracts.batch import IssueIn, NormalizedBatch, PurchaseIn
 from mermia_contracts.pending import IngredientPriceSet
 
-ZONE = ZoneInfo("America/Mexico_City")  # the parser's: CFDI Fecha is Mexico City time
 PRICE_PLACES = Decimal("0.000001")
 IEPS_LISTED = "cfdi.ieps_listed"  # the parser's warning for a line with itemized IEPS
 # Decision 9 (PENDING OWNER CONFIRMATION): "exclude" proposes the price without the IEPS (the
@@ -61,14 +70,16 @@ def buyer_issues(
     """(reject, warnings) from checking each invoice's buyer RFC against the tenant's."""
     row = conn.execute("select rfc from public.tenant where id = %s", (tenant_id,)).fetchone()
     tenant_rfc = None if row is None or row[0] is None else str(row[0]).strip().upper()
-    buyers = {d.buyer_rfc.strip().upper() for d in batch.purchases if d.buyer_rfc is not None}
+    given = [(d.buyer_rfc or "").strip().upper() for d in batch.purchases]
+    buyers = {rfc for rfc in given if rfc}
+    warnings = [notes.buyer_rfc_missing()] if "" in given else []
     if not buyers:
-        return [], []
+        return [], warnings
     if not tenant_rfc:
-        return [], [notes.tenant_rfc_missing()]
+        return [], [*warnings, notes.tenant_rfc_missing()]
     if REJECT_OTHER_BUYER and buyers != {tenant_rfc}:
-        return [notes.buyer_mismatch()], []
-    return [], []
+        return [notes.buyer_mismatch()], warnings
+    return [], warnings
 
 
 def propose_prices(
@@ -103,7 +114,8 @@ def _propose_invoice(
     proposed_by: UUID | None,
 ) -> Proposals:
     supplier = find_supplier(conn, tenant_id, doc.supplier)
-    issues: list[IssueIn] = [] if supplier else [notes.supplier_unknown(doc.supplier.name)]
+    unknown_name = None if is_person(doc.supplier.rfc) else doc.supplier.name
+    issues: list[IssueIn] = [] if supplier else [notes.supplier_unknown(unknown_name)]
     catalog = load_catalog(conn, tenant_id, supplier.id if supplier else None)
     ieps_rows = {i.row_ref for i in batch.issues if i.code == IEPS_LISTED}
     priced, held = _price_lines(doc, catalog, ieps_rows, issues)
@@ -111,8 +123,10 @@ def _propose_invoice(
         batch_id=batch_id,
         parser=batch.parser,
         cfdi_uuid=None if doc.cfdi_uuid is None else str(doc.cfdi_uuid),
-        day=doc.issued_at.astimezone(ZONE).date(),
-        supplier_name=supplier.name if supplier else doc.supplier.name,
+        issued_at=doc.issued_at,
+        day=doc.issued_at.astimezone(INVOICE_ZONE).date(),
+        supplier_name=supplier.name if supplier else invoice_supplier_name(doc.supplier),
+        supplier_matched_by=supplier.matched_by if supplier else SUPPLIER_UNKNOWN,
     )
     counts: Counter[str] = Counter()
     ids: list[UUID] = []

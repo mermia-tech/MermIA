@@ -17,6 +17,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from mermia_api.ingestion import price_issues as notes
+from mermia_api.ingestion.batch_checks import INVOICE_ZONE
 from mermia_api.ingestion.price_match import BY_NAME, Match
 from mermia_api.ingestion.proposals import audit
 from mermia_contracts.batch import IssueIn, PurchaseLineIn
@@ -24,6 +25,7 @@ from mermia_contracts.db.models import IngredientPriceSource
 from mermia_contracts.pending import TARGET_TYPE, IngredientPriceSet, PendingKind
 
 KIND = PendingKind.ingredient_price_set
+CFDI_PARSERS = "cfdi.%"  # diff.parser of the proposals CFDI imports file (any parser version)
 SOURCE = IngredientPriceSource.cfdi
 REQUIRED_ROLE = "manager"  # decision 6: whoever the tenant lets approve ingredient_price.set
 TTL = dt.timedelta(hours=24)  # decision 7
@@ -44,8 +46,10 @@ class Invoice:
     batch_id: UUID
     parser: str
     cfdi_uuid: str | None
+    issued_at: dt.datetime  # the invoice's date and time: the newest invoice wins
     day: dt.date  # the invoice date (Mexico City): the effective date of its prices
-    supplier_name: str  # the tenant's name for the supplier, or the invoice's cleaned one
+    supplier_name: str  # the tenant's name for the supplier, or the invoice's (a person masked)
+    supplier_matched_by: str  # price_match: "rfc", "name" or "none"
 
 
 @dataclass(frozen=True)
@@ -103,9 +107,10 @@ def file_price(
     latest = _latest_price_day(conn, tenant_id, ingredient.id)
     if SKIP_OLDER_INVOICES and latest is not None and latest > invoice.day:
         return Filed("held", notes=(notes.older_than_record(ingredient.name, invoice.day, latest),))
-    newer = _newer_pending(conn, tenant_id, ingredient.id, invoice.day)
+    newer = _newer_pending(conn, tenant_id, ingredient.id, invoice.issued_at)
     if newer is not None:
-        return Filed("held", notes=(notes.newer_pending(ingredient.name, newer),))
+        newer_at = newer.astimezone(INVOICE_ZONE)
+        return Filed("held", notes=(notes.newer_pending(ingredient.name, newer_at),))
     before = _price_of_record(conn, ingredient.id, invoice.day)
     pct = _change_pct(before, price)
     small = pct is not None and abs(pct) < MIN_CHANGE_PCT
@@ -155,9 +160,11 @@ def _diff(
     return {
         "batch_id": str(invoice.batch_id),
         "parser": invoice.parser,
-        "report_date": invoice.day.isoformat(),  # what _newer_pending compares
+        "report_date": invoice.day.isoformat(),
+        "issued_at": invoice.issued_at.isoformat(),  # what _newer_pending compares
         "cfdi_uuid": invoice.cfdi_uuid,
         "supplier_name": invoice.supplier_name,
+        "supplier_matched_by": invoice.supplier_matched_by,
         "ingredient": {
             "id": str(match.ingredient.id),
             "name": match.ingredient.name,
@@ -231,19 +238,27 @@ def _price_of_record(
 
 
 def _live_imports() -> str:
+    """Live CFDI import proposals of the ingredient; other import kinds are never touched."""
     return """tenant_id = %(tenant)s and kind = %(kind)s and target_id = %(target)s
               and status = 'pending' and proposed_via = 'import'
+              and diff ->> 'parser' like %(parsers)s
               and (expires_at is null or expires_at > now())"""
 
 
 def _newer_pending(
-    conn: psycopg.Connection[Any], tenant_id: UUID, ingredient_id: UUID, day: dt.date
-) -> dt.date | None:
-    """The date of the latest live import proposal for the ingredient from a later invoice."""
+    conn: psycopg.Connection[Any], tenant_id: UUID, ingredient_id: UUID, issued_at: dt.datetime
+) -> dt.datetime | None:
+    """When the latest live CFDI proposal for the ingredient from a later invoice was issued."""
     row = conn.execute(
-        f"""select max((diff ->> 'report_date')::date) from public.pending_change
-            where {_live_imports()} and (diff ->> 'report_date')::date > %(day)s""",
-        {"tenant": tenant_id, "kind": KIND.value, "target": ingredient_id, "day": day},
+        f"""select max((diff ->> 'issued_at')::timestamptz) from public.pending_change
+            where {_live_imports()} and (diff ->> 'issued_at')::timestamptz > %(at)s""",
+        {
+            "tenant": tenant_id,
+            "kind": KIND.value,
+            "target": ingredient_id,
+            "parsers": CFDI_PARSERS,
+            "at": issued_at,
+        },
     ).fetchone()
     return None if row is None else row[0]
 
@@ -272,7 +287,7 @@ def _supersede(
     change_id: UUID | None,
     proposed_by: UUID | None,
 ) -> bool:
-    """The newest invoice wins: every other live import proposal of the ingredient expires
+    """The newest invoice wins: every other live CFDI proposal of the ingredient expires
     (resolved_via 'superseded'). An agent's or the dashboard's proposal is never touched.
     `change_id` is None when the invoice confirms the price of record. True if any expired."""
     rows = conn.execute(
@@ -285,6 +300,7 @@ def _supersede(
             "tenant": tenant_id,
             "kind": KIND.value,
             "target": ingredient_id,
+            "parsers": CFDI_PARSERS,
             "new": change_id,
         },
     ).fetchall()

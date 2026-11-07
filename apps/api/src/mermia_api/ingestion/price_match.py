@@ -1,7 +1,11 @@
 """Matching CFDI invoice lines to the tenant's ingredients, in base units (MR-36).
 
-- Supplier: by RFC within the tenant; when that finds none, by its cleaned name (decision 10).
-  A supplier is never created. An unknown supplier has no aliases, so its lines match by name.
+- Supplier: by RFC within the tenant; when that finds none, by its cleaned name (decision 10), but
+  only a supplier with no RFC on file: one with another RFC is someone else, so the invoice's
+  issuer stays unknown and never borrows a trusted supplier's name or aliases. A supplier is
+  never created. An unknown supplier has no aliases, so its lines match by name.
+- An issuer whose RFC has 4 letters is a person: an unknown one is shown by first word and
+  initial (invoice_supplier_name), never by full name, since the diff may reach the LLM.
 - Line: the supplier's alias whose source text normalizes to the line's description; else, when
   name matches are on (decision 2), the one ingredient with that normalized name. Two candidate
   ingredients hold the line; none leaves it unmatched.
@@ -11,6 +15,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any
@@ -26,12 +31,18 @@ MATCH_SUPPLIER_BY_NAME = True  # decision 10: an RFC we don't know is looked up 
 PROPOSE_NAME_MATCHES = True  # decision 2: a name match without an alias is proposed, "(por nombre)"
 BY_ALIAS = "alias"
 BY_NAME = "name"
+SUPPLIER_BY_RFC = "rfc"  # diff.supplier_matched_by
+SUPPLIER_BY_NAME = "name"
+SUPPLIER_UNKNOWN = "none"
+PERSON_RFC = re.compile(r"[A-ZÑ&]{4}\d")  # a persona física's RFC starts with 4 letters
+PERSON_LABEL = "proveedor persona física"  # a person whose name has a single word
 
 
 @dataclass(frozen=True)
 class Supplier:
     id: UUID
     name: str
+    matched_by: str  # SUPPLIER_BY_RFC or SUPPLIER_BY_NAME
 
 
 @dataclass(frozen=True)
@@ -87,6 +98,20 @@ class Catalog:
         return Match(found[0], BY_NAME) if found else None
 
 
+def is_person(rfc: str | None) -> bool:
+    """A 4-letter RFC: the issuer is a person (persona física), not a company."""
+    return rfc is not None and PERSON_RFC.match(rfc.strip().upper()) is not None
+
+
+def invoice_supplier_name(supplier: SupplierIn) -> str:
+    """The name to show for an issuer that is not among the tenant's suppliers: a company's as
+    invoiced; a person's as first word and the next word's initial ("José P.")."""
+    if not is_person(supplier.rfc):
+        return supplier.name
+    words = supplier.name.split()
+    return f"{words[0].title()} {words[1][0].upper()}." if len(words) > 1 else PERSON_LABEL
+
+
 def find_supplier(
     conn: psycopg.Connection[Any], tenant_id: UUID, supplier: SupplierIn
 ) -> Supplier | None:
@@ -97,18 +122,21 @@ def find_supplier(
             (tenant_id, supplier.rfc),
         ).fetchall()
         if len(rows) == 1:
-            return Supplier(rows[0][0], rows[0][1])
+            return Supplier(rows[0][0], rows[0][1], SUPPLIER_BY_RFC)
     if not MATCH_SUPPLIER_BY_NAME:
         return None
     key = normalize_name(supplier.name)
     named = [
-        Supplier(row[0], row[1])
+        row
         for row in conn.execute(
-            "select id, name from public.supplier where tenant_id = %s order by id", (tenant_id,)
+            "select id, name, rfc from public.supplier where tenant_id = %s order by id",
+            (tenant_id,),
         ).fetchall()
         if normalize_name(row[1]) == key
     ]
-    return named[0] if len(named) == 1 else None
+    if len(named) != 1 or (named[0][2] or "").strip():
+        return None  # none, several, or one with an RFC that is not the invoice's
+    return Supplier(named[0][0], named[0][1], SUPPLIER_BY_NAME)
 
 
 def load_catalog(

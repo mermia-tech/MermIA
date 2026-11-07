@@ -308,6 +308,18 @@ def test_a_tenant_without_an_rfc_gets_a_warning_and_the_proposals(
     assert "cfdi.tenant_rfc_missing" in codes(r)
 
 
+def test_an_invoice_without_a_buyer_rfc_gets_a_warning_and_the_proposals(
+    conn: psycopg.Connection[Any], source: UUID, invoice: NormalizedBatch
+) -> None:
+    (doc,) = invoice.purchases
+    unaddressed = invoice.model_copy(
+        update={"purchases": [doc.model_copy(update={"buyer_rfc": None})]}
+    )
+    r = load(conn, unaddressed, source_id=source)
+    assert r.status == "parsed" and len(r.pending_change_ids) == 2
+    assert "cfdi.buyer_rfc_missing" in codes(r)
+
+
 def test_a_purchase_load_holds_a_tenant_wide_prices_lock(
     conn: psycopg.Connection[Any], source: UUID, invoice: NormalizedBatch
 ) -> None:

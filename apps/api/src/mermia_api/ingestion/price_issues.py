@@ -1,7 +1,8 @@
 """The Spanish notes the CFDI price importer leaves on a batch (MR-36).
 
 They are import_issue rows the manager reads (and the agent may summarize), so they name the
-supplier and the ingredient by their cleaned names only: never an RFC.
+supplier and the ingredient by their cleaned names only: never an RFC, and never the name of a
+supplier who is a person (see price_match.invoice_supplier_name).
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from mermia_contracts.db.models import IssueSeverity
 
 # Decision 1 (PENDING OWNER CONFIRMATION): unmatched lines get one summary line and no action.
 UNMATCHED_SEVERITY = IssueSeverity.info
+MAX_LISTED = 5  # the unmatched note names this many lines, then counts the rest
 
 
 def _issue(severity: IssueSeverity, code: str, message_es: str, n: int | None = None) -> IssueIn:
@@ -26,7 +28,11 @@ def _concepto(n: int, description: str) -> str:
 
 
 def _listed(names: list[str]) -> str:
-    quoted = [f"«{shown(n)}»" for n in names]
+    """At most MAX_LISTED names quoted, then how many more."""
+    quoted = [f"«{shown(n)}»" for n in names[:MAX_LISTED]]
+    rest = len(names) - len(quoted)
+    if rest:
+        return f"{', '.join(quoted)} y {rest} más"
     return quoted[0] if len(quoted) == 1 else f"{', '.join(quoted[:-1])} y {quoted[-1]}"
 
 
@@ -48,11 +54,21 @@ def tenant_rfc_missing() -> IssueIn:
     )
 
 
-def supplier_unknown(name: str) -> IssueIn:
+def buyer_rfc_missing() -> IssueIn:
+    return _issue(
+        IssueSeverity.warning,
+        "cfdi.buyer_rfc_missing",
+        "La factura no trae el RFC del receptor, así que no pude revisar que esté a tu nombre.",
+    )
+
+
+def supplier_unknown(name: str | None) -> IssueIn:
+    """`name` is None for a person (a 4-letter RFC): their name never goes in a note."""
+    who = "este proveedor (persona física)" if name is None else f"«{shown(name)}»"
     return _issue(
         IssueSeverity.info,
         "cfdi.supplier_unknown",
-        f"No tengo a «{shown(name)}» entre tus proveedores; busqué sus conceptos por nombre.",
+        f"No tengo a {who} entre tus proveedores; busqué sus conceptos por nombre.",
     )
 
 
@@ -124,12 +140,13 @@ def older_than_record(ingredient: str, invoice_day: dt.date, record_day: dt.date
     )
 
 
-def newer_pending(ingredient: str, pending_day: dt.date) -> IssueIn:
+def newer_pending(ingredient: str, pending_at: dt.datetime) -> IssueIn:
+    """`pending_at` is the newer invoice's date and time, in Mexico City."""
     return _issue(
         IssueSeverity.warning,
         "cfdi.newer_pending",
         f"Ya hay un cambio de precio pendiente para «{ingredient}» de una factura más reciente "
-        f"({pending_day:%d/%m/%Y}); no lo reemplacé.",
+        f"({pending_at:%d/%m/%Y %H:%M}); no lo reemplacé.",
     )
 
 

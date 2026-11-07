@@ -24,9 +24,8 @@ from mermia_contracts.batch import (
     NormalizedBatch,
     Period,
     PurchaseLineIn,
-    SupplierIn,
 )
-from mermia_contracts.db.models import IssueSeverity, SupplierKind
+from mermia_contracts.db.models import IssueSeverity
 
 pytestmark = pytest.mark.db
 
@@ -74,18 +73,18 @@ def edited(
     batch: NormalizedBatch,
     *lines: PurchaseLineIn,
     day: dt.date | None = None,
-    supplier: SupplierIn | None = None,
+    hour: int | None = None,
     issues: list[IssueIn] | None = None,
 ) -> NormalizedBatch:
-    """The invoice with other lines, date, supplier or parser issues."""
+    """The invoice with other lines, date, hour or parser issues."""
     (doc,) = batch.purchases
     changes: dict[str, Any] = {"lines": list(lines)}
     update: dict[str, Any] = {"totals": batch.totals.model_copy(update={"lines": len(lines)})}
     if day is not None:
         changes["issued_at"] = doc.issued_at.replace(year=day.year, month=day.month, day=day.day)
         update["period"] = Period.model_validate({"from": day, "to": day})
-    if supplier is not None:
-        changes["supplier"] = supplier
+    if hour is not None:
+        changes["issued_at"] = changes.get("issued_at", doc.issued_at).replace(hour=hour)
     if issues is not None:
         update["issues"] = issues
     return batch.model_copy(update={**update, "purchases": [doc.model_copy(update=changes)]})
@@ -158,25 +157,18 @@ def test_a_box_needs_the_alias_pack_size(
     assert price(conn, r, HUEVO) == "4.000000"  # 720 / 180 eggs
 
 
-def test_an_unknown_supplier_is_matched_by_name_or_not_at_all(
+def test_a_piece_uses_the_alias_pack_size(
     conn: psycopg.Connection[Any], source: UUID, invoice: NormalizedBatch
 ) -> None:
-    pastor = line(PASTOR, "10", "KGM", "212")
-    renamed = SupplierIn(
-        name="Carnes Selectas del Bajio", rfc="CSX150301AB1", kind=SupplierKind.cfdi
+    conn.execute(
+        """update public.ingredient_alias set pack_qty = 180, pack_unit = 'pza'
+           where supplier_id = %s and source_text = 'HUEVO'""",
+        (CARNES_SELECTAS,),
     )
-    r = load(conn, edited(invoice, pastor, supplier=renamed), source_id=source)
-    found = proposed(conn, r, CARNE)
-    assert found is not None and found["diff"]["matched_by"] == "alias"
-    stranger = SupplierIn(name="Otro Proveedor", rfc="OPR150301AB1", kind=SupplierKind.cfdi)
-    r = load(
-        conn, edited(invoice, pastor, day=dt.date(2026, 10, 9), supplier=stranger), source_id=source
-    )
-    found = proposed(conn, r, CARNE)
-    assert found is not None and found["diff"]["matched_by"] == "name"
-    assert found["diff"]["supplier_name"] == "Otro Proveedor"
-    assert "cfdi.supplier_unknown" in codes(r)
-    assert conn.execute("select count(*) from public.supplier").fetchone() == (3,)
+    r = load(conn, edited(invoice, line("HUEVO", "1", "H87", "720")), source_id=source)
+    found = proposed(conn, r, HUEVO)
+    assert found is not None and found["payload"]["unit_price"] == "4.000000"  # not 720 an egg
+    assert Decimal(found["diff"]["lines"][0]["base_per_unit"]) == 180
 
 
 def test_two_ingredients_with_the_line_name_hold_it(
@@ -227,6 +219,53 @@ def test_a_newer_invoice_supersedes_an_older_pending_one_but_not_the_reverse(
     third = load(conn, older, source_id=source)
     assert (third.pending_change_ids, codes(third)) == ((), ["cfdi.newer_pending"])
     assert status(conn, second, CARNE) == "pending"
+
+
+def test_on_the_same_day_the_later_invoice_time_wins(
+    conn: psycopg.Connection[Any], source: UUID, invoice: NormalizedBatch
+) -> None:
+    late = load(conn, edited(invoice, line(PASTOR, "10", "KGM", "220"), hour=18), source_id=source)
+    found = proposed(conn, late, CARNE)
+    assert found is not None and found["diff"]["issued_at"] == "2026-10-08T18:15:00-06:00"
+    early = edited(invoice, line(PASTOR, "10", "KGM", "215"), hour=8)
+    r = load(conn, early, source_id=source)  # loaded last, but issued earlier that day
+    assert (r.pending_change_ids, codes(r)) == ((), ["cfdi.newer_pending"])
+    assert "18:15" in r.issues[0].message_es
+    assert status(conn, late, CARNE) == "pending"
+
+
+def test_a_second_invoice_with_the_same_price_is_already_pending(
+    conn: psycopg.Connection[Any], source: UUID, invoice: NormalizedBatch
+) -> None:
+    first = load(conn, edited(invoice, line(PASTOR, "10", "KGM", "212")), source_id=source)
+    other = edited(invoice, line(PASTOR, "4", "KGM", "212"), hour=11)
+    r = load(conn, other, source_id=source)
+    assert (r.duplicate, r.pending_change_ids, codes(r)) == (False, (), [])
+    stats = conn.execute(
+        "select stats ->> 'already_pending' from public.import_batch where id = %s", (r.batch_id,)
+    )
+    assert stats.fetchone() == ("1",)
+    assert status(conn, first, CARNE) == "pending"
+
+
+def test_only_cfdi_imports_count_as_newer_or_are_superseded(
+    conn: psycopg.Connection[Any], source: UUID, invoice: NormalizedBatch
+) -> None:
+    payload = {"unit_price": "0.300000", "effective_from": "2026-10-20", "source": "manual"}
+    diff = {"parser": "otro.reporte@v1", "issued_at": "2026-10-20T10:00:00-06:00"}
+    row = conn.execute(
+        """insert into public.pending_change
+             (tenant_id, kind, target_type, target_id, base_version, payload, diff, proposed_via,
+              expires_at)
+           values (%s, 'ingredient_price.set', 'ingredient', %s, 2, %s, %s, 'import',
+                   now() + interval '1 day') returning id""",
+        (TENANT, CARNE, Jsonb(payload), Jsonb(diff)),
+    ).fetchone()
+    assert row is not None
+    r = load(conn, edited(invoice, line(PASTOR, "10", "KGM", "212")), source_id=source)
+    assert status(conn, r, CARNE) == "pending" and "cfdi.newer_pending" not in codes(r)
+    other = conn.execute("select status::text from public.pending_change where id = %s", row)
+    assert other.fetchone() == ("pending",)
 
 
 def test_an_agent_proposal_is_never_superseded(
