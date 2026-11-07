@@ -695,9 +695,12 @@ class WeeklyReportData(Model):
     Each section is the data of the read RPC of the same shape over `week`: `sales` is
     get_sales_summary (`change_vs_previous` is vs `previous_week`, W3), `top_dishes` get_top_dishes
     by units (top 3), `food_cost` get_food_cost_pct (null when the week has no costed sales),
-    `stale_costs` get_data_status today. `missing_business_days` are the days of the week a
-    location in scope has no sales data (W2: the report goes out and says so). `locations` are the
-    locations in scope with their names, to label a breach or a suggestion ("Centro").
+    `stale_costs` get_data_status today. `missing_business_days` are the days of the week on which a
+    location in scope has no sales data on a day it normally opens (W2: the report goes out and
+    says so; a location's closed weekdays never count). `locations` are the locations in scope
+    with their names, to label a breach or a suggestion ("Centro"). The envelope carries one
+    confidence flag: `cost_estimated` when any cost figure in the report is estimated, else
+    `cost_confirmed`.
 
     `cost_alerts` is get_cost_alerts' shape (top 10 of each list; dishes over target =
     `breaches_total`) with two differences. Price moves and breaches cover the week only, Monday to
@@ -705,7 +708,9 @@ class WeeklyReportData(Model):
     says the same. Suggestions are as of the day the report is built (open and fresh today, at
     today's menu price), as the owner would act on them. Each breach carries, per location over
     target, its cost, prices and the suggestion priced on those figures (WeeklyBreach), so
-    `[Ver márgenes]` needs no other call.
+    `[Ver márgenes]` needs no other call. Breaches are every dish over target in the week's cost
+    snapshots, counted once per dish: estimated ones too (marked by each line's `confidence`), and
+    ones that already existed when the restaurant joined, whatever their alerts' urgency.
     """
 
     week: DateRange

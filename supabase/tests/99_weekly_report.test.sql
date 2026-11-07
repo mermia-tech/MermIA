@@ -80,7 +80,8 @@ $$;
 -- MR-98: the sections that differ from their own RPCs for the week of a report: sales, top dishes
 -- (no_data = no rows), food cost (no_data = null), cost alerts, stale costs and missing days
 -- (get_data_status, whose 30 days hold the week), the merged flags (each section's, first
--- occurrence kept) and the coverage. The report reads the week's item sales once; each section
+-- occurrence kept, and one confidence flag: estimated when a section's flag or a cost figure of
+-- the alerts is) and the coverage. The report reads the week's item sales once; each section
 -- must still be its RPC's.
 create function pg_temp.sections_off(claims text, period text default '"last_week"', today text default '2026-10-12')
 returns text[]
@@ -93,6 +94,8 @@ declare
   food jsonb;
   status jsonb;
   alerts jsonb;
+  all_flags jsonb;
+  levels text[];
   off text[] := '{}';
 begin
   if not (rep ->> 'ok')::boolean then
@@ -120,12 +123,19 @@ begin
       where d #>> '{}' between rep #>> '{data,week,from}' and rep #>> '{data,week,to}') then
     off := off || 'missing_business_days'::text;
   end if;
+  all_flags := sales -> 'flags' || (top -> 'flags') || (food -> 'flags') || (alerts -> 'flags');
+  levels := array(select case f ->> 'code' when 'cost_confirmed' then 'confirmed' else 'estimated' end
+                  from jsonb_array_elements(all_flags) f where f ->> 'code' in ('cost_confirmed', 'cost_estimated'))
+         || array(select c #>> '{}' from jsonb_path_query(alerts -> 'data', 'lax $.**.confidence') c
+                  where jsonb_typeof(c) = 'string');
   if rep -> 'flags' is distinct from
      (select coalesce(jsonb_agg(f.flag order by f.first), '[]')
       from (select e.flag, min(e.n) as first
-            from jsonb_array_elements(sales -> 'flags' || (top -> 'flags') || (food -> 'flags') || (alerts -> 'flags'))
-                 with ordinality e(flag, n)
-            group by e.flag) f) then
+            from jsonb_array_elements(all_flags) with ordinality e(flag, n)
+            where e.flag ->> 'code' not in ('cost_confirmed', 'cost_estimated')
+            group by e.flag) f)
+     || coalesce(case when 'estimated' = any (levels) then app.confidence_flag('{estimated}')
+                      when cardinality(levels) > 0 then app.confidence_flag('{confirmed}') end, '[]') then
     off := off || 'flags'::text;
   end if;
   if rep #> '{meta,coverage_pct}' is distinct from sales #> '{meta,coverage_pct}' then off := off || 'coverage'::text; end if;
@@ -245,11 +255,11 @@ language plpgsql stable set search_path = '' as $$
 begin
   raise exception 'sales totals failed' using errcode = '22023';
 end $$;
-select is(pg_temp.rpc(:OWNER, 'api.get_sales_summary(''"last_week"'')') #>> '{error,code}', 'invalid_args',
-          'get_sales_summary answers its own 22023 as invalid_args');
+select is(pg_temp.rpc(:OWNER, 'api.get_sales_summary(''"last_week"'')') #>> '{error,code}', 'internal',
+          'get_sales_summary answers a 22023 raised after its argument check as internal (20261107130000_rpc_arg_errors.sql)');
 select is(pg_temp.rpc(:OWNER, 'api.build_weekly_report()') -> 'error',
           '{"code":"internal","message":"sales: sales totals failed"}'::jsonb,
-          'but the report checked the week, so the sales section''s invalid_args is internal, naming the section');
+          'and the report passes it on as internal, naming the section');
 rollback to savepoint section_error;
 
 -- [Ver márgenes] (W4, doc 12 1b): each breach carries what its line needs ------------------------
@@ -291,6 +301,86 @@ select is((select count(*) from breach
 select is((select pg_temp.off_figures(r) from report), 0::bigint, 'each is priced on its line''s figures');
 select is((select count(*) from breach where name = 'Coca-Cola' and e -> 'suggestion' <> 'null'), 0::bigint,
           'a resale item has no suggestion');
+
+-- confidence (MR-98, p0sin's review): one flag, estimated wins ---------------------------------
+create function pg_temp.cost_flags(report jsonb) returns jsonb
+language sql as $$
+  select coalesce(jsonb_agg(f ->> 'code' order by n), '[]')
+  from jsonb_array_elements(report -> 'flags') with ordinality x(f, n)
+  where f ->> 'code' in ('cost_confirmed', 'cost_estimated')
+$$;
+select is((select pg_temp.cost_flags(r) from report), '["cost_estimated"]'::jsonb, 'the seed''s costs are estimated: one flag');
+savepoint mixed;
+update public.dish_cost_snapshot set confidence = 'confirmed';
+update public.price_suggestion set confidence = 'confirmed';
+select is(pg_temp.cost_flags(pg_temp.rpc(:OWNER, 'api.build_weekly_report()')), '["cost_confirmed"]'::jsonb,
+          'every cost confirmed: one cost_confirmed flag');
+-- every snapshot confirmed except the week's lowest food-cost dish that sold (p0sin's case)
+update public.dish_cost_snapshot set confidence = 'estimated'
+where menu_item_id = (select s.menu_item_id from public.dish_cost_snapshot s
+                      join app.v_item_sales_daily v
+                        on v.location_id = s.location_id and v.menu_item_id = s.menu_item_id and v.business_date = s.date
+                      where s.date between '2026-10-05' and '2026-10-11' and s.price_net > 0
+                      order by 1.0 * s.cost / s.price_net, s.menu_item_id limit 1);
+select is(jsonb_build_array(pg_temp.cost_flags(pg_temp.rpc(:OWNER, format('api.get_food_cost_pct(%L)', :WEEK))),
+                            pg_temp.cost_flags(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L)', :WEEK)))),
+          '[["cost_estimated"], ["cost_confirmed"]]'::jsonb,
+          'mixed: food cost is estimated, the breaches confirmed');
+select is(pg_temp.cost_flags(pg_temp.rpc(:OWNER, 'api.build_weekly_report()')), '["cost_estimated"]'::jsonb,
+          'the report has one confidence flag, estimated, never both');
+select is(pg_temp.sections_off(:OWNER), '{}'::text[], 'mixed: every section is still its RPC''s');
+-- food cost and breaches confirmed, one suggestion estimated
+update public.dish_cost_snapshot set confidence = 'confirmed';
+update public.price_suggestion set confidence = 'estimated'
+where id = (select id from public.price_suggestion where location_id = :'CENTRO' and status = 'open' order by value desc, id limit 1);
+select is(jsonb_build_array(pg_temp.cost_flags(pg_temp.rpc(:OWNER, format('api.get_food_cost_pct(%L)', :WEEK))),
+                            pg_temp.cost_flags(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L)', :WEEK)))),
+          '[["cost_confirmed"], ["cost_confirmed"]]'::jsonb, 'both sections confirmed');
+select ok(jsonb_path_exists(pg_temp.rpc(:OWNER, 'api.build_weekly_report()'),
+                            '$.data.cost_alerts.suggestions[*] ? (@.confidence == "estimated")'),
+          'but a listed suggestion is estimated');
+select is(pg_temp.cost_flags(pg_temp.rpc(:OWNER, 'api.build_weekly_report()')), '["cost_estimated"]'::jsonb,
+          'so the report''s one flag is estimated');
+select is(pg_temp.sections_off(:OWNER), '{}'::text[], 'and every section is still its RPC''s');
+rollback to savepoint mixed;
+
+-- the owner's decisions on alerts (MR-33 R1-R4): the report reads the snapshots, not the alert rows
+select is((select count(*) from public.alert a where a.rule = 'margin_breach'
+           and (a.urgent or a.awaits_confirmation or a.confidence <> 'estimated' or a.as_of > '2026-10-12'::date - 7)),
+          0::bigint, 'the seed''s breaches existed before the first evaluation and are estimated (never urgent)');
+select is((select jsonb_agg(distinct b ->> 'menu_item_id') from report, jsonb_array_elements(r #> '{data,cost_alerts,breaches}') b),
+          (select jsonb_agg(distinct a.menu_item_id::text) from public.alert a where a.rule = 'margin_breach'),
+          'every breach with an alert row is in the report, pre-existing and estimated ones included');
+select is((select count(*) from breach where e ->> 'confidence' <> 'estimated'), 0::bigint,
+          'each estimated line says so');
+savepoint estimated_line;
+update public.dish_cost_snapshot set confidence = 'confirmed';
+update public.dish_cost_snapshot set confidence = 'estimated'
+where location_id = :'POLANCO' and menu_item_id = (select id from public.menu_item where name = 'Torta de pastor');
+select is((select jsonb_agg(jsonb_build_array(case e ->> 'location_id' when :'CENTRO' then 'Centro' else 'Polanco' end,
+                                              e ->> 'confidence') order by k)
+           from pg_temp.entries(pg_temp.rpc(:OWNER, 'api.build_weekly_report()')) where name = 'Torta de pastor'),
+          '[["Centro", "confirmed"], ["Polanco", "estimated"]]'::jsonb,
+          'an estimated breach line is listed and marked estimated next to a confirmed one');
+select is(pg_temp.rpc(:OWNER, 'api.build_weekly_report()') #> '{data,cost_alerts,breaches_total}', '9'::jsonb,
+          'and every dish over target is still counted');
+rollback to savepoint estimated_line;
+savepoint merged;
+-- a recompute merged two episodes of the Torta de pastor at Centro: two alert rows, one breach
+insert into public.alert (tenant_id, location_id, rule, status, value, threshold, menu_item_id, as_of, confidence, evaluated_on)
+select a.tenant_id, a.location_id, a.rule, a.status, a.value, a.threshold, a.menu_item_id, '2026-09-21', a.confidence, a.evaluated_on
+from public.alert a join public.menu_item m on m.id = a.menu_item_id
+where a.rule = 'margin_breach' and m.name = 'Torta de pastor' and a.location_id = :'CENTRO';
+select is((select count(*) from public.alert a join public.menu_item m on m.id = a.menu_item_id
+           where a.rule = 'margin_breach' and m.name = 'Torta de pastor' and a.location_id = :'CENTRO'), 2::bigint,
+          'two alert rows for one breach');
+select is((select jsonb_build_array(r #> '{data,cost_alerts,breaches_total}',
+                                    (select count(*) from jsonb_array_elements(r #> '{data,cost_alerts,breaches}') b
+                                     where b ->> 'name' = 'Torta de pastor'),
+                                    (select count(*) from pg_temp.entries(r) x where x.name = 'Torta de pastor' and x.e ->> 'location_id' = :'CENTRO'))
+           from (select pg_temp.rpc(:OWNER, 'api.build_weekly_report()') as r) x),
+          '[9, 1, 1]'::jsonb, 'the merged breach is counted once: 9 dishes, the torta listed once, one Centro line');
+rollback to savepoint merged;
 
 -- a dish over target at both locations: one line each, worst first (Queso Oaxaca at $280/kg)
 savepoint queso;
@@ -376,6 +466,10 @@ select is(pg_temp.rpc(:OWNER, format('api.build_weekly_report(%L)', p)) #>> '{er
 from unnest(array['"this_week"', '"last_7d"', '7', '{"from":"2026-10-06","to":"2026-10-12"}',
                   '{"from":"2026-09-28","to":"2026-10-11"}', '{"from":"2026-10-12","to":"2026-10-18"}']) p;
 select is(pg_temp.rpc(:OWNER, 'api.build_weekly_report(null)') #>> '{error,code}', 'invalid_args', 'rejects a null period');
+select is(pg_temp.rpc(:OWNER, format('api.build_weekly_report(%L)', :WEEK), '2026-10-11') #>> '{error,code}', 'invalid_args',
+          'rejects a week that ends today (Sunday 10-11 has not closed yet)');
+select is(pg_temp.rpc(:OWNER, format('api.build_weekly_report(%L)', :WEEK), '2026-10-12') ->> 'ok', 'true',
+          'and takes it the day after');
 
 -- the week of the aguacate jump (09-29) -------------------------------------------------------------
 select is((select jsonb_agg(m ->> 'ingredient')
@@ -391,6 +485,28 @@ select is((select count(*) from jsonb_array_elements(pg_temp.rpc(:OWNER, 'api.bu
            where f ->> 'code' = 'missing_days'), 1::bigint, 'one missing_days flag, not one per section');
 select is(pg_temp.sections_off(:OWNER), '{}'::text[], 'with Sunday missing, every section is still its RPC''s');
 select is(pg_temp.sections_off(:POLANCO_MGR), '{}'::text[], 'and for the Polanco manager');
+
+-- closed weekdays (MR-98): a day a location normally closes is never missing ------------------------
+savepoint closed;
+update public.location set closed_weekdays = '{7}' where id = :'POLANCO';
+select is(pg_temp.rpc(:OWNER, 'api.build_weekly_report()') #> '{data,missing_business_days}', '[]'::jsonb,
+          'Polanco closes on Sundays: its Sunday is not missing');
+select is((select count(*) from jsonb_array_elements(pg_temp.rpc(:OWNER, 'api.build_weekly_report()') -> 'flags') f
+           where f ->> 'code' = 'missing_days'), 0::bigint, 'and no missing_days flag');
+select is(pg_temp.rpc(:OWNER, 'api.build_weekly_report()') #> '{meta,coverage_pct}', '100'::jsonb, 'coverage 100 %');
+select is(pg_temp.sections_off(:OWNER), '{}'::text[], 'with a closed Sunday, every section is still its RPC''s');
+select is(pg_temp.sections_off(:POLANCO_MGR), '{}'::text[], 'and for the Polanco manager');
+create temp table open_every_day as select pg_temp.rpc(:OWNER, 'api.build_weekly_report()') as r;
+update public.location set closed_weekdays = '{1}' where id = :'CENTRO';
+select is(pg_temp.rpc(:OWNER, 'api.build_weekly_report()') #> '{data,sales,net_sales}',
+          (select r #> '{data,sales,net_sales}' from open_every_day),
+          'Centro closed on Mondays: the Monday it sold still counts in sales');
+select is(pg_temp.sections_off(:OWNER), '{}'::text[], 'and every section is still its RPC''s');
+update public.location set closed_weekdays = '{6}' where id = :'POLANCO';
+select is(pg_temp.rpc(:OWNER, 'api.build_weekly_report()') #> '{data,missing_business_days}', '["2026-10-11"]'::jsonb,
+          'Polanco closed on Saturdays instead: its Sunday is missing again');
+select is(pg_temp.sections_off(:OWNER), '{}'::text[], 'and every section is still its RPC''s');
+rollback to savepoint closed;
 
 -- no costed sales: food cost is null, the report still goes out ------------------------------------
 delete from public.dish_cost_snapshot where date between '2026-10-05' and '2026-10-11';

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SYNTHETIC: written by hand for MR-36, not issued by the SAT. Sello, certificates and UUID are placeholders. -->
+<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sat.gob.mx/cfd/4 http://www.sat.gob.mx/sitio_internet/cfd/4/cfdv40.xsd http://www.sat.gob.mx/TimbreFiscalDigital http://www.sat.gob.mx/sitio_internet/cfd/TimbreFiscalDigital/TimbreFiscalDigitalv11.xsd" Version="4.0" Serie="A" Folio="10482" Fecha="2026-10-08T09:15:00" FormaPago="03" NoCertificado="00001000000500000000" Certificado="U0lOVEVUSUNP" Sello="U0lOVEVUSUNP" SubTotal="5160.00" Descuento="40.00" Moneda="MXN" Total="5228.80" TipoDeComprobante="I" Exportacion="01" MetodoPago="PUE" LugarExpedicion="37000">
+  <cfdi:Emisor Rfc="CSB150301AB1" Nombre="CARNES SELECTAS DEL BAJIO" RegimenFiscal="601"/>
+  <cfdi:Receptor Rfc="TEG190415MX2" Nombre="TAQUERIA EL GUERO" DomicilioFiscalReceptor="06000" RegimenFiscalReceptor="626" UsoCFDI="G01"/>
+  <cfdi:Conceptos>
+    <cfdi:Concepto ClaveProdServ="50111500" NoIdentificacion="CP-ADO" Cantidad="10.000" ClaveUnidad="KGM" Unidad="Kilogramo" Descripcion="CARNE AL PASTOR (ADOBADA)" ValorUnitario="212.00" Importe="2120.00" ObjetoImp="02">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="2120.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.000000" Importe="0.00"/>
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+    <cfdi:Concepto ClaveProdServ="50111500" NoIdentificacion="BI-RES" Cantidad="10.000" ClaveUnidad="KGM" Unidad="Kilogramo" Descripcion="BISTEC DE RES" ValorUnitario="210.00" Importe="2100.00" ObjetoImp="02">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="2100.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.000000" Importe="0.00"/>
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+    <cfdi:Concepto ClaveProdServ="50404900" Cantidad="5.000" ClaveUnidad="KGM" Unidad="Kilogramo" Descripcion="  CEBOLLA BLANCA " ValorUnitario="26.00" Importe="130.00" ObjetoImp="02">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="130.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.000000" Importe="0.00"/>
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+    <cfdi:Concepto ClaveProdServ="50131800" NoIdentificacion="QS-OAX" Cantidad="4.000" ClaveUnidad="KGM" Unidad="Kilogramo" Descripcion="QUESO OAXACA" ValorUnitario="150.00" Importe="600.00" Descuento="40.00" ObjetoImp="02">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="560.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="89.60"/>
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+    <cfdi:Concepto ClaveProdServ="50131600" Cantidad="2.000" ClaveUnidad="KGM" Unidad="Kilogramo" Descripcion="HUEVO" ValorUnitario="45.00" Importe="90.00" ObjetoImp="02">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="90.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.000000" Importe="0.00"/>
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+    <cfdi:Concepto ClaveProdServ="15101700" Cantidad="1" ClaveUnidad="XBX" Unidad="Caja" Descripcion="CARBÓN VEGETAL" ValorUnitario="120.00" Importe="120.00" ObjetoImp="02">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="120.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="19.20"/>
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+  </cfdi:Conceptos>
+  <cfdi:Impuestos TotalImpuestosTrasladados="108.80">
+    <cfdi:Traslados>
+      <cfdi:Traslado Base="4440.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.000000" Importe="0.00"/>
+      <cfdi:Traslado Base="680.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="108.80"/>
+    </cfdi:Traslados>
+  </cfdi:Impuestos>
+  <cfdi:Complemento>
+    <tfd:TimbreFiscalDigital Version="1.1" UUID="5D3E8A1C-7B2F-4E9A-9C61-0F4A2B7D8E13" FechaTimbrado="2026-10-08T09:16:02" RfcProvCertif="SAT970701NN3" SelloCFD="U0lOVEVUSUNP" NoCertificadoSAT="00001000000500000000" SelloSAT="U0lOVEVUSUNP"/>
+  </cfdi:Complemento>
+</cfdi:Comprobante>

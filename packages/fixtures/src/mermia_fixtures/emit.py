@@ -3,7 +3,7 @@
 - supabase/seed.sql: loaded by `supabase db reset` and `supabase db start`.
 - fixtures/el_guero/<table>.json: the same rows, for mocks and tests (08 C7).
 - fixtures/el_guero/expected.json: the figures the eval and the RPC tests check (13 H3).
-- fixtures/sr/synthetic/: two sample SR exports with their golden NormalizedBatch (08 C8).
+- fixtures/sr/synthetic/: three sample SR exports with their golden NormalizedBatch (08 C8).
   The columns are a guess from the SR 8 manual until the pilot sends real files (MR-5).
 """
 
@@ -15,6 +15,7 @@ import json
 import re
 import zipfile
 from collections import Counter, defaultdict
+from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any
@@ -39,6 +40,15 @@ JSONB = {"config", "stats", "payment_mix"}
 SAMPLE_LOCATION = "L1"
 SAMPLE_ITEMS_DAY = r.LAST_DAY
 SAMPLE_DAILY_FROM = dt.date(2026, 10, 5)
+SAMPLE_RECIPES_DAY = r.TODAY  # the recipe book as printed that morning
+
+# SR insumo codes and units for the Recetas export. The seed's ingredients have no code; these
+# are made up. Quantities are printed in the purchase unit (the parser converts to base units),
+# the prepared salsa verde in grams.
+INSUMO_CODE = {i.key: f"I{n:03d}" for n, i in enumerate(r.INGREDIENTS, start=1)} | {
+    r.SALSA_VERDE: "E001"
+}
+SR_UNIT = {"kg": "KG", "l": "LT", "pza": "PZA"}
 
 
 def render() -> dict[Path, bytes]:
@@ -247,11 +257,14 @@ def samples(items: list[b.ItemDay], days: list[b.Day]) -> dict[Path, bytes]:
     ]
     stem_i = f"productos_vendidos_{lo.key}_{SAMPLE_ITEMS_DAY.isoformat()}"
     stem_d = f"ventas_por_dia_{lo.key}_{SAMPLE_DAILY_FROM.isoformat()}"
+    stem_r = f"recetas_{lo.key}_{SAMPLE_RECIPES_DAY.isoformat()}"
     return {
         SR_DIR / f"{stem_i}.xlsx": items_xlsx(lo, sold),
         SR_DIR / f"{stem_i}.golden.json": golden(items_golden(lo, sold)),
         SR_DIR / f"{stem_d}.xlsx": daily_xlsx(lo, week, items),
         SR_DIR / f"{stem_d}.golden.json": golden(daily_golden(lo, week)),
+        SR_DIR / f"{stem_r}.xlsx": recipes_xlsx(lo),
+        SR_DIR / f"{stem_r}.golden.json": golden(recipes_golden(lo)),
     }
 
 
@@ -327,6 +340,119 @@ def daily_golden(lo: r.Location, week: list[b.Day]) -> dict[str, Any]:
             for d in week
         ],
     }
+
+
+@dataclass(frozen=True)
+class RecipeLine:
+    """One line of a dish recipe: ingredient key and quantity in its base unit."""
+
+    key: str
+    qty: Decimal
+
+    @property
+    def is_prepared(self) -> bool:
+        return self.key == r.SALSA_VERDE
+
+    @property
+    def name(self) -> str:
+        return r.SALSA_VERDE_NAME if self.is_prepared else b.INGREDIENTS[self.key].name
+
+    @property
+    def base_unit(self) -> str:
+        return "g" if self.is_prepared else b.INGREDIENTS[self.key].base_unit
+
+    @property
+    def yield_pct(self) -> Decimal | None:
+        """None for the prepared salsa: its loss is in its own recipe's yield."""
+        return None if self.is_prepared else b.INGREDIENTS[self.key].yield_pct
+
+    def as_printed(self) -> tuple[Decimal, str]:
+        """Quantity and unit as the export shows them: purchase unit, salsa in grams."""
+        if self.is_prepared:
+            return self.qty, "GR"
+        ing = b.INGREDIENTS[self.key]
+        return self.qty * ing.per_base, SR_UNIT[ing.unit]
+
+
+def recipe_lines(m: r.MenuItem) -> list[RecipeLine]:
+    return [RecipeLine(k, Decimal(q)) for k, q in m.recipe]
+
+
+def recipes_golden(lo: r.Location) -> dict[str, Any]:
+    day = SAMPLE_RECIPES_DAY.isoformat()
+    recipes = [m for m in r.MENU if m.recipe]
+    return {
+        "contract_version": 1,
+        "parser": b.PARSER_RECIPES,
+        "source_kind": "sr_report",
+        "quality": "file",
+        "location_hint": lo.name,
+        "period": {"from": day, "to": day},
+        "grain": "catalog",
+        "totals": {"lines": len(recipes)},
+        "recipes": [
+            {
+                "menu_item_external_id": m.code,
+                "menu_item_name": m.name,
+                "yield_qty": "1.000000",
+                "lines": [
+                    {
+                        "ingredient_name": x.name,
+                        "ingredient_external_id": INSUMO_CODE[x.key],
+                        "qty_base": f"{x.qty:.6f}",
+                        "unit": x.base_unit,
+                        "yield_override_pct": (
+                            None if x.yield_pct is None else f"{x.yield_pct:.4f}"
+                        ),
+                    }
+                    for x in recipe_lines(m)
+                ],
+            }
+            for m in recipes
+        ],
+    }
+
+
+def recipes_xlsx(lo: r.Location) -> bytes:
+    """One row per recipe line. Costo is the line's cost that day in pesos; the parser reads
+    past it (the contract has no field for it)."""
+    wb = Workbook()
+    ws = wb.active
+    assert ws is not None
+    ws.title = "Recetas"
+    ws.append([f"{r.TENANT_NAME} - {lo.name}"])
+    ws.append(["Recetas - Productos"])
+    ws.append([f"Al {SAMPLE_RECIPES_DAY:%d/%m/%Y}"])
+    ws.append([])
+    ws.append(
+        [
+            "Clave",
+            "Producto",
+            "Clave insumo",
+            "Insumo",
+            "Cantidad",
+            "Unidad",
+            "Rendimiento %",
+            "Costo",
+        ]
+    )
+    for m in r.MENU:
+        for x in recipe_lines(m):
+            qty, unit = x.as_printed()
+            cost = b.line_cost(x.key, x.qty, SAMPLE_RECIPES_DAY)
+            ws.append(
+                [
+                    m.code,
+                    m.name,
+                    INSUMO_CODE[x.key],
+                    x.name,
+                    float(qty),
+                    unit,
+                    None if x.yield_pct is None else float(x.yield_pct),
+                    float(cost.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)),
+                ]
+            )
+    return save(wb)
 
 
 def header(ws: Any, lo: r.Location, title: str, first: dt.date, last: dt.date) -> None:

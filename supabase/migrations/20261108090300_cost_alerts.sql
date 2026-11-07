@@ -12,19 +12,34 @@
 --   $195 -> $215). Either direction; a zero price is never a jump. The quoted change is the rule
 --   that fired: vs the last price when the 15 % rule does, else vs the average. One definition
 --   (app.price_jumps) for the evaluator and api.get_cost_alerts.
--- - Margin breach: a dish's snapshot food cost is above target + 3 pts (U1: 32 % + 3).
+-- - Margin breach: a dish's snapshot food cost is above target + 3 pts (U1: 32 % + 3). The alert
+--   carries the food cost and the confidence of the same snapshot, the run day's (03: never a margin
+--   without its tag).
 -- - Urgent (U3, for a same-day message sent by MR-37/38): a price rise of at least 15 % vs the last
 --   price on a top-20 ingredient by spend, or a breach on a top-10 dish by net sales at its
 --   location, both over the 30 days to the evaluation day, and only when the evidence is at most
 --   7 days old on the business day the run happens (today, not the day evaluated: a catch-up run
 --   over old days marks nothing urgent). The top-20 filter applies to
---   urgency only: every jump gets an alert for the weekly report.
+--   urgency only: every jump gets an alert for the weekly report. Breach urgency (owner decisions
+--   R1-R4, 2026-11-07):
+--   R1 urgent only on a confirmed dish cost; an estimated (or missing) one is never urgent.
+--   R2 a new breach (its start within 7 days of the day it is first recorded) first recorded on an
+--      estimate waits (awaits_confirmation) and becomes urgent the first time its cost is
+--      confirmed on a fresh day while still over the limit, if it is in the top 10 that day.
+--   R3 a breach that already existed when first recorded (a first run, a catch-up) is never
+--      urgent, whatever its confidence later; it shows in the weekly report (MR-37).
+--   R4 one row per breach and urgency granted at most once in its life: the first confirmed fresh
+--      day uses up the chance (urgent or not); a later downgrade clears urgent and never re-grants
+--      it, so no second same-day message goes out about the same problem. The breach is the
+--      episode: when a recompute merges two episodes, their rows share one chance, and only the
+--      earliest row is refreshed or can be granted it.
 -- - Spend is theoretical usage (units sold x recipe of record, through sub-recipes, x price of
 --   record): purchases are only partly captured in Phase 1.
 -- - Dedupe: one price_jump alert per (tenant, ingredient, day the price started); one
 --   margin_breach alert per episode, (tenant, location, dish, first day of the run of breaching
 --   snapshots): a breach that persists does not alert again, one that ends and comes back does.
---   `as_of` is that day and `value` the change or food cost on it. Status stays `open` until the
+--   `as_of` is that day; `value` is the price change on it, or for a breach the food cost of the
+--   snapshot of the latest day evaluated (with its confidence). Status stays `open` until the
 --   owner acts.
 
 -- Lookup indexes ----------------------------------------------------------------------------------
@@ -41,9 +56,12 @@ alter table public.alert
   add column ingredient_id uuid,
   add column as_of date,
   add column urgent boolean not null default false,
+  add column awaits_confirmation boolean not null default false,
   add column old_unit_price numeric(20, 6),
   add column new_unit_price numeric(20, 6),
   add column avg_unit_price numeric(20, 6),
+  add column confidence app.cost_confidence,
+  add column evaluated_on date,
   add foreign key (tenant_id, menu_item_id) references public.menu_item (tenant_id, id) on delete restrict,
   add foreign key (tenant_id, ingredient_id) references public.ingredient (tenant_id, id) on delete restrict;
 
@@ -59,7 +77,12 @@ alter table public.alert
       (rule = 'price_jump' and ingredient_id is not null and menu_item_id is null and location_id is null
         and old_unit_price > 0 and new_unit_price > 0 and avg_unit_price > 0)
       or (rule = 'margin_breach' and menu_item_id is not null and location_id is not null and ingredient_id is null
-        and old_unit_price is null and new_unit_price is null and avg_unit_price is null)), false));
+        and confidence is not null and old_unit_price is null and new_unit_price is null and avg_unit_price is null)), false)),
+  -- R1, R4: an urgent row is never waiting and never on an unconfirmed dish cost
+  add constraint alert_urgent_confirmed check (
+    not urgent or (not awaits_confirmation and (rule = 'price_jump' or coalesce(confidence = 'confirmed', false)))),
+  -- only a breach can wait for a confirmed cost
+  add constraint alert_awaits_breach check (rule = 'margin_breach' or not awaits_confirmation);
 
 create unique index alert_price_jump_key on public.alert (tenant_id, ingredient_id, as_of) where rule = 'price_jump';
 create unique index alert_margin_breach_key on public.alert (tenant_id, location_id, menu_item_id, as_of)
@@ -70,8 +93,20 @@ select app.tag('public.alert', 'unit=pesos_per_base_unit', array['old_unit_price
 comment on column public.alert.rule is 'price_jump | margin_breach (alert_rule_known)';
 comment on column public.alert.status is 'open | acknowledged | dismissed (alert_status_known)';
 comment on column public.alert.value is
-  'percent points: the price change that fired (price_jump) or the food cost (margin_breach) on as_of';
+  'percent points: the price change that fired on as_of (price_jump) or the food cost (margin_breach) of the snapshot that set confidence';
 comment on column public.alert.threshold is 'percent points: the threshold that fired';
+comment on column public.alert.urgent is
+  'a same-day message is due (MR-37/38). price_jump: a fresh rise of 15 % or more on a top-20 ingredient. '
+  'margin_breach: only on a confirmed cost (R1), only for a breach new when first recorded (R2, R3), granted at most once (R4); '
+  'a downgrade to estimated clears it for good';
+comment on column public.alert.awaits_confirmation is
+  'margin_breach only: a new breach first recorded on an unconfirmed cost, waiting for its one chance at urgency (R2); '
+  'cleared on the first confirmed fresh day, top 10 or not, and never set again (R4). After a merge of episodes '
+  'the later rows stop waiting once the earliest does; dedupe margin_breach rows by episode, or take its earliest row';
+comment on column public.alert.evaluated_on is
+  'margin_breach: the last day the evaluator applied to the row (on_date); a rerun of an older day leaves the row as it is';
+comment on column public.alert.confidence is
+  'margin_breach: the confidence of the dish cost snapshot value comes from (an estimated breach is never urgent); null for price_jump';
 
 -- Settings -----------------------------------------------------------------------------------
 -- 03 defaults and U3; one place to calibrate them in the pilot.
@@ -90,14 +125,28 @@ returns table (ingredient_id uuid, started date, old_unit_price numeric, new_uni
                avg_unit_price numeric, change_pct numeric, threshold_pct numeric)
 language sql stable set search_path = ''
 as $$
-  with k as (
+  with recursive k as (
     select * from app.cost_alert_settings()
+  ), used(recipe_id, depth) as (
+    -- app.live_ingredients(to_date) with a tenant filter (it has none: under service_role it would
+    -- walk every tenant's dishes)
+    select app.recipe_of_record(m.id, null, to_date), 0
+    from public.menu_item m where m.tenant_id = tenant and m.is_active
+    union
+    select app.recipe_of_record(null, sr.produces_ingredient_id, to_date), u.depth + 1
+    from used u
+    join public.recipe_line rl on rl.recipe_id = u.recipe_id
+    join public.recipe sr on sr.id = rl.sub_recipe_id
+    where u.depth < 8
+  ), live as (
+    select distinct rl.ingredient_id from used u join public.recipe_line rl on rl.recipe_id = u.recipe_id
+    where rl.ingredient_id is not null
   ), candidate as (
     select distinct p.ingredient_id, d.day
     from public.ingredient_price p
     cross join lateral (values (p.effective_from), (p.effective_to + 1)) d(day)
     where p.tenant_id = tenant and d.day between from_date and to_date
-      and p.ingredient_id in (select u.ingredient_id from app.live_ingredients(to_date) u)
+      and p.ingredient_id in (select l.ingredient_id from live l)
   ), move as (
     select c.ingredient_id, c.day, o.unit_price_net as old_price, n.unit_price_net as new_price,
            (select avg(h.unit_price_net)
@@ -163,17 +212,10 @@ as $$
   group by rl.ingredient_id
 $$;
 
--- The tenant's business day today (the timezone of its first location). Word for word MR-32's
--- app.tenant_today (20261105090000_apply_pending_change.sql), so the merged schema has one.
-create or replace function app.tenant_today(tenant uuid) returns date
-language sql stable set search_path = ''
-as $$
-  select app.business_today((select l.id from public.location l where l.tenant_id = tenant order by l.id limit 1))
-$$;
-
 -- Evaluator ----------------------------------------------------------------------------------
 -- Writes the tenant's alerts for one business day; returns how many rows it added. Idempotent: a
--- rerun adds nothing. Price jumps are looked for over the 7 days to on_date, so a price entered a
+-- rerun adds nothing, and a rerun of a day older than one already applied to a breach leaves that
+-- breach as it is (alert.evaluated_on). Price jumps are looked for over the 7 days to on_date, so a price entered a
 -- few days late is still caught by the next run. Urgency is judged against `today` (null: the
 -- tenant's business today), never on_date, so a catch-up run over old days marks nothing urgent.
 create function app.evaluate_cost_alerts(tenant uuid, on_date date, today date default null) returns int
@@ -235,15 +277,99 @@ begin
       where v.tenant_id = tenant and v.business_date between on_date - (k.ranking_days - 1) and on_date
       group by v.location_id, v.menu_item_id
     ) x where x.n <= k.top_dishes
+  ), head as (
+    -- the breach is the episode, across all its alert rows of any status. A late recompute can
+    -- merge two episodes into one; only the earliest row is the episode's (F2), and an owner's
+    -- acknowledge or dismiss on it leaves the whole episode as it is
+    select distinct on (a.location_id, a.menu_item_id) a.id, a.status, a.location_id, a.menu_item_id, a.as_of,
+           a.urgent, a.awaits_confirmation, a.evaluated_on, e.started
+    from episode e
+    join public.alert a
+      on a.tenant_id = tenant and a.rule = 'margin_breach'
+     and a.location_id = e.location_id and a.menu_item_id = e.menu_item_id
+     and a.as_of between e.started and on_date
+    order by a.location_id, a.menu_item_id, a.as_of
+  ), next_state as (
+    -- the open head of a breach still on (the episode only holds snapshots over the limit, so a
+    -- breach that ended is left as it is) takes the confidence and the food cost of the on_date
+    -- snapshot together (a late CFDI can move them either way). Its urgency moves by R1-R4:
+    -- - another row of the episode already used its chance (it is urgent, or it no longer waits:
+    --   a later row stops waiting only once the head does, below): the head stops waiting and is
+    --   never urgent (F1, one urgency per breach, R4).
+    -- - unconfirmed snapshot: not urgent (R1); a waiting row keeps waiting, a row that is not
+    --   waiting is never set waiting again (R4).
+    -- - confirmed snapshot on a fresh day of a waiting row: its one chance (R2, R4). It stops
+    --   waiting, top 10 or not, and is urgent only if in the top 10 that day.
+    -- - otherwise urgent stays as it is: a row that lost urgency, never had it or already used its
+    --   chance cannot gain it; a catch-up over old days confirms the tag but leaves a waiting row
+    --   waiting for a fresh day.
+    -- A rerun of a day older than the last one applied to the row (a range rerun) leaves it as it
+    -- is: an older day never undoes the state a later day set.
+    select a.id, s.confidence, round(100.0 * s.cost / s.price_net, 4) as value,
+           case when s.confidence <> 'confirmed' or u.spent then false
+                when a.awaits_confirmation and on_date > today - k.fresh_days
+                  then exists (select 1 from top_dish t where t.location_id = a.location_id and t.menu_item_id = a.menu_item_id)
+                else a.urgent end as urgent,
+           a.awaits_confirmation and not u.spent
+             and not (s.confidence = 'confirmed' and on_date > today - k.fresh_days) as awaits_confirmation
+    from head a
+    join public.dish_cost_snapshot s
+      on s.tenant_id = tenant and s.location_id = a.location_id and s.menu_item_id = a.menu_item_id and s.date = on_date
+    cross join lateral (
+      select a.awaits_confirmation and exists (
+               select 1 from public.alert o
+               where o.tenant_id = tenant and o.rule = 'margin_breach' and o.location_id = a.location_id
+                 and o.menu_item_id = a.menu_item_id and o.as_of between a.started and on_date and o.id <> a.id
+                 and (o.urgent or not o.awaits_confirmation)) as spent
+    ) u
+    where a.status = 'open' and (a.evaluated_on is null or a.evaluated_on <= on_date)
+  ), refreshed as (
+    -- only rows that change: an identical rerun of the same day writes nothing and bumps no version
+    update public.alert a
+    set confidence = n.confidence, value = n.value, urgent = n.urgent, awaits_confirmation = n.awaits_confirmation,
+        evaluated_on = on_date
+    from next_state n
+    where a.id = n.id
+      and (a.confidence, a.value, a.urgent, a.awaits_confirmation, a.evaluated_on)
+          is distinct from (n.confidence, n.value, n.urgent, n.awaits_confirmation, on_date)
+    returning 1
+  ), merged as (
+    -- F3: the episode's later open rows are never refreshed or granted. They keep waiting while
+    -- the head waits (so the head can tell a row that used its chance from one that only follows
+    -- it), and stop waiting for good once the head no longer waits or is no longer open. Their
+    -- value and confidence stay as they were last refreshed, and their status is left alone: the
+    -- weekly report (MR-37) and the same-day sender must dedupe margin_breach alerts by episode,
+    -- or take the episode's earliest row.
+    update public.alert o
+    set awaits_confirmation = false
+    from head h
+    left join next_state n on n.id = h.id
+    where o.tenant_id = tenant and o.rule = 'margin_breach' and o.status = 'open' and o.awaits_confirmation
+      and o.location_id = h.location_id and o.menu_item_id = h.menu_item_id
+      and o.as_of > h.as_of and o.as_of <= on_date
+      and (h.status <> 'open' or not coalesce(n.awaits_confirmation, h.awaits_confirmation))
+    returning 1
   )
-  insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, urgent)
+  insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, confidence, urgent, awaits_confirmation,
+                            evaluated_on)
+  -- as_of is the start of the episode; value and confidence come from the on_date snapshot
   select tenant, e.location_id, 'margin_breach', e.menu_item_id, e.started,
-         round(100.0 * s.cost / s.price_net, 4), breach_above,
-         e.started > today - k.fresh_days
-           and exists (select 1 from top_dish t where t.location_id = e.location_id and t.menu_item_id = e.menu_item_id)
+         round(100.0 * s.cost / s.price_net, 4), breach_above, s.confidence,
+         -- urgent at insert needs all four: a new breach, started within fresh_days of on_date (R3:
+         -- an existing problem goes to the weekly report), a confirmed on_date cost (R1), a fresh
+         -- on_date and a top-10 dish
+         e.started > on_date - k.fresh_days
+           and s.confidence = 'confirmed'
+           and on_date > today - k.fresh_days
+           and exists (select 1 from top_dish t where t.location_id = e.location_id and t.menu_item_id = e.menu_item_id),
+         -- a new breach recorded on an unconfirmed cost on a fresh day waits for its one chance (R2);
+         -- an existing one or one first recorded on a stale day (a catch-up) never waits (R3), nor
+         -- does one recorded confirmed (its chance is this insert, R4)
+         e.started > on_date - k.fresh_days and s.confidence <> 'confirmed' and on_date > today - k.fresh_days,
+         on_date
   from episode e
   join public.dish_cost_snapshot s
-    on s.tenant_id = tenant and s.location_id = e.location_id and s.menu_item_id = e.menu_item_id and s.date = e.started
+    on s.tenant_id = tenant and s.location_id = e.location_id and s.menu_item_id = e.menu_item_id and s.date = on_date
   -- a breach already alerted in this episode (even under an earlier start, before a recompute
   -- moved it) is not alerted again
   where not exists (select 1 from public.alert a
@@ -257,7 +383,7 @@ end
 $$;
 
 -- get_cost_alerts on the shared jump rule ----------------------------------------------------
--- As in 20261104090000_read_rpcs_cost.sql, except price moves: ingredients with a jump
+-- As in 20261108090000_read_rpcs_cost.sql, except price moves: ingredients with a jump
 -- (app.price_jumps) that started in the window and a price of record above zero at the window's
 -- end. `change` is computed from that price and the price before the window (#77's move; the
 -- earliest jump's last price when the ingredient had none above zero then), so a second step
@@ -361,10 +487,11 @@ $$;
 -- The RPC runs as the caller and needs the jump rule. The evaluator and its spend ranking are the
 -- backend's (service_role), with the helpers and the sales view they read.
 revoke all on function app.cost_alert_settings(), app.price_jumps(uuid, date, date),
-  app.ingredient_spend(uuid, date, date), app.tenant_today(uuid), app.evaluate_cost_alerts(uuid, date, date)
+  app.ingredient_spend(uuid, date, date), app.evaluate_cost_alerts(uuid, date, date)
   from public, anon, authenticated;
 grant execute on function app.cost_alert_settings(), app.price_jumps(uuid, date, date) to authenticated, service_role;
-grant execute on function app.ingredient_spend(uuid, date, date), app.tenant_today(uuid),
+-- app.tenant_today is MR-32's (20261105090000_apply_pending_change.sql), granted there.
+grant execute on function app.ingredient_spend(uuid, date, date),
   app.evaluate_cost_alerts(uuid, date, date),
   app.food_cost_target(), app.live_ingredients(date), app.business_today(uuid) to service_role;
 grant select on app.v_item_sales_daily to service_role;

@@ -4,7 +4,7 @@ Regenerate with `python -m mermia_contracts.tools.gen_db_models` after
 `supabase db reset`. Source of truth: supabase/migrations.
 
 generator_version: 1
-migrations_sha256: 73b9c373abb70cd0fd7b83373bfc68b7499de7fbc7ae313c5e30ce9558c5ebcc
+migrations_sha256: f6c024c32eab54a596f83b46cf2437c8490e396c666be4176ed55bf4198d7958
 """
 
 import datetime as dt
@@ -211,9 +211,12 @@ class AlertRow(RowModel):
     ingredient_id: UUID | None = None
     as_of: dt.date | None = None
     urgent: bool
+    awaits_confirmation: bool
     old_unit_price: UnitPricePesosPerBaseUnit | None = None
     new_unit_price: UnitPricePesosPerBaseUnit | None = None
     avg_unit_price: UnitPricePesosPerBaseUnit | None = None
+    confidence: CostConfidence | None = None
+    evaluated_on: dt.date | None = None
 
 
 class AppUserRow(RowModel):
@@ -331,6 +334,23 @@ class DailySalesAggRow(RowModel):
     created_at: AwareDatetime
     updated_at: AwareDatetime
     version: int
+
+
+class DishCostBackfillRow(RowModel):
+    """Row of public.dish_cost_backfill. rls_class=X."""
+
+    id: UUID
+    tenant_id: UUID
+    pending_change_id: UUID
+    from_date: dt.date
+    to_date: dt.date
+    next_before: dt.date
+    done_at: AwareDatetime | None = None
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
+    version: int
+    attempts: int
+    last_error: str | None = None
 
 
 class DishCostSnapshotRow(RowModel):
@@ -514,6 +534,7 @@ class LocationRow(RowModel):
     created_at: AwareDatetime
     updated_at: AwareDatetime
     version: int
+    closed_weekdays: list[int]
 
 
 class MembershipRow(RowModel):

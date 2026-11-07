@@ -18,15 +18,23 @@
 --   breach lists the locations where it is over target, with cost, prices and the suggestion
 --   priced on those figures, for [Ver márgenes] (W4).
 -- - locations: the locations in scope with their names, to label breaches and suggestions.
--- - missing_business_days: the days of the week a visible location has no sales data (W2: the
---   report goes out anyway and says so).
+-- - missing_business_days: the days of the week on which a visible location normally opens and has
+--   no sales data (W2: the report goes out anyway and says so; MR-98: its closed weekdays never
+--   count, the rule of app.missing_business_days and get_data_status).
 -- - Errors: a section error is one error envelope naming the section, except that no dish sales
 --   gives top_dishes.rows = [] and no costed sales gives food_cost = null (a new tenant without
 --   recipes still gets its report). No sales at all is no_data. Only the argument checks answer
 --   invalid_args (MR-98 A1): past them the week is valid, so a 22023 raised later, or a section
 --   answering invalid_args to that week, is internal (our data or our bug, not the caller's).
--- - Flags: every section's flags, first occurrence kept, no duplicates. meta.coverage_pct is the
---   sales coverage of the week.
+-- - Flags: every section's flags, first occurrence kept, no duplicates, except confidence: the
+--   report has one confidence flag, cost_estimated when any cost figure in it is estimated (food
+--   cost, a breach line, a suggestion), else cost_confirmed (MR-98, p0sin's review: never both).
+--   meta.coverage_pct is the sales coverage of the week.
+-- - Breaches come from the week's dish cost snapshots, not from public.alert, so the alert rows'
+--   urgency rules (R1-R4 in 20261108090300_cost_alerts.sql) do not filter them: an estimated breach
+--   is listed with confidence estimated on its lines, a breach that already existed when the
+--   restaurant joined or came in through a catch-up is listed, and a breach whose episodes merged
+--   into several alert rows is one dish, counted once.
 -- Security invoker like every RPC: RLS decides the tenant and the locations (W1: a manager sees
 -- only their location). It writes nothing.
 
@@ -48,8 +56,9 @@ as $$
                   where p.ingredient_id = i.id and p.effective_from <= today), '-infinity') < today - 45
 $$;
 
--- get_data_status with its stale-cost count from app.stale_costs (MR-98 P1), otherwise word for
--- word 20261019200000_read_rpcs_first4.sql (merged, so it is replaced here): the same answer.
+-- get_data_status with its stale-cost count from app.stale_costs (MR-98 P1); otherwise the body of
+-- 20261107140000_closed_weekdays.sql, unchanged (missing days from app.missing_business_days):
+-- the same answer.
 create or replace function api.get_data_status(location_id uuid default null) returns jsonb
 language plpgsql stable security invoker set search_path = ''
 as $$
@@ -78,18 +87,7 @@ begin
     group by src.kind
   ) k;
 
-  with covered as (
-    select v.location_id, v.business_date from app.v_daily_sales v
-    where v.location_id = any (locs) and v.business_date between today - 30 and today - 1
-    union
-    select v.location_id, v.business_date from app.v_item_sales_daily v
-    where v.location_id = any (locs) and v.business_date between today - 30 and today - 1
-  )
-  select coalesce(jsonb_agg(d.day order by d.day), '[]') into missing
-  from (select g::date as day from generate_series(today - 30, today - 1, interval '1 day') g) d
-  where exists (
-    select 1 from unnest(locs) l(id)
-    where not exists (select 1 from covered c where c.location_id = l.id and c.business_date = d.day));
+  missing := app.missing_business_days(locs, today - 30, today - 1);
 
   stale := app.stale_costs(today);
 
@@ -110,12 +108,14 @@ $$;
 -- has one row per app.item_rows row, the same sales and snapshot join plus the day's IVA rate):
 -- - top_rows: get_top_dishes(week, 'units', 'desc', 3)'s rows; null when no dish sold (its no_data);
 -- - food: get_food_cost_pct(week)'s data (group_by 'none'); null when no costed sales (its no_data);
---   food_flags: its confidence flag (its missing_days flag is the sales section's, the same text);
--- - missing: the days of [f, t] on which a location has no sales data (daily or item rows), the
---   rule of get_data_status.
+--   food_levels: the confidence levels its confidence flag is built from (its missing_days flag is
+--   the sales section's, the same text); null when no costed sales;
+-- - missing: the days of [f, t] on which a location normally opens and has no sales data (daily or
+--   item rows), the rule of app.missing_business_days and get_data_status (MR-98: from
+--   app.open_location_days, so a closed weekday is never missing).
 -- The report used to call the two RPCs and a helper, which read the week four more times.
 create function app.report_item_sections(locs uuid[], f date, t date)
-returns table (top_rows jsonb, food jsonb, food_flags jsonb, missing jsonb)
+returns table (top_rows jsonb, food jsonb, food_levels app.cost_confidence[], missing jsonb)
 language sql stable set search_path = ''
 as $$
   with c as materialized (
@@ -149,12 +149,10 @@ as $$
       'target', app.pct(app.food_cost_target()),
       'coverage', app.pct(100.0 * x.covered_net / x.total_net),
       'by_category', '[]'::jsonb) end,
-    case when coalesce(x.covered_ex_iva, 0) > 0 then coalesce('[]'::jsonb || app.confidence_flag(x.levels), '[]') else '[]' end,
-    (select coalesce(jsonb_agg(d.day order by d.day), '[]')
-     from (select g::date as day from generate_series(f, t, interval '1 day') g) d
-     where exists (
-       select 1 from unnest(locs) l(id)
-       where not exists (select 1 from covered v where v.location_id = l.id and v.business_date = d.day)))
+    case when coalesce(x.covered_ex_iva, 0) > 0 then x.levels end,
+    (select coalesce(jsonb_agg(distinct o.day order by o.day), '[]')
+     from app.open_location_days(locs, f, t) o
+     where not exists (select 1 from covered v where v.location_id = o.location_id and v.business_date = o.day))
   from x
 $$;
 
@@ -210,7 +208,7 @@ $$;
 --   snapshots of [f, t]);
 -- - suggestions as of `today`: the rows evaluated from f to today that are still open (or pending)
 --   and fresh today, at today's menu price, whose dish's latest snapshot up to today still
---   breaches (the rules of 20261106110000_price_suggestions.sql).
+--   breaches (the rules of 20261108090400_price_suggestions.sql).
 -- get_cost_alerts is t = today. The weekly report passes the week's Sunday as t, so a price dated
 -- after Sunday never moves last week's figures (the 9:00 and the 12:00 report agree), and
 -- `detailed`: each breach also gets `at`, one app.breach_at per location in scope where the dish
@@ -355,7 +353,7 @@ end
 $$;
 
 -- get_cost_alerts on the shared body, up to today: the same answer as in
--- 20261106110000_price_suggestions.sql (its tests and examples pin it).
+-- 20261108090400_price_suggestions.sql (its tests and examples pin it).
 create or replace function api.get_cost_alerts(since jsonb default '"last_7d"', location_id uuid default null) returns jsonb
 language plpgsql stable security invoker set search_path = ''
 as $$
@@ -393,6 +391,7 @@ declare
   items record;
   alerts jsonb;
   flags jsonb;
+  levels app.cost_confidence[];
 begin
   if locs is null then
     return app.rpc_error('not_found', 'location not found');
@@ -426,13 +425,25 @@ begin
   alerts := app.cost_alerts(locs, r[1], r[2], today, true);
 
   -- every section's flags, first occurrence kept (top dishes' and food cost's missing_days flag is
-  -- the sales section's)
+  -- the sales section's), but one confidence flag for the report: estimated when any cost figure
+  -- in it is (food cost, the breaches get_cost_alerts' flag covers, a breach line, a suggestion)
   select coalesce(jsonb_agg(f.flag order by f.first), '[]') into flags
   from (
     select e.flag, min(e.n) as first
-    from jsonb_array_elements(sales -> 'flags' || items.food_flags || (alerts -> 'flags')) with ordinality e(flag, n)
+    from jsonb_array_elements(sales -> 'flags' || (alerts -> 'flags')) with ordinality e(flag, n)
+    where e.flag ->> 'code' not in ('cost_confirmed', 'cost_estimated')
     group by e.flag
   ) f;
+  levels := coalesce(items.food_levels, '{}')
+    || array(select case e.flag ->> 'code' when 'cost_confirmed' then 'confirmed' else 'estimated' end::app.cost_confidence
+             from jsonb_array_elements(sales -> 'flags' || (alerts -> 'flags')) e(flag)
+             where e.flag ->> 'code' in ('cost_confirmed', 'cost_estimated'))
+    || array(select (c #>> '{}')::app.cost_confidence
+             from jsonb_path_query(alerts -> 'data', 'lax $.**.confidence') c
+             where jsonb_typeof(c) = 'string');
+  if cardinality(levels) > 0 then
+    flags := flags || app.confidence_flag(levels);
+  end if;
 
   return app.rpc_ok(
     jsonb_build_object(

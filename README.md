@@ -54,6 +54,29 @@ Migrations are created with `supabase migration new <name>` and never edited onc
 A new table must call `app.finish_table(...)` in the same migration (RLS, privileges, text
 checks) and tag its unit columns with `app.tag(...)`; the catalog test fails otherwise.
 
+## Onboarding a tenant (concierge)
+
+One command creates a restaurant, its locations and its users with their roles, from a spec
+file (YAML or JSON; start from `apps/api/src/mermia_api/admin/example.yaml`, and keep real
+specs out of git because they hold phone numbers):
+
+```bash
+export MERMIA_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres   # the admin (postgres) URL
+uv run python -m mermia_api.admin pilot.yaml --operator <you> --dry-run   # report, save nothing
+uv run python -m mermia_api.admin pilot.yaml --operator <you>             # apply, in one transaction
+```
+
+Each user gets an `app_user`, a verified WhatsApp identity (so the channel can resolve the
+sender) and a `membership`: `owner`, `admin` and `support` see every location by default; a
+`manager` lists theirs. The first run creates the tenant and prints its id: add it to the spec
+as `tenant.id` before rerunning (a spec without an id is refused when a tenant with that name
+exists). Rerunning the same file then changes nothing; edit it and rerun to update. A phone
+that already belongs to someone under another name is refused, and a member of another tenant
+needs `existing_user: true`. Nothing is deleted (members left out of the spec keep their
+access; the run warns), every change writes an `audit_log` row with your `--operator` handle,
+and phone numbers are printed masked. A real run against the local database adds a second
+tenant that some seed tests do not expect; `supabase db reset` brings it back to the seed.
+
 ## Contracts package
 
 ```bash

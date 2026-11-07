@@ -4,7 +4,7 @@
 -- 16 / 116)), while the engine nets each menu price at its tax_rate. In the northern border zone
 -- (8 %) or for 0 % items, compare_periods('food_cost_pct'), compare_locations and get_top_dishes
 -- (margin, margin_pct) then disagreed with get_dish_margin, get_food_cost_pct and the breaches.
--- They now read app.item_cost_rows (20261104090000_read_rpcs_cost.sql), whose net_ex_iva uses the
+-- They now read app.item_cost_rows (20261108090000_read_rpcs_cost.sql), whose net_ex_iva uses the
 -- rate of the menu price in effect that day (16 % when unknown), summed unrounded and rounded
 -- once. For a 16 % row nothing changes: round(sum(net) / 1.16) = sum(net) - round(sum(net) x
 -- 16 / 116), since 29 is odd and the IVA is never a half centavo. Margins are rounded once per
