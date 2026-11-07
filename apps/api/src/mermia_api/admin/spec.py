@@ -15,10 +15,11 @@ from __future__ import annotations
 
 import re
 from collections.abc import Hashable
+from functools import cache
 from pathlib import Path
 from typing import Annotated, Any, Literal
 from uuid import UUID
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from zoneinfo import available_timezones
 
 import yaml
 from pydantic import Field, field_validator, model_validator
@@ -31,6 +32,13 @@ from mermia_contracts.pending import PendingKind
 
 EXAMPLE = Path(__file__).with_name("example.yaml")
 DEFAULT_TIMEZONE = "America/Mexico_City"
+# Canonical IANA regions a location time zone may start with. The DB helper
+# app.is_valid_timezone (supabase/migrations/20261107120000_location_timezone_check.sql) mirrors
+# this list: change both together.
+TIMEZONE_REGIONS = (
+    "Africa/", "America/", "Antarctica/", "Asia/", "Atlantic/",
+    "Australia/", "Europe/", "Indian/", "Pacific/",
+)  # fmt: skip
 
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 # Persona moral (3 letters) or física (4), yymmdd, 3-character homoclave.
@@ -69,6 +77,11 @@ class TenantSpec(Model):
         return rfc
 
 
+@cache
+def _known_timezones() -> frozenset[str]:
+    return frozenset(available_timezones())
+
+
 class LocationSpec(Model):
     id: UUID | None = None  # pins the location, so a rerun can rename it
     name: Text
@@ -87,10 +100,10 @@ class LocationSpec(Model):
     def _timezone(cls, value: str | None) -> str | None:
         if value is None:
             return None
-        try:
-            ZoneInfo(value)
-        except (ZoneInfoNotFoundError, ValueError):
-            raise ValueError(f"unknown time zone {value!r}") from None
+        # Same rule as the DB helper app.is_valid_timezone: exact-case name plus a canonical region.
+        # (ZoneInfo alone accepts wrong case on macOS and names like CST6CDT.)
+        if not value.startswith(TIMEZONE_REGIONS) or value not in _known_timezones():
+            raise ValueError(f"unknown time zone {value!r}")
         return value
 
 
