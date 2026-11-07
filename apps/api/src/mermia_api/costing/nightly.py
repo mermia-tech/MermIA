@@ -7,17 +7,25 @@ today, and a short catch-up window before it (`days`, default 2: yesterday and t
 
 - Insert only (`app.fill_dish_costs`): a row that exists keeps its id and values, a rerun writes
   nothing. The rows it writes are the ones `app.compute_dish_costs` writes for those days.
-- Tenants one at a time. Each tenant's window is cut into chunks of at most 31 days, newest first,
-  one transaction each: the per-tenant lock is held for one chunk only.
+- Insert only, so a snapshot made stale outside approval taps and backfills is not refreshed here.
+  Any other path that writes costing inputs directly (e.g. a future CFDI ingest writing prices) must
+  call the recompute itself.
+- Tenants one at a time. Each tenant's window is cut into chunks of at most 7 days, newest first,
+  one transaction each: the per-tenant lock is held for one chunk (about 1-3 s) only. Each
+  transaction sets `lock_timeout` to 5 s, so a chunk waiting on the lock (or a tap waiting behind
+  it) fails fast; the failure is transient and the run goes on.
 - A tenant that fails is logged and reported in `failed` (SQLSTATE and exception class only, as
   MR-87's backfill sweep), tagged transient or not with the sweep's split; the run goes on with the
   next tenant. A broken connection is raised: nothing else can run. Every tenant is retried on the
   next run (the job is idempotent).
 
+One run at a time: `main` takes a job-wide advisory lock and exits 0 when another run holds it.
+It also switches to `service_role`, so the job never runs as a superuser.
+
 Run it on a service-role connection with no transaction open (inside an open transaction each
 chunk is only a savepoint and the locks are held until the caller commits).
 
-CLI (connects with MERMIA_DB_URL or --db-url; exit 0 done, 1 a tenant failed, 2 bad arguments):
+CLI (connects with MERMIA_DB_URL; exit 0 done or skipped, 1 a tenant failed, 2 bad arguments):
 
     uv run python -m mermia_api.costing.nightly [--days N] [--today YYYY-MM-DD]
 
@@ -48,7 +56,10 @@ from mermia_api.confirm.backfill import failure_reason, is_transient
 
 DEFAULT_DAYS = 2  # yesterday and today
 MAX_DAYS = 400  # the engine's longest range
-MAX_CHUNK_DAYS = 31  # days per transaction (app.fill_dish_costs refuses more)
+MAX_CHUNK_DAYS = 7  # days per transaction (app.fill_dish_costs allows 31): lock held ~1-3 s
+LOCK_TIMEOUT = "5s"  # a chunk (or a tap behind it) waits this long for the tenant lock
+JOB_LOCK_KEY = "mermia:nightly_dish_costs"  # job-wide advisory lock: one run at a time
+JOB_ROLE = "service_role"
 EXIT_OK, EXIT_FAILED, EXIT_USAGE = 0, 1, 2
 
 log = logging.getLogger(__name__)
@@ -102,10 +113,10 @@ def run_nightly_dish_costs(
             if conn.broken or conn.closed:
                 raise
             failed[tenant] = TenantFailure(failure_reason(error), is_transient(conn, error))
-            log.exception("nightly dish costs failed for tenant %s", tenant)
+            log.error("nightly dish costs failed for tenant %s: %s", tenant, failed[tenant].reason)
         except Exception as error:  # a bug for one tenant must not stop the others
             failed[tenant] = TenantFailure(failure_reason(error), is_transient=False)
-            log.exception("nightly dish costs crashed for tenant %s", tenant)
+            log.error("nightly dish costs crashed for tenant %s: %s", tenant, failed[tenant].reason)
     return NightlyResult(done=done, failed=failed)
 
 
@@ -170,8 +181,9 @@ def _fill_chunk(
 
 @contextmanager
 def _transaction(conn: psycopg.Connection[Any], today: dt.date | None) -> Iterator[None]:
-    """One transaction, with app.today set for it when the caller fixed the date."""
+    """One transaction with a short lock_timeout; app.today is set if the caller fixed the date."""
     with conn.transaction():
+        conn.execute(f"set local lock_timeout = '{LOCK_TIMEOUT}'")
         if today is not None:
             conn.execute("select set_config('app.today', %s, true)", (today.isoformat(),))
         yield
@@ -206,21 +218,44 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         "--days", type=_days, default=DEFAULT_DAYS, help="window ending today (1-400, default 2)"
     )
     parser.add_argument("--today", type=_date, help="treat this date as every location's today")
-    parser.add_argument("--db-url", default=os.environ.get("MERMIA_DB_URL"))
     return parser.parse_args(argv)
+
+
+def become_service_role(conn: psycopg.Connection[Any]) -> None:
+    """Drop to service_role for the session, so the job never runs as a superuser."""
+    with conn.transaction():
+        conn.execute(f"set role {JOB_ROLE}")
+
+
+def try_job_lock(conn: psycopg.Connection[Any]) -> bool:
+    """Take the job-wide session advisory lock; False when another run holds it."""
+    with conn.transaction():
+        row = conn.execute(
+            "select pg_try_advisory_lock(hashtextextended(%s, 0))", (JOB_LOCK_KEY,)
+        ).fetchone()
+    return bool(row and row[0])
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
-    if not args.db_url:
-        print("set MERMIA_DB_URL or pass --db-url", file=sys.stderr)
+    db_url = os.environ.get("MERMIA_DB_URL")
+    if not db_url:
+        print("set MERMIA_DB_URL", file=sys.stderr)
         return EXIT_USAGE
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     start = time.perf_counter()
-    with psycopg.connect(args.db_url, autocommit=False) as conn:
+    with psycopg.connect(db_url, autocommit=False) as conn:
+        try:
+            become_service_role(conn)
+        except psycopg.Error as error:
+            print(f"cannot switch to {JOB_ROLE}: {failure_reason(error)}", file=sys.stderr)
+            return EXIT_FAILED
+        if not try_job_lock(conn):
+            log.info("another nightly dish-cost run holds the job lock; exiting")
+            return EXIT_OK
         result = run_nightly_dish_costs(conn, today=args.today, days=args.days)
     print(
-        f"nightly dish costs on {db_label(args.db_url)}: {len(result.done)} tenants, "
+        f"nightly dish costs on {db_label(db_url)}: {len(result.done)} tenants, "
         f"{result.snapshots} rows, {len(result.failed)} failed, "
         f"{time.perf_counter() - start:.1f}s"
     )

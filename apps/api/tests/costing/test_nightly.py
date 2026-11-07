@@ -16,12 +16,15 @@ import pytest
 
 from mermia_api.costing import nightly
 from mermia_api.costing.nightly import (
+    JOB_LOCK_KEY,
     MAX_CHUNK_DAYS,
     TenantFailure,
     TenantRun,
+    become_service_role,
     main,
     plan_chunks,
     run_nightly_dish_costs,
+    try_job_lock,
 )
 
 SEED = UUID("03299e41-28bd-5779-bcc6-0e5e76580fad")
@@ -253,6 +256,57 @@ def test_the_job_runs_as_service_role(conn: psycopg.Connection[Any]) -> None:
 
 
 @pytest.mark.db
+def test_become_service_role_drops_the_superuser(conn: psycopg.Connection[Any]) -> None:
+    become_service_role(conn)
+
+    assert conn.execute("select current_user").fetchone() == ("service_role",)
+
+
+@pytest.mark.db
+def test_a_held_tenant_lock_is_transient_and_the_run_goes_on(
+    conn: psycopg.Connection[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    conn.execute(f"set local app.today = '{SEED_TODAY}'")
+    tenant, _ = add_two_zone_tenant(conn)
+    monkeypatch.setattr(nightly, "LOCK_TIMEOUT", "200ms")
+    with psycopg.connect(os.environ["MERMIA_DB_URL"]) as holder:
+        holder.execute("select app.lock_dish_costs(%s)", (SEED,))  # held until holder rolls back
+
+        result = run_nightly_dish_costs(conn, only=[SEED, tenant])
+
+        holder.rollback()
+    assert result.failed == {SEED: TenantFailure("55P03 LockNotAvailable", is_transient=True)}
+    assert result.done[tenant].snapshots > 0
+
+
+@pytest.mark.db
+def test_the_job_lock_admits_one_run_at_a_time(conn: psycopg.Connection[Any]) -> None:
+    with psycopg.connect(os.environ["MERMIA_DB_URL"]) as other:
+        assert try_job_lock(other) is True
+        assert try_job_lock(conn) is False
+        other.execute("select pg_advisory_unlock(hashtextextended(%s, 0))", (JOB_LOCK_KEY,))
+        other.commit()
+        assert try_job_lock(conn) is True
+
+
+@pytest.mark.db
+def test_main_exits_0_without_running_when_another_run_holds_the_job_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    url = os.environ.get("MERMIA_DB_URL")
+    if not url:
+        pytest.skip("MERMIA_DB_URL is not set")
+    called = []
+    monkeypatch.setattr(nightly, "run_nightly_dish_costs", lambda *a, **k: called.append(1))
+    with psycopg.connect(url) as holder:
+        assert try_job_lock(holder) is True
+
+        assert main([]) == 0
+
+    assert called == []
+
+
+@pytest.mark.db
 def test_a_failing_tenant_is_reported_and_the_others_go_on(
     conn: psycopg.Connection[Any],
 ) -> None:
@@ -304,7 +358,7 @@ def test_a_bug_for_one_tenant_does_not_stop_the_others(
 
 
 @pytest.mark.db
-def test_a_400_day_window_runs_in_chunks_of_at_most_31_days(
+def test_a_400_day_window_runs_in_chunks_of_at_most_7_days(
     conn: psycopg.Connection[Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     conn.execute(f"set local app.today = '{SEED_TODAY}'")
@@ -323,7 +377,7 @@ def test_a_400_day_window_runs_in_chunks_of_at_most_31_days(
     assert result.done[SEED] == TenantRun(
         from_date=today - dt.timedelta(days=399),
         to_date=today,
-        chunks=13,  # 12 x 31 + 28
+        chunks=58,  # 57 x 7 + 1
         snapshots=result.snapshots,
         seconds=result.done[SEED].seconds,
     )
@@ -360,14 +414,14 @@ def test_a_tenant_without_locations_has_nothing_to_do(conn: psycopg.Connection[A
 # --- no db ------------------------------------------------------------------------------------
 
 
-def test_plan_chunks_walks_back_from_today_in_31_day_steps() -> None:
+def test_plan_chunks_walks_back_from_today_in_7_day_steps() -> None:
     to = dt.date(2026, 10, 12)
 
-    chunks = plan_chunks(to - dt.timedelta(days=61), to)
+    chunks = plan_chunks(to - dt.timedelta(days=12), to)
 
     assert chunks == [
-        (to - dt.timedelta(days=30), to),
-        (to - dt.timedelta(days=61), to - dt.timedelta(days=31)),
+        (to - dt.timedelta(days=6), to),
+        (to - dt.timedelta(days=12), to - dt.timedelta(days=7)),
     ]
 
 
@@ -388,7 +442,7 @@ def test_days_out_of_range_are_refused(days: int) -> None:
 )
 def test_the_cli_refuses_bad_arguments(argv: list[str]) -> None:
     with pytest.raises(SystemExit) as exit_:
-        main([*argv, "--db-url", "postgresql://nowhere"])
+        main(argv)
     assert exit_.value.code == 2
 
 

@@ -7,6 +7,10 @@
 -- (a tap or a backfill already rewrote it from the inputs it changed), a rerun writes nothing. The
 -- rows it writes are the ones app.compute_dish_costs writes for those days: same change days, same
 -- app.write_dish_cost_rows.
+--
+-- Because it is insert only, a snapshot made stale outside approval taps and backfills is not
+-- refreshed by this job (e.g. a future CFDI ingest path that writes prices directly). Such paths
+-- must call the recompute themselves.
 
 -- The job's window for a tenant: from the earliest location's today minus (days - 1) to the latest
 -- location's today. Nulls for a tenant without locations (nothing to cost).

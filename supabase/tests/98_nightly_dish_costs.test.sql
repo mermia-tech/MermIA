@@ -50,5 +50,12 @@ select bag_eq($$select menu_item_id, location_id, date, cost, price_net, margin,
               'select menu_item_id, location_id, date, cost, price_net, margin, food_cost_pct, confidence from filled',
               'with the same values');
 
+-- the job's role ------------------------------------------------------------------------------
+set local role service_role;
+select lives_ok($$select app.nightly_dish_cost_range('03299e41-28bd-5779-bcc6-0e5e76580fad', 2)$$, 'service_role reads the window');
+select lives_ok($$select app.fill_dish_costs('03299e41-28bd-5779-bcc6-0e5e76580fad', '2026-10-11', '2026-10-12')$$,
+                'service_role runs the fill');
+reset role;
+
 select * from finish();
 rollback;
