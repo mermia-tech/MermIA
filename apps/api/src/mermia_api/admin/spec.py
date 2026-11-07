@@ -40,6 +40,13 @@ TIMEZONE_REGIONS = (
     "Australia/", "Europe/", "Indian/", "Pacific/",
 )  # fmt: skip
 
+# ISO weekdays (1 = Monday ... 7 = Sunday), keyed by the normalized Spanish name.
+WEEKDAYS = {
+    "lunes": 1, "martes": 2, "miercoles": 3, "jueves": 4,
+    "viernes": 5, "sabado": 6, "domingo": 7,
+}  # fmt: skip
+WEEKDAY_NAMES = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
+
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 # Persona moral (3 letters) or física (4), yymmdd, 3-character homoclave.
 RFC = re.compile(r"^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$")
@@ -89,11 +96,41 @@ class LocationSpec(Model):
     address: Text | None = None
     sr_version: Text | None = None
     sr_edition: Text | None = None
+    # Weekdays the location normally closes, in Spanish. None: keep the stored ones (a new
+    # location needs an answer); []: opens every day.
+    closed_days: list[str] | None = None
 
     @field_validator("name")
     @classmethod
     def _strip(cls, value: str) -> str:
         return value.strip()
+
+    @field_validator("closed_days", mode="before")
+    @classmethod
+    def _closed_days(cls, value: Any) -> Any:
+        if value is None:
+            return None
+        valid = ", ".join(WEEKDAY_NAMES)
+        if not isinstance(value, list):
+            raise ValueError(f"closed_days debe ser una lista de días ({valid}); [] si abre todos")
+        numbers: list[int] = []
+        for day in value:
+            number = WEEKDAYS.get(normalize_name(day)) if isinstance(day, str) else None
+            if number is None:
+                raise ValueError(f"día desconocido {day!r} en closed_days; usa: {valid}")
+            if number in numbers:
+                raise ValueError(f"día repetido en closed_days: {WEEKDAY_NAMES[number - 1]}")
+            numbers.append(number)
+        if len(numbers) == len(WEEKDAYS):
+            raise ValueError("closed_days no puede incluir los siete días: la sucursal no abriría")
+        return value
+
+    @property
+    def closed_weekdays(self) -> list[int] | None:
+        """The ISO weekday numbers, ascending; None when the spec does not say."""
+        if self.closed_days is None:
+            return None
+        return sorted(WEEKDAYS[normalize_name(d)] for d in self.closed_days)
 
     @field_validator("timezone")
     @classmethod
