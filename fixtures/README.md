@@ -13,6 +13,10 @@ supabase db reset                          # loads supabase/seed.sql into the lo
 
 The restaurant itself is written by hand in `packages/fixtures/src/mermia_fixtures/restaurant.py`.
 
+The exception is `cfdi/`: CFDI 4.0 supplier invoices, each next to its `.golden.json` (MR-36).
+`cfdi/synthetic/` is written and checked by hand; a real anonymized invoice goes in
+`cfdi/<origin>/`. `test_golden.py` parses every one of them.
+
 ## What it contains
 
 - 2 locations: `L1` Centro and `L2` Polanco. Polanco sells less at prices about 10% higher.
