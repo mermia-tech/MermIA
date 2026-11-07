@@ -162,6 +162,28 @@ def test_a_correction_waits_for_a_manager_then_supersedes(conn: psycopg.Connecti
     assert previous == [("applied",)], "the seeded batch is current again"
 
 
+def test_an_unsliced_batch_does_not_break_the_correction_check(
+    conn: psycopg.Connection[Any],
+) -> None:
+    """MR-80: a batch with no location gets the slice key `unsliced:<digest>`, which has no dates.
+    The correction check casts parts of slice_key to dates; Postgres does not promise to test the
+    key's shape first, so the cast must sit inside a CASE. The row passes every other filter (same
+    location, applied), so only that guard keeps the cast off it."""
+    tenant = conn.execute(
+        "select tenant_id from public.source where id = %s", (CENTRO_ITEMS,)
+    ).fetchone()
+    assert tenant is not None
+    conn.execute(
+        """insert into public.import_batch (tenant_id, source_id, location_id, parser, slice_key,
+                                            status)
+           values (%s, %s, %s, 'sr.productos_vendidos@v1', %s, 'applied')""",
+        (tenant[0], CENTRO_ITEMS, CENTRO, "unsliced:" + "b" * 64),
+    )
+    batch = parse_file((SR / "productos_vendidos_L1_2026-10-11.xlsx").read_bytes())
+    r = load(conn, batch, source_id=CENTRO_ITEMS, expected_day=DAY(2026, 10, 11))
+    assert (r.status, [i.code for i in r.issues]) == ("needs_review", ["batch.correction"])
+
+
 def test_the_wrong_day_goes_to_review(conn: psycopg.Connection[Any]) -> None:
     r = load(
         conn, report("12/10/2026", PASTOR), source_id=CENTRO_ITEMS, expected_day=DAY(2026, 10, 13)
@@ -192,7 +214,7 @@ def test_totals_that_do_not_add_up_are_rejected_without_rows(conn: psycopg.Conne
 
 def test_an_unsupported_grain_is_rejected(conn: psycopg.Connection[Any]) -> None:
     good = report("12/10/2026", PASTOR)
-    r = load(conn, good.model_copy(update={"grain": Grain.ticket}), source_id=CENTRO_ITEMS)
+    r = load(conn, good.model_copy(update={"grain": Grain.purchase}), source_id=CENTRO_ITEMS)
     assert r.status == "rejected" and "batch.grain_unsupported" in {i.code for i in r.issues}
 
 

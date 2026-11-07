@@ -7,7 +7,9 @@ prices and menu prices. Each test runs in a transaction that is rolled back.
 
 import json
 import os
+import time
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -88,3 +90,150 @@ def test_yesterday_s_food_cost_is_37_5_percent_through_the_rpc(
     assert Decimal(str(a["raw"])) == round(
         Decimal(100 * expected["numerator_cost"]) / Decimal(expected["denominator_net_ex_iva"]), 4
     )
+
+
+TENANT = "03299e41-28bd-5779-bcc6-0e5e76580fad"
+CENTRO = "705e8e51-376b-5785-adbb-405eff4e2a22"
+TODAY = "2026-10-12"
+LOCK_WAIT_POLLS = 100
+LOCK_WAIT_STEP_S = 0.1
+Conn = psycopg.Connection[Any]
+
+
+def one(conn: Conn, sql: str, args: tuple[Any, ...]) -> Any:
+    row = conn.execute(sql, args).fetchone()
+    assert row is not None
+    return row[0]
+
+
+def add_ingredient(conn: Conn) -> str:
+    """A throwaway ingredient at $1.00/g since January."""
+    ingredient = str(
+        one(
+            conn,
+            "insert into public.ingredient (tenant_id, name, base_unit) "
+            "values (%s, 'Prueba candado ' || gen_random_uuid(), 'g') returning id",
+            (TENANT,),
+        )
+    )
+    conn.execute(
+        "insert into public.ingredient_price "
+        "(tenant_id, ingredient_id, unit_price_net, effective_from, source) "
+        "values (%s, %s, 1.00, '2026-01-01', 'manual')",
+        (TENANT, ingredient),
+    )
+    return ingredient
+
+
+def add_dish(conn: Conn, ingredient: str) -> str:
+    """A throwaway dish at Centro made of 10 g of the ingredient, costed today."""
+    item = str(
+        one(
+            conn,
+            "insert into public.menu_item (tenant_id, name) "
+            "values (%s, 'Prueba candado ' || gen_random_uuid()) returning id",
+            (TENANT,),
+        )
+    )
+    conn.execute(
+        "insert into public.menu_item_price (tenant_id, location_id, menu_item_id, price_gross, "
+        "tax_rate, effective_from, source) "
+        "values (%s, %s, %s, 10000, 0.16, '2026-01-01', 'manual')",
+        (TENANT, CENTRO, item),
+    )
+    recipe = one(
+        conn,
+        "insert into public.recipe (tenant_id, menu_item_id, recipe_version, effective_from, "
+        "yield_qty, status) values (%s, %s, 1, '2026-01-01', 1, 'confirmed') returning id",
+        (TENANT, item),
+    )
+    conn.execute(
+        "insert into public.recipe_line (tenant_id, recipe_id, ingredient_id, qty_base) "
+        "values (%s, %s, %s, 10)",
+        (TENANT, recipe, ingredient),
+    )
+    conn.execute(
+        "select app.compute_dish_costs_for(%s, array[%s]::uuid[], %s, %s)",
+        (TENANT, item, TODAY, TODAY),
+    )
+    return item
+
+
+def price_tap_cost(url: str, opts: str, ingredient: str, item: str) -> int:
+    """The price approval: its price row, then the tap's recompute; rolled back. Returns the
+    dish's cost today as the tap left it."""
+    with psycopg.connect(url, options=opts) as b, b.transaction(force_rollback=True):
+        b.execute(
+            "insert into public.ingredient_price "
+            "(tenant_id, ingredient_id, unit_price_net, effective_from, source) "
+            "values (%s, %s, 3.00, %s, 'manual')",
+            (TENANT, ingredient, TODAY),
+        )
+        b.execute(
+            """select app.recompute_after_change(%s, %s, jsonb_populate_record(
+                 null::public.pending_change,
+                 jsonb_build_object('tenant_id', %s::uuid, 'kind', 'ingredient_price.set',
+                                    'target_id', %s::uuid)))""",
+            (TENANT, TODAY, TENANT, ingredient),
+        )
+        return int(
+            one(
+                b,
+                "select cost from public.dish_cost_snapshot where menu_item_id = %s and date = %s",
+                (item, TODAY),
+            )
+        )
+
+
+def wait_for_a_lock_waiter(url: str) -> None:
+    with psycopg.connect(url) as watcher:
+        for _ in range(LOCK_WAIT_POLLS):
+            sql = "select count(*) from pg_locks where locktype = 'advisory' and not granted"
+            if one(watcher, sql, ()) > 0:
+                return
+            time.sleep(LOCK_WAIT_STEP_S)
+    pytest.fail("the price tap never waited for the tenant lock")
+
+
+def remove(url: str, ingredient: str, item: str | None) -> None:
+    with psycopg.connect(url) as c:
+        if item:
+            c.execute("delete from public.dish_cost_snapshot where menu_item_id = %s", (item,))
+            c.execute(
+                "delete from public.recipe_line where recipe_id in "
+                "(select id from public.recipe where menu_item_id = %s)",
+                (item,),
+            )
+            for table in ("recipe", "menu_item_price"):
+                c.execute(f"delete from public.{table} where menu_item_id = %s", (item,))
+            c.execute("delete from public.menu_item where id = %s", (item,))
+        c.execute("delete from public.ingredient_price where ingredient_id = %s", (ingredient,))
+        c.execute("delete from public.ingredient where id = %s", (ingredient,))
+
+
+def test_a_tap_names_its_dishes_after_taking_the_tenant_lock() -> None:
+    """A2: a recipe approval (A) holds the per-tenant costing lock when a price approval (B) on an
+    ingredient of that recipe starts its recompute. B must list its dishes after A commits, or the
+    new dish keeps A's old cost. Commits throwaway rows (an ingredient, a dish, its price and
+    recipe) and removes them at the end; B is rolled back."""
+    url = os.environ.get("MERMIA_DB_URL")
+    if not url:
+        pytest.skip("MERMIA_DB_URL is not set")
+    opts = "-c lock_timeout=20s -c app.today=" + TODAY
+    with psycopg.connect(url, options=opts) as c:
+        ingredient = add_ingredient(c)
+    item: str | None = None
+    a = psycopg.connect(url, options=opts)
+    try:
+        # A: the recipe approval, its tap still open (it holds the lock)
+        a.execute("select app.lock_dish_costs(%s)", (TENANT,))
+        item = add_dish(a, ingredient)
+        with ThreadPoolExecutor(1) as pool:
+            cost = pool.submit(price_tap_cost, url, opts, ingredient, item)
+            wait_for_a_lock_waiter(url)
+            a.commit()
+            assert cost.result(timeout=30) == 3000  # 10 g at $3.00, not A's $1.00
+    finally:
+        a.rollback()
+        a.close()
+        remove(url, ingredient, item)

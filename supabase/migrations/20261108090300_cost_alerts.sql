@@ -163,14 +163,6 @@ as $$
   group by rl.ingredient_id
 $$;
 
--- The tenant's business day today (the timezone of its first location). Word for word MR-32's
--- app.tenant_today (20261105090000_apply_pending_change.sql), so the merged schema has one.
-create or replace function app.tenant_today(tenant uuid) returns date
-language sql stable set search_path = ''
-as $$
-  select app.business_today((select l.id from public.location l where l.tenant_id = tenant order by l.id limit 1))
-$$;
-
 -- Evaluator ----------------------------------------------------------------------------------
 -- Writes the tenant's alerts for one business day; returns how many rows it added. Idempotent: a
 -- rerun adds nothing. Price jumps are looked for over the 7 days to on_date, so a price entered a
@@ -257,7 +249,7 @@ end
 $$;
 
 -- get_cost_alerts on the shared jump rule ----------------------------------------------------
--- As in 20261104090000_read_rpcs_cost.sql, except price moves: ingredients with a jump
+-- As in 20261108090000_read_rpcs_cost.sql, except price moves: ingredients with a jump
 -- (app.price_jumps) that started in the window and a price of record above zero at the window's
 -- end. `change` is computed from that price and the price before the window (#77's move; the
 -- earliest jump's last price when the ingredient had none above zero then), so a second step
@@ -361,10 +353,11 @@ $$;
 -- The RPC runs as the caller and needs the jump rule. The evaluator and its spend ranking are the
 -- backend's (service_role), with the helpers and the sales view they read.
 revoke all on function app.cost_alert_settings(), app.price_jumps(uuid, date, date),
-  app.ingredient_spend(uuid, date, date), app.tenant_today(uuid), app.evaluate_cost_alerts(uuid, date, date)
+  app.ingredient_spend(uuid, date, date), app.evaluate_cost_alerts(uuid, date, date)
   from public, anon, authenticated;
 grant execute on function app.cost_alert_settings(), app.price_jumps(uuid, date, date) to authenticated, service_role;
-grant execute on function app.ingredient_spend(uuid, date, date), app.tenant_today(uuid),
+-- app.tenant_today is MR-32's (20261105090000_apply_pending_change.sql), granted there.
+grant execute on function app.ingredient_spend(uuid, date, date),
   app.evaluate_cost_alerts(uuid, date, date),
   app.food_cost_target(), app.live_ingredients(date), app.business_today(uuid) to service_role;
 grant select on app.v_item_sales_daily to service_role;

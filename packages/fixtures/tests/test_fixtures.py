@@ -130,12 +130,16 @@ GOLDEN = sorted((REPO / SR_DIR).glob("*.golden.json"))
 @pytest.mark.parametrize("path", GOLDEN, ids=lambda p: p.name)
 def test_golden_is_a_valid_batch(path: Path) -> None:
     batch = NormalizedBatch.model_validate_json(path.read_text())
-    rows = batch.item_sales if batch.grain == Grain.item_daily else batch.daily_sales
-    assert batch.totals.lines == len(rows)
     if batch.grain == Grain.item_daily:
+        assert batch.totals.lines == len(batch.item_sales)
         assert batch.totals.net_sales == sum(x.net for x in batch.item_sales)
-    else:
+    elif batch.grain == Grain.daily:
+        assert batch.totals.lines == len(batch.daily_sales)
         assert batch.totals.net_sales == sum(x.net_sales for x in batch.daily_sales)
+    else:
+        assert batch.grain == Grain.catalog
+        assert batch.totals.lines == len(batch.recipes)
+        assert batch.totals.net_sales is None
 
 
 def test_item_golden_matches_the_seed() -> None:
@@ -220,3 +224,58 @@ def test_daily_sample_agrees_with_its_golden() -> None:
             to_cents(x["Alimentos"]) + to_cents(x["Bebidas"]) - to_cents(x["Descuentos"])
             == g["net_sales"]
         )
+
+
+RECIPES = "recetas_L1_2026-10-12"
+
+
+def test_recipe_golden_matches_the_seed() -> None:
+    # the 15 dish recipes (salsa verde's own recipe is a sub-recipe, out of the export) with
+    # qty_base in base units, as recipe_line stores it, and one portion per recipe
+    batch = committed(SR_DIR / f"{RECIPES}.golden.json")
+    names = {i["id"]: i["name"] for i in committed(JSON_DIR / "ingredient.json")}
+    items = {m["id"]: m for m in committed(JSON_DIR / "menu_item.json")}
+    recipes = [x for x in committed(JSON_DIR / "recipe.json") if x.get("menu_item_id")]
+    lines = committed(JSON_DIR / "recipe_line.json")
+    salsa = next(x["id"] for x in committed(JSON_DIR / "recipe.json") if not x.get("menu_item_id"))
+    salsa_name = names[b.uid("ingredient", r.SALSA_VERDE)]
+    seed = {
+        items[x["menu_item_id"]]["external_id"]: (
+            items[x["menu_item_id"]]["name"],
+            x["yield_qty"],
+            [
+                (
+                    salsa_name if rl.get("sub_recipe_id") == salsa else names[rl["ingredient_id"]],
+                    rl["qty_base"],
+                )
+                for rl in lines
+                if rl["recipe_id"] == x["id"]
+            ],
+        )
+        for x in recipes
+    }
+    golden = {
+        g["menu_item_external_id"]: (
+            g["menu_item_name"],
+            g["yield_qty"],
+            [(x["ingredient_name"], x["qty_base"]) for x in g["lines"]],
+        )
+        for g in batch["recipes"]
+    }
+    assert len(golden) == 15
+    assert golden == seed
+    assert batch["grain"] == "catalog"
+    assert batch["period"] == {"from": "2026-10-12", "to": "2026-10-12"}
+
+
+def test_recipe_sample_agrees_with_its_golden() -> None:
+    golden = committed(SR_DIR / f"{RECIPES}.golden.json")["recipes"]
+    rows = table(SR_DIR / f"{RECIPES}.xlsx")
+    expected = [(g["menu_item_external_id"], x) for g in golden for x in g["lines"]]
+    assert len(rows) == len(expected)
+    per_base = {"KG": Decimal(1000), "LT": Decimal(1000), "GR": Decimal(1), "PZA": Decimal(1)}
+    for x, (code, g) in zip(rows, expected, strict=True):
+        assert (x["Clave"], x["Insumo"]) == (code, g["ingredient_name"])
+        qty = Decimal(str(x["Cantidad"])) * per_base[x["Unidad"]]
+        assert qty == Decimal(g["qty_base"])
+        assert x["Costo"] > 0

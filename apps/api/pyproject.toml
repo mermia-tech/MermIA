@@ -9,12 +9,16 @@ dependencies = [
     "mermia-contracts",
     "openpyxl>=3.1",
     "psycopg[binary]>=3.2",
+    "pyyaml>=6.0",
+    "defusedxml>=0.7.1",
 ]
 
 [dependency-groups]
 dev = [
     "httpx2",
+    "types-defusedxml>=0.7.0.20260504",
     "types-openpyxl",
+    "types-pyyaml",
 ]
 
 [tool.uv.sources]

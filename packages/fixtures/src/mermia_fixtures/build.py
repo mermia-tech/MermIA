@@ -32,6 +32,7 @@ SEED = 20261012
 
 PARSER_ITEMS = "sr.productos_vendidos@v1"
 PARSER_DAILY = "sr.ventas_por_dia@v1"
+PARSER_RECIPES = "sr.recetas@v1"
 PARSER_CANCELLATIONS = "sr.cancelaciones@v1"
 
 
