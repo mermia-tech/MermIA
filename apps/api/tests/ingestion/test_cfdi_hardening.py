@@ -139,3 +139,56 @@ def test_a_description_of_only_hidden_characters_is_refused() -> None:
     error = refusal(edited(DESCRIPCION, f'Descripcion="{HIDDEN}"'))
     assert isinstance(error, MalformedReport)
     assert "Descripcion" in error.message_es
+
+
+# --- R2: line price bound and subtotal tolerance ------------------------------------------
+
+
+def concepto(desc: str, cantidad: str, valor: str, importe: str) -> str:
+    return (
+        f'<cfdi:Concepto ClaveProdServ="50404900" Cantidad="{cantidad}" ClaveUnidad="KGM" '
+        f'Descripcion="{desc}" ValorUnitario="{valor}" Importe="{importe}" ObjetoImp="02"/>'
+    )
+
+
+def cfdi(*conceptos: str, subtotal: str, total: str) -> bytes:
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" '
+        'xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" Version="4.0" '
+        f'Fecha="2026-10-08T09:15:00" SubTotal="{subtotal}" Moneda="MXN" Total="{total}" '
+        'TipoDeComprobante="I" LugarExpedicion="37000">'
+        '<cfdi:Emisor Rfc="CSB150301AB1" Nombre="CARNES SELECTAS DEL BAJIO" RegimenFiscal="601"/>'
+        '<cfdi:Receptor Rfc="TEG190415MX2" Nombre="TAQUERIA EL GUERO" UsoCFDI="G01"/>'
+        f"<cfdi:Conceptos>{''.join(conceptos)}</cfdi:Conceptos>"
+        '<cfdi:Complemento><tfd:TimbreFiscalDigital Version="1.1" '
+        'UUID="5D3E8A1C-7B2F-4E9A-9C61-0F4A2B7D8E13"/></cfdi:Complemento></cfdi:Comprobante>'
+    ).encode()
+
+
+def malformed(data: bytes) -> str:
+    err = refusal(data)
+    assert isinstance(err, MalformedReport)
+    return err.message_es
+
+
+def test_a_line_price_beyond_the_contract_is_refused_naming_the_concepto() -> None:
+    line = concepto(f"MUY{HIDDEN}CARO", "0.000001", "999999999.99", "999999999.99")
+    message = malformed(cfdi(line, subtotal="999999999.99", total="999999999.99"))
+    assert "concepto 1" in message
+    assert "MUYCARO" in message
+    assert "dañado" not in message
+    assert not has_hidden_characters(message)
+
+
+def test_the_subtotal_tolerance_is_half_a_centavo_per_line() -> None:
+    lines = [concepto("A", "1", "10.005", "10.005"), concepto("B", "1", "10.005", "10.005")]
+    assert "SubTotal" in malformed(cfdi(*lines, subtotal="20.03", total="20.03"))
+
+
+def test_a_sum_gap_warning_states_the_gap_in_pesos() -> None:
+    lines = [concepto("A", "1", "10.005", "10.005"), concepto("B", "1", "10.005", "10.005")]
+    batch = parse_file(cfdi(*lines, subtotal="20.02", total="20.02"))
+    (issue,) = batch.issues
+    assert "$0.01" in issue.message_es
+    assert "centavos" not in issue.message_es

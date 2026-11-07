@@ -293,11 +293,18 @@ def _line(el: Element, n: int) -> _Line:
             f"El Descuento del concepto {n} es mayor que su Importe.",
             f"Descuento > Importe at concepto {n}",
         )
+    price = ((importe - descuento) / qty).quantize(PRICE, ROUND_HALF_UP)
+    if price >= MAX_NUMBER:
+        raise MalformedReport(
+            f"El precio del concepto {n} ({shown(description)}) es demasiado grande: "
+            "revisa su Cantidad e Importe.",
+            f"unit price out of range at concepto {n}: {price}",
+        )
     line = PurchaseLineIn(
         description=description,
         qty=qty.quantize(PRICE),
         unit=unit,
-        unit_price_net=((importe - descuento) / qty).quantize(PRICE, ROUND_HALF_UP),
+        unit_price_net=price,
     )
     is_outlier = abs(qty * valor - importe) > _importe_tolerance(qty, valor, importe)
     issues = _line_issues(el, f"concepto {n} ({shown(description)})", n, is_outlier)
@@ -318,11 +325,11 @@ def _lines(root: Element) -> list[_Line]:
 
 def _check_sum(given: Decimal, name: str, parts: list[Decimal], label: str) -> list[IssueIn]:
     """The Comprobante's `name` must be the sum of the lines' amounts. An issuer that rounds each
-    line before adding may be off by up to a centavo per line (at most MAX_LINES centavos): that
+    line before adding may be off by up to half a centavo per line: that
     gap is a warning and the invoice's own figure is kept. A larger gap is refused."""
     summed = sum(parts, Decimal(0))
     rounded = summed.quantize(CENT, ROUND_HALF_UP)
-    if abs(given - summed) > CENT * len(parts):
+    if abs(given - summed) > Decimal("0.005") * len(parts):
         raise MalformedReport(
             f"El {name} de la factura ({given}) no es la suma de {label} ({rounded}).",
             f"{name} {given} != sum of lines {summed}",
@@ -330,8 +337,8 @@ def _check_sum(given: Decimal, name: str, parts: list[Decimal], label: str) -> l
     if given == rounded:
         return []
     message = (
-        f"El {name} de la factura ({given}) difiere por centavos de la suma de {label} "
-        f"({rounded}); tomo el de la factura."
+        f"El {name} de la factura ({given}) difiere por ${abs(given - rounded)} de la suma "
+        f"de {label} ({rounded}); tomo el de la factura."
     )
     return [IssueIn(severity=IssueSeverity.warning, code="cfdi.sum_gap", message_es=message)]
 
