@@ -403,10 +403,10 @@ select is((select count(*) from public.ingredient_price where pending_change_id 
           'with the price write rolled back: the record and the apply commit together');
 drop trigger zz_boom on public.dish_cost_backfill;
 
--- recipe.upsert is part 2: it fails cleanly for now
+-- recipe.upsert without the importer's resolved lines (diff.after) cannot be applied (part 2: 96_apply_recipe)
 select pg_temp.propose('recipe', 'recipe.upsert', 'menu_item', :PASTOR,
                        '{"yield_qty": "1", "lines": [{"ingredient_name": "Carne al pastor (adobada)", "qty_base": "120", "unit": "g"}]}');
-select is(pg_temp.tap('recipe', 'recipe', :OWNER) ->> 'code', 'failed', 'recipe.upsert is not applied yet (part 2)');
+select is(pg_temp.tap('recipe', 'recipe', :OWNER) ->> 'code', 'failed', 'a recipe.upsert with no resolved lines fails');
 select is(pg_temp.audits('recipe', 'pending_change.fail'), 1::bigint, 'with a fail audit row');
 
 -- MR-87: the sweep counts failures per record and gives up after MAX_BACKFILL_ATTEMPTS

@@ -56,3 +56,8 @@
 - `apply_batch` hard-codes owner/manager while apply uses `can_approve` (an admin allowed by `can_approve` gets `forbidden_role`).
 - No channel or request_id in the audit rows.
 - Phase 2 dashboard "under the user's session" (09 §5.3) vs `service_role` only.
+
+## Part 2: recipe.upsert (2026-11-06)
+- Migration `20261106090000_apply_recipe_upsert.sql`: `app.apply_recipe` writes a new confirmed recipe version (`max + 1`, `effective_from` = the tenant's business today) from `diff.after.lines` (the MR-25 importer's resolved ids); `payload.values` must describe the same recipe. A `new_ingredient` line reuses the tenant's ingredient with the same `lower(name)` and base unit, else creates it with the line's unit; the same name in another unit fails. Lines must use their ingredient's base unit; a sub-recipe must produce an ingredient (the MR-25 triggers stay the cycle backstop).
+- D1: recipes are tenant-wide, so `pending_change_denial` refuses a member without all locations (`location`).
+- Tests: `supabase/tests/96_apply_recipe.test.sql`, `apps/api/tests/confirm/test_apply_recipe.py` (importer to apply, end to end).

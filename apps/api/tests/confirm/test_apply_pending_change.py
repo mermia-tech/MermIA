@@ -389,7 +389,7 @@ def test_a_transient_error_escapes_and_leaves_the_change_pending(
     assert status == ("pending",)
 
 
-def test_a_recipe_change_fails_until_part_2(conn: psycopg.Connection[Any]) -> None:
+def test_a_recipe_change_without_resolved_lines_fails(conn: psycopg.Connection[Any]) -> None:
     change = propose(
         conn,
         PendingKind.recipe_upsert,
