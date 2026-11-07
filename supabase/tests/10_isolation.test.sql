@@ -1,6 +1,6 @@
 -- Layers: privilege + policy. Data-driven tenant and location isolation over every table
 -- (spec 7.2, 10.4). Fixtures are inserted with foreign keys switched off (replica mode) so one
--- generic generator can fill all 40 tables; the integrity of the keys is proven in 40_integrity.
+-- generic generator can fill all 41 tables; the integrity of the keys is proven in 40_integrity.
 begin;
 select * from no_plan();
 
@@ -32,6 +32,7 @@ begin
            when a.attname = 'sha256' then quote_literal(repeat('a', 64))
            when a.attname = 'parser' then quote_literal('sr.test@v1')
            when a.attname = 'code' then quote_literal('ok')
+           when a.attname = 'timezone' then quote_literal('America/Mexico_City')
            when a.attname = 'currency' then quote_literal('MXN')
            when t.typtype = 'e' then quote_literal((select enumlabel from pg_enum where enumtypid = t.oid order by enumsortorder limit 1)) || '::' || format_type(a.atttypid, a.atttypmod)
            when t.typcategory = 'A' then quote_literal('{}') || '::' || format_type(a.atttypid, a.atttypmod)
@@ -66,7 +67,7 @@ declare
   b1 constant uuid := 'b1b1b1b1-0000-7000-8000-000000000001';
   pins_recipe constant jsonb := '{"menu_item_id": "gen_random_uuid()"}';
   pins_line constant jsonb := '{"ingredient_id": "gen_random_uuid()"}';
-  pins_alert constant jsonb := '{"rule": "''margin_breach''", "menu_item_id": "gen_random_uuid()", "as_of": "current_date", "value": "40", "threshold": "35"}';
+  pins_alert constant jsonb := '{"rule": "''margin_breach''", "menu_item_id": "gen_random_uuid()", "as_of": "current_date", "value": "40", "threshold": "35", "confidence": "''confirmed''"}';
   pins_suggestion constant jsonb := '{"rule": "''margin_breach''", "menu_item_id": "gen_random_uuid()", "as_of": "current_date", "episode_start": "current_date", "value": "40", "threshold": "35", "current_price": "8000", "target_price": "9000", "confidence": "''estimated''::app.cost_confidence", "rationale_code": "''review_portion_cost''"}';
   p jsonb;
 begin
@@ -157,7 +158,7 @@ from result where expected is distinct from actual;
 select is((select count(*) from result where expected is distinct from actual), 0::bigint,
           'authenticated sees exactly the rows its claims allow, in every table and scenario');
 select is((select count(*) from result), (select count(*) from cls) * (select count(*) from scenario),
-          'the matrix covers all 40 tables and all 9 scenarios');
+          'the matrix covers all 41 tables and all 9 scenarios');
 
 -- anon is denied at the privilege layer everywhere
 select is((select count(*) from cls where pg_temp.seen('anon', '', tbl) is distinct from 'ERR 42501'), 0::bigint,

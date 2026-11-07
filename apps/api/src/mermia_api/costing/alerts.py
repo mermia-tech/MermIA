@@ -1,15 +1,17 @@
 """Run the cost alert rules for a tenant (MR-33, 03 "Alert thresholds").
 
 The rules live in SQL next to the costing engine (`app.evaluate_cost_alerts`, migration
-20261106100000_cost_alerts.sql): price jumps and margin breaches become `public.alert` rows, urgent
+20261108090300_cost_alerts.sql): price jumps and margin breaches become `public.alert` rows, urgent
 ones marked for a same-day message (U3; sending is MR-37 / MR-38). The same call writes the day's
-menu price suggestions (`public.price_suggestion`, 20261106110000_price_suggestions.sql). Nothing
+menu price suggestions (`public.price_suggestion`, 20261108090400_price_suggestions.sql). Nothing
 is ever applied: the evaluator writes no pending change and no menu price.
 
 The backend calls `evaluate_cost_alerts` once a day per tenant, after the day's dish costs are
 computed, and `evaluate_cost_alerts_range` to catch up on missed days (oldest first, so breach
 episodes and urgency read the days in order). Urgency is judged against the business day the
 run happens (`today`), never the day evaluated, so a catch-up over old days marks nothing urgent.
+A margin breach is urgent only on a confirmed dish cost (owner decision 2026-11-07): one on an
+estimated cost is recorded with its `confidence` for the weekly report, never sent the same day.
 Run it on a service-role connection with no transaction open: each day commits on its own. It is
 idempotent: a rerun adds nothing.
 """
@@ -46,8 +48,13 @@ def evaluate_cost_alerts(
 
 
 def tenant_today(conn: psycopg.Connection[Any], tenant_id: UUID) -> dt.date:
-    """The tenant's business day today, as the database sees it."""
-    row = conn.execute("select app.tenant_today(%s)", (tenant_id,)).fetchone()
+    """The tenant's business day today, as the database sees it.
+
+    Read in its own transaction: a bare execute would leave one open, so every later day of a
+    range would run as a savepoint inside it and nothing would commit until the end.
+    """
+    with conn.transaction():
+        row = conn.execute("select app.tenant_today(%s)", (tenant_id,)).fetchone()
     if row is None or row[0] is None:  # a function call always returns one row
         raise RuntimeError("app.tenant_today returned no day")
     day: dt.date = row[0]

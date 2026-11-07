@@ -534,6 +534,41 @@ select ok(pg_temp.rpc(:OWNER, format('api.get_cancellations(%L, location_id => %
           'R4: never a full last name');
 rollback to savepoint same_first_name;
 
+-- PR #77 review 5: two staff with the same first name and last initial get a number, never more of the name
+savepoint same_initial;
+insert into public.staff (id, tenant_id, location_id, display_name)
+values ('eeeeeeee-0000-7000-8000-000000000511', :'TENANT', :'CENTRO', 'Luis Martínez'),
+       ('eeeeeeee-0000-7000-8000-000000000512', :'TENANT', :'CENTRO', 'Luis Méndez'),
+       ('eeeeeeee-0000-7000-8000-000000000513', :'TENANT', :'CENTRO', 'Luis Romero');
+select is(pg_temp.rpc(:OWNER, $$(select jsonb_agg(n.name order by n.staff_id) from app.staff_names(array[
+             'eeeeeeee-0000-7000-8000-000000000512', 'eeeeeeee-0000-7000-8000-000000000511',
+             'eeeeeeee-0000-7000-8000-000000000513', null]::uuid[]) n)$$),
+          '["Luis M.", "Luis M. (2)", "Luis R.", "Sin asignar"]', 'R5: the shared "Luis M." gets a number by staff id; Luis R. and Sin asignar keep theirs');
+select ok(pg_temp.rpc(:OWNER, $$(select jsonb_agg(n.name) from app.staff_names(array[
+             'eeeeeeee-0000-7000-8000-000000000511', 'eeeeeeee-0000-7000-8000-000000000512']::uuid[]) n)$$)::text !~* 'mart|m[eé]nd',
+          'R5: never more of the last name');
+rollback to savepoint same_initial;
+
+-- MR-98 (PR-4): a location with no open day in the period gets a note, not "Sin datos para"
+savepoint closed_location;
+update public.location set closed_weekdays = '{6,7}' where id = :'POLANCO';
+delete from public.daily_sales_agg where location_id = :'POLANCO' and business_date in ('2026-10-10', '2026-10-11');
+delete from public.item_sales_agg where location_id = :'POLANCO' and period_from <= '2026-10-11' and period_to >= '2026-10-10';
+delete from public.sale_line where ticket_id in
+  (select id from public.sale_ticket where location_id = :'POLANCO' and business_date in ('2026-10-10', '2026-10-11'));
+delete from public.sale_ticket where location_id = :'POLANCO' and business_date in ('2026-10-10', '2026-10-11');
+select is(pg_temp.rpc(:OWNER, format('api.compare_locations(%L, %L)', 'net_sales', '"yesterday"')) -> 'flags',
+          '[{"code": "closed_locations", "message": "Polanco no abre ese día."}]',
+          'PR-4: yesterday, Polanco''s closed Sunday: the note, not "Sin datos para: Polanco"');
+select is(jsonb_array_length(pg_temp.rpc(:OWNER, format('api.compare_locations(%L, %L)', 'net_sales', '"yesterday"')) #> '{data,rows}'), 1,
+          'PR-4: Centro is still ranked');
+select is(pg_temp.rpc(:OWNER, format('api.compare_locations(%L, %L)', 'net_sales', '{"from": "2026-10-10", "to": "2026-10-11"}')) -> 'flags',
+          '[{"code": "closed_locations", "message": "Polanco no abre esos días."}]', 'PR-4: "esos días" for a longer period');
+update public.location set closed_weekdays = '{}' where id = :'POLANCO';
+select is(pg_temp.rpc(:OWNER, format('api.compare_locations(%L, %L)', 'net_sales', '"yesterday"')) #>> '{flags,0,message}',
+          'Sin datos para: Polanco.', 'PR-4: the same gap on a day Polanco opens is still "Sin datos para"');
+rollback to savepoint closed_location;
+
 -- (outside any savepoint, so pgTAP's count keeps the savepoint tests above)
 select ok(pg_temp.rpc(:OWNER, format('api.get_top_dishes(%L, %L, location_id => %L)', '"yesterday"', 'margin_pct', :'CENTRO')) -> 'flags'
             @> '[{"code": "cost_estimated"}]', 'R3: top dishes by margin say cost_estimated');
