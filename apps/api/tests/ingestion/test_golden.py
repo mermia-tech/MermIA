@@ -5,17 +5,23 @@
   .golden.json and it is picked up here.
 - fixtures/templates/: the MermIA recipe template, written from the seed by its CLI
   (`uv run python -m mermia_api.ingestion.templates.recetas ... --golden`), never by hand.
+- fixtures/cfdi/<origin>/: CFDI 4.0 supplier invoices (XML). `synthetic/` is written by hand and
+  its golden checked by hand; a real anonymized invoice goes in its own folder with its golden.
 """
 
 from pathlib import Path
 
 import pytest
 
-from mermia_api.ingestion.registry import XLSX_PARSERS, parse_file
+from mermia_api.ingestion.registry import XLSX_PARSERS, XML_PARSERS, parse_file
 from mermia_contracts.batch import NormalizedBatch
 
 FIXTURES = Path(__file__).parents[4] / "fixtures"
-SAMPLES = sorted(FIXTURES.glob("sr/*/*.xlsx")) + sorted(FIXTURES.glob("templates/*.xlsx"))
+SAMPLES = (
+    sorted(FIXTURES.glob("sr/*/*.xlsx"))
+    + sorted(FIXTURES.glob("templates/*.xlsx"))
+    + sorted(FIXTURES.glob("cfdi/*/*.xml"))
+)
 
 
 @pytest.mark.parametrize("path", SAMPLES, ids=lambda p: f"{p.parent.name}/{p.name}")
@@ -30,4 +36,5 @@ def test_every_parser_has_a_sample() -> None:
         NormalizedBatch.model_validate_json(p.with_name(p.stem + ".golden.json").read_text()).parser
         for p in SAMPLES
     }
-    assert {p.name for p in XLSX_PARSERS} <= parsers
+    names = {p.name for p in XLSX_PARSERS} | {p.name for p in XML_PARSERS}
+    assert names <= parsers
