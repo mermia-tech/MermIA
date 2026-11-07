@@ -1,0 +1,948 @@
+{
+  "args": {
+    "period": "last_week"
+  },
+  "response": {
+    "ok": true,
+    "data": {
+      "week": {
+        "to": "2026-10-11",
+        "from": "2026-10-05"
+      },
+      "sales": {
+        "guests": 2418,
+        "tickets": 1089,
+        "discounts": {
+          "raw": 83570,
+          "text": "$835.70"
+        },
+        "net_sales": {
+          "raw": 34524130,
+          "text": "$345,241.30"
+        },
+        "avg_ticket": {
+          "raw": 31703,
+          "text": "$317.03"
+        },
+        "cancellations": {
+          "raw": 423000,
+          "text": "$4,230.00"
+        },
+        "change_vs_previous": {
+          "raw": 3.513,
+          "text": "+3.5%"
+        }
+      },
+      "food_cost": {
+        "target": {
+          "raw": 32,
+          "text": "32.0%"
+        },
+        "coverage": {
+          "raw": 72.3437,
+          "text": "72.3%"
+        },
+        "by_category": [],
+        "theoretical": {
+          "raw": 38.7663,
+          "text": "38.8%"
+        }
+      },
+      "locations": [
+        {
+          "name": "Centro",
+          "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22"
+        },
+        {
+          "name": "Polanco",
+          "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e"
+        }
+      ],
+      "top_dishes": {
+        "rows": [
+          {
+            "name": "Tacos al pastor (orden de 3)",
+            "rank": 1,
+            "value": {
+              "raw": 708,
+              "text": "708"
+            },
+            "menu_item_id": "f496f051-9f85-5f8a-a4b6-c1a814d37c73"
+          },
+          {
+            "name": "Coca-Cola",
+            "rank": 2,
+            "value": {
+              "raw": 498,
+              "text": "498"
+            },
+            "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05"
+          },
+          {
+            "name": "Tacos de bistec (orden de 3)",
+            "rank": 3,
+            "value": {
+              "raw": 343,
+              "text": "343"
+            },
+            "menu_item_id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8"
+          }
+        ],
+        "metric": "units"
+      },
+      "cost_alerts": {
+        "breaches": [
+          {
+            "at": [
+              {
+                "cost": {
+                  "raw": 6976,
+                  "text": "$69.76"
+                },
+                "food_cost": {
+                  "raw": 55.808,
+                  "text": "55.8%"
+                },
+                "net_price": {
+                  "raw": 12500,
+                  "text": "$125.00"
+                },
+                "confidence": "estimated",
+                "suggestion": {
+                  "name": "Alambre de res",
+                  "change": null,
+                  "confidence": "estimated",
+                  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+                  "menu_item_id": "81404715-16f4-518e-b9e7-07df075161eb",
+                  "target_price": {
+                    "raw": 25288,
+                    "text": "$252.88"
+                  },
+                  "current_price": {
+                    "raw": 14500,
+                    "text": "$145.00"
+                  },
+                  "new_food_cost": null,
+                  "rationale_code": "review_portion_cost",
+                  "suggested_price": null
+                },
+                "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+                "price_gross": {
+                  "raw": 14500,
+                  "text": "$145.00"
+                }
+              },
+              {
+                "cost": {
+                  "raw": 6976,
+                  "text": "$69.76"
+                },
+                "food_cost": {
+                  "raw": 50.5764,
+                  "text": "50.6%"
+                },
+                "net_price": {
+                  "raw": 13793,
+                  "text": "$137.93"
+                },
+                "confidence": "estimated",
+                "suggestion": {
+                  "name": "Alambre de res",
+                  "change": null,
+                  "confidence": "estimated",
+                  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+                  "menu_item_id": "81404715-16f4-518e-b9e7-07df075161eb",
+                  "target_price": {
+                    "raw": 25288,
+                    "text": "$252.88"
+                  },
+                  "current_price": {
+                    "raw": 16000,
+                    "text": "$160.00"
+                  },
+                  "new_food_cost": null,
+                  "rationale_code": "review_portion_cost",
+                  "suggested_price": null
+                },
+                "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+                "price_gross": {
+                  "raw": 16000,
+                  "text": "$160.00"
+                }
+              }
+            ],
+            "name": "Alambre de res",
+            "target": {
+              "raw": 32,
+              "text": "32.0%"
+            },
+            "food_cost": {
+              "raw": 55.808,
+              "text": "55.8%"
+            },
+            "menu_item_id": "81404715-16f4-518e-b9e7-07df075161eb"
+          },
+          {
+            "at": [
+              {
+                "cost": {
+                  "raw": 1400,
+                  "text": "$14.00"
+                },
+                "food_cost": {
+                  "raw": 54.1377,
+                  "text": "54.1%"
+                },
+                "net_price": {
+                  "raw": 2586,
+                  "text": "$25.86"
+                },
+                "confidence": "estimated",
+                "suggestion": null,
+                "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+                "price_gross": {
+                  "raw": 3000,
+                  "text": "$30.00"
+                }
+              },
+              {
+                "cost": {
+                  "raw": 1400,
+                  "text": "$14.00"
+                },
+                "food_cost": {
+                  "raw": 49.2091,
+                  "text": "49.2%"
+                },
+                "net_price": {
+                  "raw": 2845,
+                  "text": "$28.45"
+                },
+                "confidence": "estimated",
+                "suggestion": null,
+                "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+                "price_gross": {
+                  "raw": 3300,
+                  "text": "$33.00"
+                }
+              }
+            ],
+            "name": "Coca-Cola",
+            "target": {
+              "raw": 32,
+              "text": "32.0%"
+            },
+            "food_cost": {
+              "raw": 54.1377,
+              "text": "54.1%"
+            },
+            "menu_item_id": "6ad0cd19-1e20-5d83-89d9-f35cb46afd05"
+          },
+          {
+            "at": [
+              {
+                "cost": {
+                  "raw": 3855,
+                  "text": "$38.55"
+                },
+                "food_cost": {
+                  "raw": 52.6064,
+                  "text": "52.6%"
+                },
+                "net_price": {
+                  "raw": 7328,
+                  "text": "$73.28"
+                },
+                "confidence": "estimated",
+                "suggestion": null,
+                "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+                "price_gross": {
+                  "raw": 8500,
+                  "text": "$85.00"
+                }
+              },
+              {
+                "cost": {
+                  "raw": 3855,
+                  "text": "$38.55"
+                },
+                "food_cost": {
+                  "raw": 47.575,
+                  "text": "47.6%"
+                },
+                "net_price": {
+                  "raw": 8103,
+                  "text": "$81.03"
+                },
+                "confidence": "estimated",
+                "suggestion": null,
+                "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+                "price_gross": {
+                  "raw": 9400,
+                  "text": "$94.00"
+                }
+              }
+            ],
+            "name": "Gringa de pastor",
+            "target": {
+              "raw": 32,
+              "text": "32.0%"
+            },
+            "food_cost": {
+              "raw": 52.6064,
+              "text": "52.6%"
+            },
+            "menu_item_id": "e6e3bfbc-32bd-5345-aa3b-de89839dd88f"
+          },
+          {
+            "at": [
+              {
+                "cost": {
+                  "raw": 1941,
+                  "text": "$19.41"
+                },
+                "food_cost": {
+                  "raw": 50.0387,
+                  "text": "50.0%"
+                },
+                "net_price": {
+                  "raw": 3879,
+                  "text": "$38.79"
+                },
+                "confidence": "estimated",
+                "suggestion": null,
+                "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+                "price_gross": {
+                  "raw": 4500,
+                  "text": "$45.00"
+                }
+              },
+              {
+                "cost": {
+                  "raw": 1941,
+                  "text": "$19.41"
+                },
+                "food_cost": {
+                  "raw": 45.0348,
+                  "text": "45.0%"
+                },
+                "net_price": {
+                  "raw": 4310,
+                  "text": "$43.10"
+                },
+                "confidence": "estimated",
+                "suggestion": {
+                  "name": "Quesadilla de queso",
+                  "change": {
+                    "raw": 10,
+                    "text": "+10.0%"
+                  },
+                  "confidence": "estimated",
+                  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+                  "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
+                  "target_price": {
+                    "raw": 7037,
+                    "text": "$70.37"
+                  },
+                  "current_price": {
+                    "raw": 5000,
+                    "text": "$50.00"
+                  },
+                  "new_food_cost": {
+                    "raw": 40.9407,
+                    "text": "40.9%"
+                  },
+                  "rationale_code": "raise_capped",
+                  "suggested_price": {
+                    "raw": 5500,
+                    "text": "$55.00"
+                  }
+                },
+                "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+                "price_gross": {
+                  "raw": 5000,
+                  "text": "$50.00"
+                }
+              }
+            ],
+            "name": "Quesadilla de queso",
+            "target": {
+              "raw": 32,
+              "text": "32.0%"
+            },
+            "food_cost": {
+              "raw": 50.0387,
+              "text": "50.0%"
+            },
+            "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37"
+          },
+          {
+            "at": [
+              {
+                "cost": {
+                  "raw": 3449,
+                  "text": "$34.49"
+                },
+                "food_cost": {
+                  "raw": 50.0072,
+                  "text": "50.0%"
+                },
+                "net_price": {
+                  "raw": 6897,
+                  "text": "$68.97"
+                },
+                "confidence": "estimated",
+                "suggestion": {
+                  "name": "Torta de pastor",
+                  "change": null,
+                  "confidence": "estimated",
+                  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+                  "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
+                  "target_price": {
+                    "raw": 12503,
+                    "text": "$125.03"
+                  },
+                  "current_price": {
+                    "raw": 8000,
+                    "text": "$80.00"
+                  },
+                  "new_food_cost": null,
+                  "rationale_code": "review_portion_cost",
+                  "suggested_price": null
+                },
+                "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+                "price_gross": {
+                  "raw": 8000,
+                  "text": "$80.00"
+                }
+              },
+              {
+                "cost": {
+                  "raw": 3449,
+                  "text": "$34.49"
+                },
+                "food_cost": {
+                  "raw": 45.4653,
+                  "text": "45.5%"
+                },
+                "net_price": {
+                  "raw": 7586,
+                  "text": "$75.86"
+                },
+                "confidence": "estimated",
+                "suggestion": {
+                  "name": "Torta de pastor",
+                  "change": null,
+                  "confidence": "estimated",
+                  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+                  "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
+                  "target_price": {
+                    "raw": 12503,
+                    "text": "$125.03"
+                  },
+                  "current_price": {
+                    "raw": 8800,
+                    "text": "$88.00"
+                  },
+                  "new_food_cost": null,
+                  "rationale_code": "review_portion_cost",
+                  "suggested_price": null
+                },
+                "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+                "price_gross": {
+                  "raw": 8800,
+                  "text": "$88.00"
+                }
+              }
+            ],
+            "name": "Torta de pastor",
+            "target": {
+              "raw": 32,
+              "text": "32.0%"
+            },
+            "food_cost": {
+              "raw": 50.0072,
+              "text": "50.0%"
+            },
+            "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c"
+          },
+          {
+            "at": [
+              {
+                "cost": {
+                  "raw": 1882,
+                  "text": "$18.82"
+                },
+                "food_cost": {
+                  "raw": 48.5177,
+                  "text": "48.5%"
+                },
+                "net_price": {
+                  "raw": 3879,
+                  "text": "$38.79"
+                },
+                "confidence": "estimated",
+                "suggestion": {
+                  "name": "Volcán de pastor",
+                  "change": null,
+                  "confidence": "estimated",
+                  "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+                  "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
+                  "target_price": {
+                    "raw": 6823,
+                    "text": "$68.23"
+                  },
+                  "current_price": {
+                    "raw": 4500,
+                    "text": "$45.00"
+                  },
+                  "new_food_cost": null,
+                  "rationale_code": "review_portion_cost",
+                  "suggested_price": null
+                },
+                "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+                "price_gross": {
+                  "raw": 4500,
+                  "text": "$45.00"
+                }
+              },
+              {
+                "cost": {
+                  "raw": 1882,
+                  "text": "$18.82"
+                },
+                "food_cost": {
+                  "raw": 43.6659,
+                  "text": "43.7%"
+                },
+                "net_price": {
+                  "raw": 4310,
+                  "text": "$43.10"
+                },
+                "confidence": "estimated",
+                "suggestion": {
+                  "name": "Volcán de pastor",
+                  "change": null,
+                  "confidence": "estimated",
+                  "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+                  "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
+                  "target_price": {
+                    "raw": 6823,
+                    "text": "$68.23"
+                  },
+                  "current_price": {
+                    "raw": 5000,
+                    "text": "$50.00"
+                  },
+                  "new_food_cost": null,
+                  "rationale_code": "review_portion_cost",
+                  "suggested_price": null
+                },
+                "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+                "price_gross": {
+                  "raw": 5000,
+                  "text": "$50.00"
+                }
+              }
+            ],
+            "name": "Volcán de pastor",
+            "target": {
+              "raw": 32,
+              "text": "32.0%"
+            },
+            "food_cost": {
+              "raw": 48.5177,
+              "text": "48.5%"
+            },
+            "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0"
+          },
+          {
+            "at": [
+              {
+                "cost": {
+                  "raw": 1200,
+                  "text": "$12.00"
+                },
+                "food_cost": {
+                  "raw": 46.4037,
+                  "text": "46.4%"
+                },
+                "net_price": {
+                  "raw": 2586,
+                  "text": "$25.86"
+                },
+                "confidence": "estimated",
+                "suggestion": null,
+                "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+                "price_gross": {
+                  "raw": 3000,
+                  "text": "$30.00"
+                }
+              },
+              {
+                "cost": {
+                  "raw": 1200,
+                  "text": "$12.00"
+                },
+                "food_cost": {
+                  "raw": 42.1793,
+                  "text": "42.2%"
+                },
+                "net_price": {
+                  "raw": 2845,
+                  "text": "$28.45"
+                },
+                "confidence": "estimated",
+                "suggestion": null,
+                "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+                "price_gross": {
+                  "raw": 3300,
+                  "text": "$33.00"
+                }
+              }
+            ],
+            "name": "Agua mineral",
+            "target": {
+              "raw": 32,
+              "text": "32.0%"
+            },
+            "food_cost": {
+              "raw": 46.4037,
+              "text": "46.4%"
+            },
+            "menu_item_id": "1ea4dd32-cfd7-50b4-bdb0-3fa128bb154a"
+          },
+          {
+            "at": [
+              {
+                "cost": {
+                  "raw": 1800,
+                  "text": "$18.00"
+                },
+                "food_cost": {
+                  "raw": 46.4037,
+                  "text": "46.4%"
+                },
+                "net_price": {
+                  "raw": 3879,
+                  "text": "$38.79"
+                },
+                "confidence": "estimated",
+                "suggestion": null,
+                "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+                "price_gross": {
+                  "raw": 4500,
+                  "text": "$45.00"
+                }
+              },
+              {
+                "cost": {
+                  "raw": 1800,
+                  "text": "$18.00"
+                },
+                "food_cost": {
+                  "raw": 41.7633,
+                  "text": "41.8%"
+                },
+                "net_price": {
+                  "raw": 4310,
+                  "text": "$43.10"
+                },
+                "confidence": "estimated",
+                "suggestion": null,
+                "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+                "price_gross": {
+                  "raw": 5000,
+                  "text": "$50.00"
+                }
+              }
+            ],
+            "name": "Cerveza Corona",
+            "target": {
+              "raw": 32,
+              "text": "32.0%"
+            },
+            "food_cost": {
+              "raw": 46.4037,
+              "text": "46.4%"
+            },
+            "menu_item_id": "b55371fc-3a78-55c0-8edc-ed56d117914d"
+          },
+          {
+            "at": [
+              {
+                "cost": {
+                  "raw": 2532,
+                  "text": "$25.32"
+                },
+                "food_cost": {
+                  "raw": 39.1587,
+                  "text": "39.2%"
+                },
+                "net_price": {
+                  "raw": 6466,
+                  "text": "$64.66"
+                },
+                "confidence": "estimated",
+                "suggestion": null,
+                "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+                "price_gross": {
+                  "raw": 7500,
+                  "text": "$75.00"
+                }
+              },
+              {
+                "cost": {
+                  "raw": 2532,
+                  "text": "$25.32"
+                },
+                "food_cost": {
+                  "raw": 35.3878,
+                  "text": "35.4%"
+                },
+                "net_price": {
+                  "raw": 7155,
+                  "text": "$71.55"
+                },
+                "confidence": "estimated",
+                "suggestion": null,
+                "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+                "price_gross": {
+                  "raw": 8300,
+                  "text": "$83.00"
+                }
+              }
+            ],
+            "name": "Tacos de bistec (orden de 3)",
+            "target": {
+              "raw": 32,
+              "text": "32.0%"
+            },
+            "food_cost": {
+              "raw": 39.1587,
+              "text": "39.2%"
+            },
+            "menu_item_id": "f6fdf947-ec26-5cd9-90c2-4255b53ceae8"
+          },
+          {
+            "at": [
+              {
+                "cost": {
+                  "raw": 2343,
+                  "text": "$23.43"
+                },
+                "food_cost": {
+                  "raw": 38.83,
+                  "text": "38.8%"
+                },
+                "net_price": {
+                  "raw": 6034,
+                  "text": "$60.34"
+                },
+                "confidence": "estimated",
+                "suggestion": null,
+                "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+                "price_gross": {
+                  "raw": 7000,
+                  "text": "$70.00"
+                }
+              },
+              {
+                "cost": {
+                  "raw": 2343,
+                  "text": "$23.43"
+                },
+                "food_cost": {
+                  "raw": 35.2968,
+                  "text": "35.3%"
+                },
+                "net_price": {
+                  "raw": 6638,
+                  "text": "$66.38"
+                },
+                "confidence": "estimated",
+                "suggestion": null,
+                "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+                "price_gross": {
+                  "raw": 7700,
+                  "text": "$77.00"
+                }
+              }
+            ],
+            "name": "Tacos de suadero (orden de 3)",
+            "target": {
+              "raw": 32,
+              "text": "32.0%"
+            },
+            "food_cost": {
+              "raw": 38.83,
+              "text": "38.8%"
+            },
+            "menu_item_id": "78384b44-f9b6-59d0-88c6-e8a5ac27de63"
+          }
+        ],
+        "price_moves": [],
+        "suggestions": [
+          {
+            "name": "Alambre de res",
+            "change": null,
+            "confidence": "estimated",
+            "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+            "menu_item_id": "81404715-16f4-518e-b9e7-07df075161eb",
+            "target_price": {
+              "raw": 25288,
+              "text": "$252.88"
+            },
+            "current_price": {
+              "raw": 14500,
+              "text": "$145.00"
+            },
+            "new_food_cost": null,
+            "rationale_code": "review_portion_cost",
+            "suggested_price": null
+          },
+          {
+            "name": "Alambre de res",
+            "change": null,
+            "confidence": "estimated",
+            "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+            "menu_item_id": "81404715-16f4-518e-b9e7-07df075161eb",
+            "target_price": {
+              "raw": 25288,
+              "text": "$252.88"
+            },
+            "current_price": {
+              "raw": 16000,
+              "text": "$160.00"
+            },
+            "new_food_cost": null,
+            "rationale_code": "review_portion_cost",
+            "suggested_price": null
+          },
+          {
+            "name": "Torta de pastor",
+            "change": null,
+            "confidence": "estimated",
+            "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+            "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
+            "target_price": {
+              "raw": 12503,
+              "text": "$125.03"
+            },
+            "current_price": {
+              "raw": 8000,
+              "text": "$80.00"
+            },
+            "new_food_cost": null,
+            "rationale_code": "review_portion_cost",
+            "suggested_price": null
+          },
+          {
+            "name": "Volcán de pastor",
+            "change": null,
+            "confidence": "estimated",
+            "location_id": "705e8e51-376b-5785-adbb-405eff4e2a22",
+            "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
+            "target_price": {
+              "raw": 6823,
+              "text": "$68.23"
+            },
+            "current_price": {
+              "raw": 4500,
+              "text": "$45.00"
+            },
+            "new_food_cost": null,
+            "rationale_code": "review_portion_cost",
+            "suggested_price": null
+          },
+          {
+            "name": "Torta de pastor",
+            "change": null,
+            "confidence": "estimated",
+            "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+            "menu_item_id": "6a076c57-be40-5ece-b48f-4ab124f4e65c",
+            "target_price": {
+              "raw": 12503,
+              "text": "$125.03"
+            },
+            "current_price": {
+              "raw": 8800,
+              "text": "$88.00"
+            },
+            "new_food_cost": null,
+            "rationale_code": "review_portion_cost",
+            "suggested_price": null
+          },
+          {
+            "name": "Quesadilla de queso",
+            "change": {
+              "raw": 10,
+              "text": "+10.0%"
+            },
+            "confidence": "estimated",
+            "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+            "menu_item_id": "7724df82-1a06-5a9b-8bb9-6f56aeba7e37",
+            "target_price": {
+              "raw": 7037,
+              "text": "$70.37"
+            },
+            "current_price": {
+              "raw": 5000,
+              "text": "$50.00"
+            },
+            "new_food_cost": {
+              "raw": 40.9407,
+              "text": "40.9%"
+            },
+            "rationale_code": "raise_capped",
+            "suggested_price": {
+              "raw": 5500,
+              "text": "$55.00"
+            }
+          },
+          {
+            "name": "Volcán de pastor",
+            "change": null,
+            "confidence": "estimated",
+            "location_id": "fdda5e3b-6bcd-5c48-a6de-f524be37463e",
+            "menu_item_id": "0ff2f280-6ded-5c20-930d-3990303ecdc0",
+            "target_price": {
+              "raw": 6823,
+              "text": "$68.23"
+            },
+            "current_price": {
+              "raw": 5000,
+              "text": "$50.00"
+            },
+            "new_food_cost": null,
+            "rationale_code": "review_portion_cost",
+            "suggested_price": null
+          }
+        ],
+        "breaches_total": 10,
+        "price_moves_total": 0,
+        "suggestions_total": 7
+      },
+      "stale_costs": 28,
+      "previous_week": {
+        "to": "2026-10-04",
+        "from": "2026-09-28"
+      },
+      "missing_business_days": []
+    },
+    "meta": {
+      "as_of": "2026-10-12T15:00:00+00:00",
+      "coverage_pct": 100,
+      "period_resolved": {
+        "to": "2026-10-11",
+        "from": "2026-10-05"
+      }
+    },
+    "flags": [
+      {
+        "code": "cost_estimated",
+        "message": "Costos estimados: hay precios de más de 30 días o sin CFDI, o recetas sin confirmar."
+      }
+    ]
+  }
+}

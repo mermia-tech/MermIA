@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from pydantic import TypeAdapter
 
-from mermia_contracts.rpc import RPCS, RpcEnvelope
+from mermia_contracts.rpc import ALL_RPCS, RpcEnvelope
 from mermia_mock_rpc import rpcs
 
 CASES = [
@@ -18,17 +18,17 @@ def _data(name: str, variant: str | None = None) -> dict[str, Any]:
     return out
 
 
-def test_the_registry_covers_the_eleven_rpcs() -> None:
-    assert list(rpcs.VARIANTS) == list(RPCS) == list(rpcs.CANONICAL)
+def test_the_registry_covers_every_rpc() -> None:
+    assert list(rpcs.VARIANTS) == list(ALL_RPCS) == list(rpcs.CANONICAL)
 
 
 @pytest.mark.parametrize(("name", "variant"), CASES, ids=lambda v: str(v))
 def test_every_answer_is_valid_c3(name: str, variant: str | None) -> None:
-    RPCS[name].args.model_validate(rpcs.CANONICAL[name])
-    TypeAdapter(RpcEnvelope[RPCS[name].data]).validate_python(rpcs.build(name, variant))  # type: ignore[misc,arg-type]
+    ALL_RPCS[name].args.model_validate(rpcs.CANONICAL[name])
+    TypeAdapter(RpcEnvelope[ALL_RPCS[name].data]).validate_python(rpcs.build(name, variant))  # type: ignore[misc,arg-type]
 
 
-@pytest.mark.parametrize("name", list(RPCS))
+@pytest.mark.parametrize("name", list(ALL_RPCS))
 def test_error_variant_has_no_data(name: str) -> None:
     envelope = rpcs.build(name, "error")
     assert envelope["ok"] is False
@@ -142,3 +142,57 @@ def test_cost_alerts_report_the_two_price_jumps() -> None:
 
 def test_data_status_has_no_missing_days() -> None:
     assert _data("get_data_status")["missing_business_days"] == []
+
+
+def test_weekly_report_is_last_week_for_the_whole_business() -> None:
+    d = _data("build_weekly_report")
+    assert d["week"] == {"from": "2026-10-05", "to": "2026-10-11"}
+    assert d["sales"]["change_vs_previous"]["text"] == "+3.5%"
+    assert d["top_dishes"]["rows"][0]["name"] == "Tacos al pastor (orden de 3)"
+    assert d["cost_alerts"]["breaches_total"] == 9
+
+
+def test_weekly_report_raise_variant_has_a_price_to_suggest() -> None:
+    suggestions = _data("build_weekly_report", "raise")["cost_alerts"]["suggestions"]
+    raises = [s for s in suggestions if s["suggested_price"] is not None]
+    assert [(s["name"], s["suggested_price"]["text"]) for s in raises] == [
+        ("Quesadilla de queso", "$55.00")
+    ]
+
+
+def test_weekly_report_has_what_ver_margenes_needs() -> None:
+    """W4: the top breaches with, per location over target, cost, menu price, location name and
+    suggestion, no other call."""
+    d = _data("build_weekly_report")
+    names = {loc["location_id"]: loc["name"] for loc in d["locations"]}
+    top = d["cost_alerts"]["breaches"][:3]
+    lines = [
+        [
+            (
+                names[e["location_id"]],
+                e["cost"]["text"],
+                e["price_gross"]["text"],
+                e["food_cost"]["text"],
+            )
+            for e in b["at"]
+        ]
+        for b in top
+    ]
+    assert lines[1][0] == ("Centro", "$34.49", "$80.00", "50.0%")
+    assert [
+        b["at"][0]["suggestion"] and b["at"][0]["suggestion"]["rationale_code"] for b in top
+    ] == [
+        None,
+        "review_portion_cost",
+        "review_portion_cost",
+    ]
+
+
+def test_weekly_report_raise_variant_lists_each_location_over_target() -> None:
+    d = _data("build_weekly_report", "raise")
+    names = {loc["location_id"]: loc["name"] for loc in d["locations"]}
+    quesadilla = next(b for b in d["cost_alerts"]["breaches"] if b["name"] == "Quesadilla de queso")
+    assert [
+        (names[e["location_id"]], e["suggestion"] and e["suggestion"]["suggested_price"]["text"])
+        for e in quesadilla["at"]
+    ] == [("Centro", None), ("Polanco", "$55.00")]

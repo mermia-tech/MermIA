@@ -1,0 +1,61 @@
+{
+  "$defs": {
+    "Period": {
+      "additionalProperties": false,
+      "description": "Business dates covered by the batch, both inclusive.",
+      "properties": {
+        "from": {
+          "format": "date",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "format": "date",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Period",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The week to report: a named past week or an explicit Monday-to-Sunday {from, to} (W2).\nThe SQL also refuses a week that has not ended yet (it knows the business date).",
+  "properties": {
+    "location_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Location Id"
+    },
+    "period": {
+      "anyOf": [
+        {
+          "enum": [
+            "last_week",
+            "prev_week"
+          ],
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/Period"
+        }
+      ],
+      "default": "last_week",
+      "title": "Period"
+    }
+  },
+  "title": "BuildWeeklyReportArgs",
+  "type": "object"
+}

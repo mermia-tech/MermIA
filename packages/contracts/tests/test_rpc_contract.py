@@ -1,4 +1,4 @@
-"""C3: the 11 RPC contracts parse their examples and reject malformed input."""
+"""C3: the 11 RPC contracts and the report RPCs parse their examples and reject malformed input."""
 
 import copy
 import json
@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from mermia_contracts.rpc import RPCS, RpcEnvelope
+from mermia_contracts.rpc import ALL_RPCS, RPCS, RpcEnvelope
 
 EXAMPLES = Path(__file__).parent / "examples" / "rpc"
 FILES = sorted(EXAMPLES.glob("*.json"))
@@ -28,7 +28,7 @@ NAMES = [
 
 
 def _envelope(name: str) -> TypeAdapter[Any]:
-    return TypeAdapter(RpcEnvelope[RPCS[name].data])  # type: ignore[misc,arg-type]
+    return TypeAdapter(RpcEnvelope[ALL_RPCS[name].data])  # type: ignore[misc,arg-type]
 
 
 def test_registry_has_the_eleven_rpcs_in_order() -> None:
@@ -36,14 +36,14 @@ def test_registry_has_the_eleven_rpcs_in_order() -> None:
 
 
 def test_every_rpc_has_an_example() -> None:
-    assert {p.name.split(".")[0] for p in FILES} >= set(NAMES)
+    assert {p.name.split(".")[0] for p in FILES} >= set(ALL_RPCS)
 
 
 @pytest.mark.parametrize("path", FILES, ids=lambda p: p.name)
 def test_examples_parse_and_round_trip(path: Path) -> None:
     name = path.name.split(".")[0]
     example = json.loads(path.read_text())
-    RPCS[name].args.model_validate(example["args"])
+    ALL_RPCS[name].args.model_validate(example["args"])
     adapter = _envelope(name)
     parsed = adapter.validate_json(json.dumps(example["response"]))
     assert adapter.validate_json(adapter.dump_json(parsed, by_alias=True)) == parsed

@@ -1,9 +1,12 @@
-"""C3: the 11 read RPCs (09 section 4.1): arguments, response data and the shared envelope.
+"""C3: the 11 read RPCs (09 section 4.1) and the report RPCs: arguments, response data and the
+shared envelope.
 
 Wire format follows batch.py: snake_case JSON, unknown fields are an error, money is integer
 centavos, percentages are percent points. Every number the agent may quote travels twice: a raw
 value for charts and code, and the text the metric layer already formatted ("$184,320.50").
-RPC names are the agent tool names (agent_tools.py builds C4 from RPCS).
+RPC names are the agent tool names (agent_tools.py builds C4 from RPCS). The report RPCs
+(REPORT_RPCS: build_weekly_report, MR-34) are for code, not the agent: they are not tools, so the
+prompt prefix and the tool budget stay as they are. ALL_RPCS is both, for the schemas and the mock.
 
 Choices not fixed by 09 (my calls, open to change before the freeze): the `error` field and its
 closed code list, `Flag` carrying only a code and a message, and the ambiguous-dish answer being
@@ -358,6 +361,14 @@ class CostDriver(Model):
     share: Pct
 
 
+def _check_food_cost(food_cost: Pct, cost: int, net: int) -> None:
+    """food_cost = cost / net x 100 on the net price (without IVA), within centavo rounding."""
+    # centavo rounding of cost and net_price moves a percentage by at most this much
+    slack = Decimal("50") * (1 + abs(Decimal(cost) / net)) / net + _PCT_ROUNDING
+    if abs(food_cost.raw - Decimal(cost) / net * 100) > slack:
+        raise ValueError("food_cost must follow cost / net_price (net, without IVA)")
+
+
 class DishMarginResolved(Model):
     """Margin and food cost on the NET price (without IVA), the basis of 03 and 09.
 
@@ -389,10 +400,7 @@ class DishMarginResolved(Model):
             raise ValueError("margin must equal net_price - cost")
         if abs(self.margin_pct.raw + self.food_cost.raw - 100) > _PCT_ROUNDING:
             raise ValueError("margin_pct and food_cost must add up to 100")
-        # centavo rounding of cost and net_price moves a percentage by at most this much
-        slack = Decimal("50") * (1 + abs(Decimal(cost) / net)) / net + _PCT_ROUNDING
-        if abs(self.food_cost.raw - Decimal(cost) / net * 100) > slack:
-            raise ValueError("food_cost must follow cost / net_price (net, without IVA)")
+        _check_food_cost(self.food_cost, cost, net)
         return self
 
 
@@ -588,6 +596,156 @@ class DataStatusData(Model):
     coverage: Pct
 
 
+# --- the weekly report (MR-34) ---------------------------------------------------------------
+
+WeekName = Literal["last_week", "prev_week"]
+
+WEEKLY_TOP_DISHES: Final = 3
+"""The weekly report lists the top 3 dishes by units (W4: the template names the first)."""
+
+
+def _is_week(r: DateRange) -> bool:
+    return r.from_.isoweekday() == 1 and r.to == r.from_ + dt.timedelta(days=6)
+
+
+class BuildWeeklyReportArgs(Model):
+    """The week to report: a named past week or an explicit Monday-to-Sunday {from, to} (W2).
+    The SQL also refuses a week that has not ended yet (it knows the business date)."""
+
+    period: WeekName | DateRange = "last_week"
+    location_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def _monday_to_sunday(self) -> BuildWeeklyReportArgs:
+        if not isinstance(self.period, str) and not _is_week(self.period):
+            raise ValueError("period must run Monday to Sunday")
+        return self
+
+
+class WeeklyBreachAt(Model):
+    """One location where a dish of `[Ver márgenes]` is over target (W4, doc 12 1b: "*Costra de
+    pastor* — costo $29.80, precio $89.00 → *38.8%*", then its suggestion).
+
+    The figures are the dish's latest snapshot of the week at `location_id`: `cost`,
+    `net_price` (without IVA; `food_cost` = cost / net_price) and `price_gross` (the menu price
+    with IVA that day, the one to quote), with the cost's `confidence` ("Receta estimada").
+    `suggestion` is that dish's suggestion at that location (one of `CostAlertsData.suggestions`
+    or a lower-ranked one) only when it is priced on these figures: the dish's latest snapshot up
+    to the report day has the same cost and net price, and the suggestion's current price is
+    `price_gross`. Otherwise null (a resale item, a star, a cost not evaluated yet, or a cost or
+    price that moved after Sunday: that suggestion is in `suggestions` only).
+    """
+
+    location_id: UUID
+    cost: Money
+    net_price: PositiveMoney
+    price_gross: PositiveMoney
+    food_cost: Pct
+    confidence: CostConfidence
+    suggestion: PriceSuggestion | None
+
+    @model_validator(mode="after")
+    def _priced(self) -> WeeklyBreachAt:
+        if self.net_price.raw > self.price_gross.raw:
+            raise ValueError("net_price must not exceed price_gross")
+        _check_food_cost(self.food_cost, self.cost.raw, self.net_price.raw)
+        s = self.suggestion
+        if s is not None and s.location_id != self.location_id:
+            raise ValueError("a breach's suggestion is for the same dish and location")
+        if s is not None and s.current_price.raw != self.price_gross.raw:
+            raise ValueError("a breach's suggestion is at the breach's menu price")
+        return self
+
+
+class WeeklyBreach(TargetBreach):
+    """A dish over target as `[Ver márgenes]` shows it: one entry in `at` per location in scope
+    where the dish's latest snapshot of the week is over target, worst first (at most 10).
+    `food_cost` is the worst location's, as in get_cost_alerts, so `breaches_total` still counts
+    dishes. The report's only: get_cost_alerts keeps the compact TargetBreach (doc 13 budget).
+    """
+
+    at: Annotated[list[WeeklyBreachAt], Field(min_length=1, max_length=COST_ALERTS_TOP_N)]
+
+    @model_validator(mode="after")
+    def _located(self) -> WeeklyBreach:
+        if self.food_cost != self.at[0].food_cost:
+            raise ValueError("a breach's food_cost is its worst location's")
+        costs = [e.food_cost.raw for e in self.at]
+        if costs != sorted(costs, reverse=True):
+            raise ValueError("a breach lists its locations worst first")
+        ids = [e.location_id for e in self.at]
+        if len(set(ids)) != len(ids):
+            raise ValueError("a breach lists each location once")
+        if any(e.food_cost.raw <= self.target.raw for e in self.at):
+            raise ValueError("a breach lists only locations over target")
+        if any(e.suggestion and e.suggestion.menu_item_id != self.menu_item_id for e in self.at):
+            raise ValueError("a breach's suggestion is for the same dish and location")
+        return self
+
+
+class WeeklyCostAlerts(CostAlertsData):
+    """CostAlertsData with the `[Ver márgenes]` detail on each breach (WeeklyBreach)."""
+
+    breaches: Annotated[list[WeeklyBreach], Field(max_length=COST_ALERTS_TOP_N)]  # type: ignore[assignment]
+
+
+class WeeklyReportData(Model):
+    """Everything the Monday report needs, for MR-38 to render (decisions W1-W4).
+
+    Each section is the data of the read RPC of the same shape over `week`: `sales` is
+    get_sales_summary (`change_vs_previous` is vs `previous_week`, W3), `top_dishes` get_top_dishes
+    by units (top 3), `food_cost` get_food_cost_pct (null when the week has no costed sales),
+    `stale_costs` get_data_status today. `missing_business_days` are the days of the week a
+    location in scope has no sales data (W2: the report goes out and says so). `locations` are the
+    locations in scope with their names, to label a breach or a suggestion ("Centro").
+
+    `cost_alerts` is get_cost_alerts' shape (top 10 of each list; dishes over target =
+    `breaches_total`) with two differences. Price moves and breaches cover the week only, Monday to
+    Sunday, so a price dated after Sunday never shows and the report built at 9:00 and at 12:00
+    says the same. Suggestions are as of the day the report is built (open and fresh today, at
+    today's menu price), as the owner would act on them. Each breach carries, per location over
+    target, its cost, prices and the suggestion priced on those figures (WeeklyBreach), so
+    `[Ver márgenes]` needs no other call.
+    """
+
+    week: DateRange
+    previous_week: DateRange
+    locations: Annotated[list[LocationRef], Field(min_length=1)]
+    sales: SalesSummaryData
+    top_dishes: TopDishesData
+    food_cost: FoodCostData | None
+    cost_alerts: WeeklyCostAlerts
+    missing_business_days: list[dt.date]
+    stale_costs: Count
+
+    @model_validator(mode="after")
+    def _one_week(self) -> WeeklyReportData:
+        if not _is_week(self.week):
+            raise ValueError("week must run Monday to Sunday")
+        week_before = dt.timedelta(days=7)
+        if (self.previous_week.from_, self.previous_week.to) != (
+            self.week.from_ - week_before,
+            self.week.to - week_before,
+        ):
+            raise ValueError("previous_week must be the week before week")
+        if self.top_dishes.metric != "units" or len(self.top_dishes.rows) > WEEKLY_TOP_DISHES:
+            raise ValueError(f"top_dishes are the top {WEEKLY_TOP_DISHES} by units")
+        if any(not self.week.from_ <= d <= self.week.to for d in self.missing_business_days):
+            raise ValueError("missing_business_days must fall in the week")
+        if self.missing_business_days != sorted(set(self.missing_business_days)):
+            raise ValueError("missing_business_days are distinct and in order")
+        ids = [loc.location_id for loc in self.locations]
+        if len(set(ids)) != len(ids):
+            raise ValueError("locations are distinct")
+        alerts = self.cost_alerts
+        placed = [e.location_id for b in alerts.breaches for e in b.at] + [
+            s.location_id for s in alerts.suggestions
+        ]
+        if not set(placed) <= set(ids):
+            raise ValueError("every breach and suggestion is at a location of the report")
+        return self
+
+
 # --- registry --------------------------------------------------------------------------------
 
 
@@ -609,3 +767,11 @@ RPCS: dict[str, RpcSpec] = {
     "get_cost_alerts": RpcSpec(GetCostAlertsArgs, CostAlertsData),
     "get_data_status": RpcSpec(GetDataStatusArgs, DataStatusData),
 }
+
+REPORT_RPCS: dict[str, RpcSpec] = {
+    "build_weekly_report": RpcSpec(BuildWeeklyReportArgs, WeeklyReportData),
+}
+"""RPCs for code (the report jobs, the dashboard), not agent tools: kept out of RPCS."""
+
+ALL_RPCS: Final[dict[str, RpcSpec]] = RPCS | REPORT_RPCS
+"""Every SQL RPC with a contract: the schemas and the mock serve these."""

@@ -51,7 +51,9 @@ select is((select count(*) from pg_class where relnamespace = 'api'::regnamespac
 select set_eq($$select proname::text from pg_proc where pronamespace = 'api'::regnamespace$$,
               array['get_sales_summary', 'compare_periods', 'get_top_dishes', 'get_data_status',
                     'get_dish_margin', 'get_food_cost_pct', 'get_sales_breakdown', 'get_cancellations',
-                    'compare_locations', 'get_menu_engineering', 'get_cost_alerts'], 'api holds the 11 read RPCs only');
+                    'compare_locations', 'get_menu_engineering', 'get_cost_alerts',
+                    -- MR-34: the weekly report (REPORT_RPCS, not an agent tool)
+                    'build_weekly_report'], 'api holds the 11 read RPCs and the weekly report only');
 select is((select count(*) from pg_proc where pronamespace = 'api'::regnamespace and prosecdef), 0::bigint,
           'every RPC is SECURITY INVOKER, so RLS applies (09 section 4.1)');
 select is((select count(*) from pg_proc where pronamespace = 'api'::regnamespace
