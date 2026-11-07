@@ -36,7 +36,7 @@ select is(pg_temp.rpc(:OWNER, 'api.get_sales_summary(''"last_week"'')') ->> 'ok'
 -- a 22023 after the argument check is internal ----------------------------------------------------
 -- Real path: a location time zone that a server tzdata upgrade no longer knows. The CHECK
 -- (location_timezone_valid) keeps new rows out, so the old row is simulated by dropping it here.
--- No savepoints: rolling one back would also drop pgTAP's recorded results.
+-- No savepoints: a rollback would not drop pgTAP's results (numbers come from a sequence and each line is printed as it runs), but it would undo the failure count in finish()'s summary.
 select timezone as centro_tz from public.location where id = :'CENTRO' \gset
 alter table public.location drop constraint location_timezone_valid;
 update public.location set timezone = 'Mars/Olympus' where id = :'CENTRO';
