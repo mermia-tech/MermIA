@@ -39,6 +39,7 @@ def test_a_small_invoice() -> None:
     (doc,) = batch.purchases
     assert doc.kind == PurchaseDocKind.cfdi
     assert doc.supplier.rfc == "CSB150301AB1"
+    assert doc.buyer_rfc == "TEG190415MX2"
     assert doc.supplier.kind == SupplierKind.cfdi
     assert doc.cfdi_uuid == UUID(UUID_)
     assert (doc.subtotal, doc.total) == (13000, 13000)

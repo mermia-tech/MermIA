@@ -16,8 +16,8 @@ PR B turns the lines into price proposals).
 - IVA (002) is ignored. Itemized IEPS (003) is a warning: whether it is part of the cost is for the
   accountant to confirm.
 - Numbers must be written as the SAT writes them (digits and a decimal point): never guessed.
-- The buyer's RFC (Receptor) is required but not returned yet: checking it against the tenant
-  needs a contract field (PR B).
+- The buyer's RFC (Receptor) is required and returned as PurchaseIn.buyer_rfc: the loader checks
+  it against the tenant's and never stores or shows it.
 """
 
 from __future__ import annotations
@@ -227,9 +227,8 @@ def _supplier(root: Element) -> SupplierIn:
     )
 
 
-def _require_buyer(root: Element) -> None:
-    # PR B checks this RFC against the tenant's (needs PurchaseIn.buyer_rfc, a contract change).
-    _rfc(_child(root, "Receptor"), "Receptor")
+def _buyer_rfc(root: Element) -> str:
+    return _rfc(_child(root, "Receptor"), "Receptor")
 
 
 # --- the Conceptos -----------------------------------------------------------------------
@@ -350,7 +349,7 @@ def parse(root: Element) -> NormalizedBatch:
     _check_kind(root)
     issued_at = _issued_at(root)
     supplier = _supplier(root)
-    _require_buyer(root)
+    buyer_rfc = _buyer_rfc(root)
     cfdi_uuid = _uuid(root)
     lines = _lines(root)
     subtotal = _decimal(root, "SubTotal", "del comprobante", 2)
@@ -363,6 +362,7 @@ def parse(root: Element) -> NormalizedBatch:
     total = _decimal(root, "Total", "del comprobante", 2)
     doc = PurchaseIn(
         supplier=supplier,
+        buyer_rfc=buyer_rfc,
         kind=PurchaseDocKind.cfdi,
         cfdi_uuid=cfdi_uuid,
         issued_at=issued_at,

@@ -23,6 +23,14 @@ recipe.upsert pending change (ingestion/recipes.py). Its status is parsed when a
 recipe was proposed or found unchanged, and rejected when every recipe was held. Without a
 location (a template for the whole tenant) its slice is the tenant's (TENANT_SLICE in place of
 the location).
+
+A purchase batch (a CFDI invoice, MR-36) is handled the same way: its prices become
+ingredient_price.set pending changes (ingestion/prices.py), never rows. Prices are tenant-wide, so
+its slice is always the tenant's, whichever location's source it came by, and an invoice for
+another buyer RFC is rejected. Its status is parsed unless rejected: an invoice whose lines are
+all unknown or unchanged is not an error. Decision 12 (PENDING OWNER CONFIRMATION): the invoice
+itself is not kept (no purchase_doc or purchase_line rows); keeping it is a follow-up that needs a
+migration. Its stats (proposed, unchanged, held) go to import_batch.
 """
 
 from __future__ import annotations
@@ -30,22 +38,22 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 from dataclasses import dataclass
-from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
 import psycopg
 from psycopg.types.json import Jsonb
 
+from mermia_api.ingestion.batch_checks import check_rows
 from mermia_api.ingestion.items import find_item
 from mermia_api.ingestion.parsers import mermia_recetas
-from mermia_api.ingestion.recipes import NO_PROPOSALS, propose_recipes
+from mermia_api.ingestion.prices import buyer_issues, propose_prices
+from mermia_api.ingestion.proposals import NO_PROPOSALS
+from mermia_api.ingestion.recipes import propose_recipes
 from mermia_contracts.batch import Grain, IssueIn, NormalizedBatch
 from mermia_contracts.db.models import IssueSeverity
 from mermia_contracts.keys import normalize_name, slice_key
 
-SUPPORTED = {Grain.item_daily: "item_sales", Grain.daily: "daily_sales", Grain.catalog: "recipes"}
-ROW_LISTS = ("menu_items", "item_sales", "daily_sales", "tickets", "purchases", "recipes")
 OPEN = ("parsed", "needs_review", "applied")  # statuses a duplicate is found among
 SLICE = r"^[^:]+:[^:]+:\d{4}-\d{2}-\d{2}:\d{4}-\d{2}-\d{2}$"  # as mermia_contracts.keys builds it
 TENANT_SLICE = "tenant"  # the location part of the slice of a catalog batch without a location
@@ -59,7 +67,7 @@ class LoadResult:
     )
     duplicate: bool
     issues: tuple[IssueIn, ...]
-    pending_change_ids: tuple[UUID, ...] = ()  # the recipe.upsert changes a catalog batch filed
+    pending_change_ids: tuple[UUID, ...] = ()  # the changes a catalog or purchase batch filed
 
 
 def _issue(severity: IssueSeverity, code: str, message_es: str) -> IssueIn:
@@ -129,12 +137,16 @@ def _load(
     review: list[IssueIn] = []
 
     catalog = batch.grain == Grain.catalog
-    tenant_wide = catalog and batch.parser == mermia_recetas.PARSER  # may name no location
+    purchase = batch.grain == Grain.purchase  # prices: tenant-wide, like recipes
+    proposes = catalog or purchase  # files pending changes instead of staging rows
+    # may name no location: the recipe template, an invoice
+    tenant_wide = purchase or (catalog and batch.parser == mermia_recetas.PARSER)
     location_id = _location(
         conn, tenant_id, source_location, batch.location_hint, reject, review, tenant_wide
     )
+    slice_location = TENANT_SLICE if purchase else location_id or TENANT_SLICE
     key = (
-        slice_key(location_id or TENANT_SLICE, batch.parser, batch.period)
+        slice_key(slice_location, batch.parser, batch.period)
         if location_id or tenant_wide
         else None
     )
@@ -144,12 +156,13 @@ def _load(
         "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
         (f"{tenant_id}:{key or digest}",),
     )
-    if catalog:  # recipes are tenant-wide: two locations must not file the same proposal at once
+    if proposes:  # recipes and prices are tenant-wide: two locations must not file at once
         conn.execute(
-            "select pg_advisory_xact_lock(hashtextextended(%s, 0))", (f"{tenant_id}:recipes",)
+            "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
+            (f"{tenant_id}:{'recipes' if catalog else 'prices'}",),
         )
 
-    # a catalog file is a duplicate only while a proposal it filed still waits for a decision:
+    # a catalog file or an invoice is a duplicate only while a proposal it filed still waits:
     # sent again after they were rejected, expired or superseded, it proposes again
     earlier = conn.execute(
         """select id, status::text from public.import_batch ib
@@ -162,7 +175,7 @@ def _load(
                      and pc.status = 'pending'
                      and (pc.expires_at is null or pc.expires_at > now())))
            order by created_at limit 1""",
-        (tenant_id, list(OPEN), raw_file_id, raw_file_id, key, digest, catalog),
+        (tenant_id, list(OPEN), raw_file_id, raw_file_id, key, digest, proposes),
     ).fetchone()
     if earlier is not None:
         return LoadResult(earlier[0], earlier[1], True, ())
@@ -175,16 +188,20 @@ def _load(
                 "El archivo no corresponde a la fuente por la que llegó.",
             )
         )
-    _check_rows(batch, reject)
-    if batch.grain != Grain.catalog:
+    reject.extend(check_rows(batch))
+    if purchase:
+        rejected, warned = buyer_issues(conn, tenant_id, batch)
+        reject.extend(rejected)
+        issues.extend(warned)
+    if not proposes:
         _sales_rules(conn, batch, tenant_id, location_id, expected_day, review)
 
     status = "rejected" if reject else "needs_review" if review else "parsed"
     batch_id = _insert_batch(
         conn, tenant_id, source_id, raw_file_id, location_id, key, status, batch, digest
     )
-    if catalog:  # review issues (another location's name) only inform
-        return _load_catalog(
+    if proposes:  # review issues (another location's name) only inform
+        return _load_proposals(
             conn, tenant_id, location_id, batch_id, batch, issues, reject, review, proposed_by
         )
     if status != "rejected":
@@ -226,7 +243,7 @@ def _insert_issues(
         )
 
 
-def _load_catalog(
+def _load_proposals(
     conn: psycopg.Connection[Any],
     tenant_id: UUID,
     location_id: UUID | None,
@@ -237,14 +254,20 @@ def _load_catalog(
     review: list[IssueIn],
     proposed_by: UUID | None,
 ) -> LoadResult:
-    """Files the batch's recipe.upsert pending changes. Never stages rows or calls apply_batch.
-    Review issues (a location hint naming another location) only inform: recipes are tenant-wide
-    and every change waits for approval anyway."""
+    """Files the batch's pending changes (recipe.upsert for a catalog, ingredient_price.set for
+    an invoice). Never stages rows or calls apply_batch. Review issues (a location hint naming
+    another location) only inform: recipes and prices are tenant-wide and every change waits for
+    approval anyway."""
     found = NO_PROPOSALS
+    catalog = batch.grain == Grain.catalog
     if not reject:
         try:
             with conn.transaction():  # a savepoint: a refused value rejects the batch, not the call
-                found = propose_recipes(conn, tenant_id, location_id, batch_id, batch, proposed_by)
+                found = (
+                    propose_recipes(conn, tenant_id, location_id, batch_id, batch, proposed_by)
+                    if catalog
+                    else propose_prices(conn, tenant_id, batch_id, batch, proposed_by)
+                )
         except psycopg.errors.IntegrityError as e:
             reject.append(
                 _issue(
@@ -258,7 +281,7 @@ def _load_catalog(
                 (Jsonb({"db_error": e.diag.message_primary}), batch_id),
             )
     kept = found.proposed + found.unchanged + found.already_pending
-    status = "parsed" if kept and not reject else "rejected"
+    status = "parsed" if (kept or not catalog) and not reject else "rejected"
     stats = {
         "proposed": found.proposed,
         "unchanged": found.unchanged,
@@ -396,72 +419,6 @@ def _location(
             )
         )
     return named
-
-
-def _check_rows(batch: NormalizedBatch, reject: list[IssueIn]) -> None:
-    rows_name = SUPPORTED.get(batch.grain)
-    if rows_name is None:
-        reject.append(
-            _issue(
-                IssueSeverity.error,
-                "batch.grain_unsupported",
-                "Todavía no puedo cargar este tipo de reporte.",
-            )
-        )
-        return
-    allowed = (rows_name,) if batch.grain == Grain.catalog else (rows_name, "menu_items")
-    extra = [n for n in ROW_LISTS if n not in allowed and getattr(batch, n)]
-    if extra:
-        reject.append(
-            _issue(
-                IssueSeverity.error,
-                "batch.grain_mismatch",
-                "El archivo mezcla tipos de datos que no van juntos.",
-            )
-        )
-    p = batch.period
-    if batch.grain == Grain.item_daily:
-        lines = len(batch.item_sales)
-        net = sum(x.net for x in batch.item_sales)
-        units: Decimal | None = sum((x.units for x in batch.item_sales), Decimal(0))
-        outside = sum(1 for x in batch.item_sales if x.period_from < p.from_ or x.period_to > p.to)
-        if any(x.period_from != x.period_to for x in batch.item_sales):
-            reject.append(
-                _issue(
-                    IssueSeverity.error,
-                    "batch.items_multi_day",
-                    "Necesito los productos vendidos de un solo día por archivo; este reporte "
-                    "cubre varios días.",
-                )
-            )
-    elif batch.grain == Grain.catalog:  # a catalog has no money, units or dated rows
-        lines, net, units, outside = len(batch.recipes), 0, None, 0
-    else:
-        lines = len(batch.daily_sales)
-        net = sum(x.net_sales for x in batch.daily_sales)
-        units = None
-        outside = sum(1 for x in batch.daily_sales if not p.from_ <= x.business_date <= p.to)
-    if outside:
-        reject.append(
-            _issue(
-                IssueSeverity.error,
-                "batch.rows_outside_period",
-                "Hay filas con fechas fuera del periodo del reporte.",
-            )
-        )
-    t = batch.totals
-    if (
-        t.lines != lines
-        or (t.net_sales is not None and t.net_sales != net)
-        or (t.units is not None and units is not None and t.units != units)
-    ):
-        reject.append(
-            _issue(
-                IssueSeverity.error,
-                "batch.totals_mismatch",
-                "Los totales del reporte no cuadran con sus renglones; no lo cargué.",
-            )
-        )
 
 
 def _insert_batch(

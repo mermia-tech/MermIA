@@ -600,13 +600,23 @@ def test_sqlstate_classification(
 def test_a_failure_count_survives_the_chunk_rollback_on_a_real_connection() -> None:
     """Commits for real. A trigger (only for from_date 2024-02-02, which nothing else uses) makes
     the chunk fail inside its transaction, which rolls back; the attempt count is still there
-    afterwards. The trigger, its function and the record are dropped at the end (the pending
-    change stays: the audit log is append-only)."""
+    afterwards. The proposal is on a throwaway ingredient the test creates, so seed data never
+    keeps it. The trigger, its function, the record and the ingredient are dropped at the end and
+    the change is expired (it stays: foreign keys from the audit log block a delete)."""
     url = os.environ.get("MERMIA_DB_URL")
     if not url:
         pytest.skip("MERMIA_DB_URL is not set")
     with psycopg.connect(url) as c:
-        change = propose(c, PendingKind.ingredient_price_set, CARNE, price("0.32", "2099-01-01"))
+        row = c.execute(
+            "insert into public.ingredient (tenant_id, name, base_unit) "
+            "values (%s, 'Prueba reintento ' || gen_random_uuid(), 'g') returning id",
+            (TENANT,),
+        ).fetchone()
+        assert row is not None
+        ingredient = UUID(str(row[0]))
+        change = propose(
+            c, PendingKind.ingredient_price_set, ingredient, price("0.32", "2099-01-01")
+        )
         c.execute("drop trigger if exists zz_test_poison on public.dish_cost_backfill")
         c.execute("delete from public.dish_cost_backfill where from_date = date '2024-02-02'")
         c.execute(
@@ -643,3 +653,9 @@ def test_a_failure_count_survives_the_chunk_rollback_on_a_real_connection() -> N
             )
             c.execute("drop trigger zz_test_poison on public.dish_cost_backfill")
             c.execute("drop function public.zz_test_poison()")
+            c.execute(
+                "update public.pending_change set status = 'expired', resolved_at = now() "
+                "where id = %s",
+                (change,),
+            )
+            c.execute("delete from public.ingredient where id = %s", (ingredient,))

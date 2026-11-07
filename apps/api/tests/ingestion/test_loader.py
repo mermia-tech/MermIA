@@ -214,7 +214,7 @@ def test_totals_that_do_not_add_up_are_rejected_without_rows(conn: psycopg.Conne
 
 def test_an_unsupported_grain_is_rejected(conn: psycopg.Connection[Any]) -> None:
     good = report("12/10/2026", PASTOR)
-    r = load(conn, good.model_copy(update={"grain": Grain.purchase}), source_id=CENTRO_ITEMS)
+    r = load(conn, good.model_copy(update={"grain": Grain.ticket}), source_id=CENTRO_ITEMS)
     assert r.status == "rejected" and "batch.grain_unsupported" in {i.code for i in r.issues}
 
 
