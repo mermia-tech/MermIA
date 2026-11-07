@@ -361,6 +361,123 @@ select results_eq(
   $$values ('2026-10-11'::date, 'estimated'::text, false)$$, 'still estimated on day 2: stays not urgent');
 rollback to savepoint confirm_stays_estimated;
 
+savepoint flip_daily;
+-- daily runs, estimated from the breach's start (10-01) to 10-11, confirmed on 10-12: the flip is
+-- judged on the day it happens (10-12), not on the breach's start 11 days earlier
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'MEAT', 0.300, '2026-10-01', 'cfdi');
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-01', '2026-10-12') > 0, 'twelve days recomputed');
+update public.dish_cost_snapshot set confidence = case when date = '2026-10-12' then 'confirmed' else 'estimated' end::app.cost_confidence
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date >= '2026-10-01';
+select ok(pg_temp.evaluate_daily(:'TENANT', '2026-10-01', '2026-10-11') > 0, 'estimated days evaluated daily');
+select is((select a.urgent from public.alert a where a.rule = 'margin_breach' and a.menu_item_id = :'PASTOR' and a.location_id = :'CENTRO'),
+          false, 'estimated for eleven days: not urgent');
+select ok(pg_temp.evaluate_daily(:'TENANT', '2026-10-12', '2026-10-12') >= 0, 'confirmation day evaluated');
+select results_eq(
+  $$select a.as_of, a.confidence::text, a.urgent from public.alert a
+    where a.rule = 'margin_breach' and a.menu_item_id = 'f496f051-9f85-5f8a-a4b6-c1a814d37c73' and a.location_id = '705e8e51-376b-5785-adbb-405eff4e2a22'$$,
+  $$values ('2026-10-01'::date, 'confirmed'::text, true)$$, 'confirmed on 10-12 while still over the limit: the one row is confirmed and urgent');
+rollback to savepoint flip_daily;
+
+savepoint flip_value;
+-- the flip takes the food cost with the tag: estimated 10-11 at a higher cost, confirmed 10-12
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'MEAT', 0.300, '2026-10-11', 'cfdi');
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-11', '2026-10-12') > 0, 'two days recomputed');
+update public.dish_cost_snapshot set confidence = case date when '2026-10-11' then 'estimated' else 'confirmed' end::app.cost_confidence,
+  cost = case date when '2026-10-11' then cost * 1.3 else cost end
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date >= '2026-10-11';
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-11', '2026-10-11');
+select is((select a.value from public.alert a where a.rule = 'margin_breach' and a.menu_item_id = :'PASTOR' and a.location_id = :'CENTRO'),
+          (select round(100.0 * s.cost / s.price_net, 4) from public.dish_cost_snapshot s
+           where s.menu_item_id = :'PASTOR' and s.location_id = :'CENTRO' and s.date = '2026-10-11'), 'day 1: the estimated cost');
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-12', '2026-10-12');
+select results_eq(
+  $$select a.as_of, a.confidence::text, a.urgent,
+           a.value = (select round(100.0 * s.cost / s.price_net, 4) from public.dish_cost_snapshot s
+                      where s.menu_item_id = a.menu_item_id and s.location_id = a.location_id and s.date = '2026-10-12'),
+           a.value < (select round(100.0 * s.cost / s.price_net, 4) from public.dish_cost_snapshot s
+                      where s.menu_item_id = a.menu_item_id and s.location_id = a.location_id and s.date = '2026-10-11')
+    from public.alert a
+    where a.rule = 'margin_breach' and a.menu_item_id = 'f496f051-9f85-5f8a-a4b6-c1a814d37c73' and a.location_id = '705e8e51-376b-5785-adbb-405eff4e2a22'$$,
+  $$values ('2026-10-11'::date, 'confirmed'::text, true, true, true)$$, 'day 2: confirmed, urgent, and the confirmed (lower) food cost, not the estimated one');
+rollback to savepoint flip_value;
+
+savepoint first_seen_confirmed;
+-- one run on 10-12 for a breach that started on 10-11 on an estimated cost: confidence, value and
+-- urgency come from the 10-12 snapshot (confirmed), as_of stays the start
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'MEAT', 0.300, '2026-10-11', 'cfdi');
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-11', '2026-10-12') > 0, 'two days recomputed');
+update public.dish_cost_snapshot set confidence = case date when '2026-10-11' then 'estimated' else 'confirmed' end::app.cost_confidence,
+  cost = case date when '2026-10-11' then cost * 1.3 else cost end
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date >= '2026-10-11';
+select pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12', '2026-10-12');
+select results_eq(
+  $$select a.as_of, a.confidence::text, a.urgent,
+           a.value = (select round(100.0 * s.cost / s.price_net, 4) from public.dish_cost_snapshot s
+                      where s.menu_item_id = a.menu_item_id and s.location_id = a.location_id and s.date = '2026-10-12')
+    from public.alert a
+    where a.rule = 'margin_breach' and a.menu_item_id = 'f496f051-9f85-5f8a-a4b6-c1a814d37c73' and a.location_id = '705e8e51-376b-5785-adbb-405eff4e2a22'$$,
+  $$values ('2026-10-11'::date, 'confirmed'::text, true, true)$$, 'first seen on 10-12: confirmed, urgent, the 10-12 cost, dated from its start');
+rollback to savepoint first_seen_confirmed;
+
+savepoint flip_catchup;
+-- confirmed on 10-12 but evaluated on 10-25: the evidence is stale, so the tag follows and the alert stays not urgent
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'MEAT', 0.300, '2026-10-11', 'cfdi');
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-11', '2026-10-12') > 0, 'two days recomputed');
+update public.dish_cost_snapshot set confidence = case date when '2026-10-11' then 'estimated' else 'confirmed' end::app.cost_confidence
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date >= '2026-10-11';
+select pg_temp.evaluate(:'TENANT', '2026-10-11', '2026-10-11', '2026-10-11');
+select pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12', '2026-10-25');
+select results_eq(
+  $$select a.confidence::text, a.urgent from public.alert a
+    where a.rule = 'margin_breach' and a.menu_item_id = 'f496f051-9f85-5f8a-a4b6-c1a814d37c73' and a.location_id = '705e8e51-376b-5785-adbb-405eff4e2a22'$$,
+  $$values ('confirmed'::text, false)$$, 'a catch-up run confirms the tag but does not make it urgent');
+rollback to savepoint flip_catchup;
+
+savepoint flip_status;
+-- an alert the owner already acknowledged or dismissed is never flipped or refreshed
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'MEAT', 0.300, '2026-10-11', 'cfdi');
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-11', '2026-10-12') > 0, 'two days recomputed');
+update public.dish_cost_snapshot set confidence = case date when '2026-10-11' then 'estimated' else 'confirmed' end::app.cost_confidence
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date >= '2026-10-11';
+select pg_temp.evaluate(:'TENANT', '2026-10-11', '2026-10-11', '2026-10-11');
+update public.alert set status = 'acknowledged' where rule = 'margin_breach' and menu_item_id = :'PASTOR' and location_id = :'CENTRO';
+select pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12', '2026-10-12');
+select results_eq(
+  $$select a.status, a.confidence::text, a.urgent from public.alert a
+    where a.rule = 'margin_breach' and a.menu_item_id = 'f496f051-9f85-5f8a-a4b6-c1a814d37c73' and a.location_id = '705e8e51-376b-5785-adbb-405eff4e2a22'$$,
+  $$values ('acknowledged'::text, 'estimated', false)$$, 'an acknowledged alert is not flipped');
+update public.alert set status = 'dismissed' where rule = 'margin_breach' and menu_item_id = :'PASTOR' and location_id = :'CENTRO';
+select pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12', '2026-10-12');
+select results_eq(
+  $$select a.status, a.confidence::text, a.urgent from public.alert a
+    where a.rule = 'margin_breach' and a.menu_item_id = 'f496f051-9f85-5f8a-a4b6-c1a814d37c73' and a.location_id = '705e8e51-376b-5785-adbb-405eff4e2a22'$$,
+  $$values ('dismissed'::text, 'estimated', false)$$, 'a dismissed alert is not flipped');
+rollback to savepoint flip_status;
+
+savepoint flip_ended;
+-- the confirmed 10-12 cost is back within the limit: the breach has ended, the row stays as it was
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'MEAT', 0.300, '2026-10-11', 'cfdi');
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-11', '2026-10-12') > 0, 'two days recomputed');
+update public.dish_cost_snapshot set confidence = case date when '2026-10-11' then 'estimated' else 'confirmed' end::app.cost_confidence,
+  cost = case date when '2026-10-12' then price_net / 4 else cost end
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date >= '2026-10-11';
+select pg_temp.evaluate(:'TENANT', '2026-10-11', '2026-10-11', '2026-10-11');
+create temp table before_end as
+  select a.value, a.confidence, a.urgent from public.alert a
+  where a.rule = 'margin_breach' and a.menu_item_id = :'PASTOR' and a.location_id = :'CENTRO';
+select pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12', '2026-10-12');
+select results_eq(
+  $$select a.value, a.confidence, a.urgent from public.alert a
+    where a.rule = 'margin_breach' and a.menu_item_id = 'f496f051-9f85-5f8a-a4b6-c1a814d37c73' and a.location_id = '705e8e51-376b-5785-adbb-405eff4e2a22'$$,
+  $$select value, confidence, urgent from before_end$$, 'a breach that ended on a confirmed cost is not flipped');
+rollback to savepoint flip_ended;
+
 savepoint fresh;
 -- seen within 7 days of its start, a breach on a top-10 dish is urgent; bistec tacos are in
 -- Centro's top 10 by net sales over 2026-07-20..08-18
@@ -377,12 +494,12 @@ select is((select array_agg(m.name order by m.name) from public.alert a join pub
           'the breaches on Centro''s top 10 dishes are urgent, the others are not');
 select ok((select bool_or(a.urgent) from public.alert a where a.menu_item_id = (select id from public.menu_item where name = 'Tacos de bistec (orden de 3)')
            and a.location_id = :'CENTRO'), 'tacos de bistec among them');
--- the 08-17 breaches run on 08-23 are in their 7th day, on 08-24 their 8th
+-- the evidence day 08-18 run on 08-24 is in its 7th day, on 08-25 its 8th (freshness is the evidence's)
 delete from public.alert;
-select ok(pg_temp.evaluate(:'TENANT', '2026-08-18', '2026-08-18', '2026-08-23') > 0, 'the same day evaluated on 08-23');
+select ok(pg_temp.evaluate(:'TENANT', '2026-08-18', '2026-08-18', '2026-08-24') > 0, 'the same day evaluated on 08-24');
 select ok((select bool_or(a.urgent) from public.alert a where a.location_id = :'CENTRO'), 'day 7: still urgent');
 delete from public.alert;
-select ok(pg_temp.evaluate(:'TENANT', '2026-08-18', '2026-08-18', '2026-08-24') > 0, 'and on 08-24');
+select ok(pg_temp.evaluate(:'TENANT', '2026-08-18', '2026-08-18', '2026-08-25') > 0, 'and on 08-25');
 select is((select count(*) from public.alert a where a.urgent), 0::bigint, 'day 8: not urgent');
 rollback to savepoint fresh;
 

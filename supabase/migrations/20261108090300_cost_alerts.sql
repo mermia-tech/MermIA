@@ -13,7 +13,8 @@
 --   that fired: vs the last price when the 15 % rule does, else vs the average. One definition
 --   (app.price_jumps) for the evaluator and api.get_cost_alerts.
 -- - Margin breach: a dish's snapshot food cost is above target + 3 pts (U1: 32 % + 3). The alert
---   carries the confidence of the snapshot it was evaluated on (03: never a margin without its tag).
+--   carries the food cost and the confidence of the same snapshot, the run day's (03: never a margin
+--   without its tag).
 -- - Urgent (U3, for a same-day message sent by MR-37/38): a price rise of at least 15 % vs the last
 --   price on a top-20 ingredient by spend, or a breach on a top-10 dish by net sales at its
 --   location, both over the 30 days to the evaluation day, and only when the evidence is at most
@@ -27,7 +28,8 @@
 -- - Dedupe: one price_jump alert per (tenant, ingredient, day the price started); one
 --   margin_breach alert per episode, (tenant, location, dish, first day of the run of breaching
 --   snapshots): a breach that persists does not alert again, one that ends and comes back does.
---   `as_of` is that day and `value` the change or food cost on it. Status stays `open` until the
+--   `as_of` is that day; `value` is the price change on it, or for a breach the food cost on
+--   the latest run day that set its confidence. Status stays `open` until the
 --   owner acts.
 
 -- Lookup indexes ----------------------------------------------------------------------------------
@@ -74,10 +76,10 @@ select app.tag('public.alert', 'unit=pesos_per_base_unit', array['old_unit_price
 comment on column public.alert.rule is 'price_jump | margin_breach (alert_rule_known)';
 comment on column public.alert.status is 'open | acknowledged | dismissed (alert_status_known)';
 comment on column public.alert.value is
-  'percent points: the price change that fired (price_jump) or the food cost (margin_breach) on as_of';
+  'percent points: the price change that fired on as_of (price_jump) or the food cost (margin_breach) of the snapshot that set confidence';
 comment on column public.alert.threshold is 'percent points: the threshold that fired';
 comment on column public.alert.confidence is
-  'margin_breach: the confidence of the dish cost snapshot on as_of (an estimated breach is never urgent); null for price_jump';
+  'margin_breach: the confidence of the dish cost snapshot value comes from (an estimated breach is never urgent); null for price_jump';
 
 -- Settings -----------------------------------------------------------------------------------
 -- 03 defaults and U3; one place to calibrate them in the pilot.
@@ -248,15 +250,18 @@ begin
       group by v.location_id, v.menu_item_id
     ) x where x.n <= k.top_dishes
   ), refreshed as (
-    -- an open alert of a breach still on keeps the confidence of the on_date snapshot (a late CFDI
-    -- can move it either way). An estimated, not-urgent alert whose cost is now confirmed becomes
-    -- urgent if it meets the urgency rules (owner decision 2026-11-07); an urgent alert never
-    -- loses it, and it flips only on the estimated -> confirmed change, so once.
+    -- an open alert of a breach still on (the episode only holds snapshots over the limit, so a
+    -- breach that ended is left as it is) takes the confidence and the food cost of the on_date
+    -- snapshot together (a late CFDI can move them either way). An estimated, not-urgent alert
+    -- whose cost is now confirmed becomes urgent if it meets the urgency rules (owner decision
+    -- 2026-11-07), judged on the evidence day on_date, so a catch-up stays not urgent; an urgent
+    -- alert never loses it, and it flips only on the estimated -> confirmed change, so once.
     update public.alert a
     set confidence = s.confidence,
+        value = round(100.0 * s.cost / s.price_net, 4),
         urgent = a.urgent
           or (a.confidence = 'estimated' and s.confidence = 'confirmed'
-              and a.as_of > today - k.fresh_days
+              and on_date > today - k.fresh_days
               and exists (select 1 from top_dish t where t.location_id = a.location_id and t.menu_item_id = a.menu_item_id))
     from episode e
     join public.dish_cost_snapshot s
@@ -268,16 +273,17 @@ begin
     returning 1
   )
   insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, confidence, urgent)
+  -- as_of is the start of the episode; value, confidence and urgency come from the on_date snapshot
   select tenant, e.location_id, 'margin_breach', e.menu_item_id, e.started,
          round(100.0 * s.cost / s.price_net, 4), breach_above, s.confidence,
          -- urgent only on a confirmed dish cost (owner decision 2026-11-07): an estimated breach is
          -- recorded for the weekly report, marked as estimated, and never sent the same day
          s.confidence = 'confirmed'
-           and e.started > today - k.fresh_days
+           and on_date > today - k.fresh_days
            and exists (select 1 from top_dish t where t.location_id = e.location_id and t.menu_item_id = e.menu_item_id)
   from episode e
   join public.dish_cost_snapshot s
-    on s.tenant_id = tenant and s.location_id = e.location_id and s.menu_item_id = e.menu_item_id and s.date = e.started
+    on s.tenant_id = tenant and s.location_id = e.location_id and s.menu_item_id = e.menu_item_id and s.date = on_date
   -- a breach already alerted in this episode (even under an earlier start, before a recompute
   -- moved it) is not alerted again
   where not exists (select 1 from public.alert a
