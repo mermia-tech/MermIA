@@ -19,23 +19,44 @@ today, and a short catch-up window before it (`days`, default 2: yesterday and t
   next tenant. A broken connection is raised: nothing else can run. Every tenant is retried on the
   next run (the job is idempotent).
 
-One run at a time: `main` takes a job-wide advisory lock and exits 0 when another run holds it.
+Entry points (MR-102), both on their own connection, as service_role, logging one summary line:
+
+- `run_job(db_url)`: the scheduled run, every tenant. It takes a job-wide advisory lock and returns
+  None (runs nothing) when another run holds it.
+- `refresh_tenant(db_url, tenant_id)`: one tenant, without the job lock (so the hourly run never
+  delays it), e.g. after an approved upload or before a tenant's weekly report (a rerun that finds
+  nothing missing takes about 0.01 s). It refuses a tenant that is not in `public.tenant`. Callers
+  pass ids read from `public.tenant` or from an approved upload, never from user or agent input. A
+  busy tenant lock comes back as a transient failure in `failed`, not an exception; the next hourly
+  run fills what is missing.
+
 Every transaction (`_transaction`) runs `set local role service_role` and sets `lock_timeout` and
 `statement_timeout` (60 s), so the job never runs as a superuser even if the session role is lost.
 The job lock is a session lock: it needs a direct or session-mode DB URL (not the transaction-mode
 pooler on port 6543), or the lock and the role could land on different backends.
 
-Run it on a service-role connection with no transaction open (inside an open transaction each
-chunk is only a savepoint and the locks are held until the caller commits).
+`run_nightly_dish_costs` takes an open connection instead: give it a service-role connection with
+no transaction open (inside an open transaction each chunk is only a savepoint and the locks are
+held until the caller commits).
 
-CLI (connects with MERMIA_DB_URL; exit 0 done or skipped, 1 a tenant failed, 2 bad arguments):
+CLI, `run_job` with exit codes (connects with MERMIA_DB_URL; exit 0 done or skipped, 1 a tenant
+failed or the role switch failed, 2 bad arguments):
 
     uv run python -m mermia_api.costing.nightly [--days N] [--today YYYY-MM-DD]
 
-Not scheduled yet (no Procrastinate). Hourly is cheap (a rerun only checks for missing rows) and
-picks up each time zone soon after its midnight and each new dish soon after an upload:
+Scheduling (Dev B, #38): call `run_job(db_url)` hourly with the default 2 days. A rerun only checks
+for missing rows, so hourly picks up each time zone soon after its midnight and each new dish soon
+after an upload; a 2-day run takes about 33-49 s for 50 tenants. A long catch-up (after an outage)
+is run by hand with the CLI and `--days N`, never by the schedule (30 days takes 5-9 min for 50).
 
-    5 * * * * cd /app && uv run python -m mermia_api.costing.nightly >> /var/log/nightly.log 2>&1
+Caller rules for the weekly report and the scheduler (Dev B, #38):
+
+a. The Monday weekly report calls `refresh_tenant(db_url, tenant_id, days=8)`: today minus 7 is the
+   previous Monday, so `days=7` would miss it. Hourly runs keep DEFAULT_DAYS=2.
+b. A transient failure (e.g. a busy tenant lock) in `failed`: retry once, then build the report
+   anyway; its missing-days section shows any gap.
+c. `run_job` and `refresh_tenant` block on psycopg. Call them from a sync Procrastinate task or a
+   thread, never directly inside an async handler.
 """
 
 from __future__ import annotations
@@ -67,6 +88,14 @@ JOB_ROLE = "service_role"
 EXIT_OK, EXIT_FAILED, EXIT_USAGE = 0, 1, 2
 
 log = logging.getLogger(__name__)
+
+
+class ServiceRoleError(RuntimeError):
+    """The session could not drop to service_role; the message has the SQLSTATE and class only."""
+
+
+class UnknownTenantError(ValueError):
+    """refresh_tenant was given an id that is not in public.tenant."""
 
 
 @dataclass(frozen=True)
@@ -106,8 +135,7 @@ def run_nightly_dish_costs(
     `today` replaces every location's business today (app.today), e.g. to rerun a missed night.
     `only` narrows the tenants read from `public.tenant` (ids not there are ignored).
     """
-    if not 1 <= days <= MAX_DAYS:
-        raise ValueError(f"days must be between 1 and {MAX_DAYS}, got {days}")
+    _check_days(days)
     done: dict[UUID, TenantRun] = {}
     failed: dict[UUID, TenantFailure] = {}
     for tenant in _tenants(conn, only):
@@ -122,6 +150,11 @@ def run_nightly_dish_costs(
             failed[tenant] = TenantFailure(failure_reason(error), is_transient=False)
             log.error("nightly dish costs crashed for tenant %s: %s", tenant, failed[tenant].reason)
     return NightlyResult(done=done, failed=failed)
+
+
+def _check_days(days: int) -> None:
+    if not 1 <= days <= MAX_DAYS:
+        raise ValueError(f"days must be between 1 and {MAX_DAYS}, got {days}")
 
 
 def plan_chunks(from_date: dt.date, to_date: dt.date) -> list[tuple[dt.date, dt.date]]:
@@ -244,6 +277,75 @@ def try_job_lock(conn: psycopg.Connection[Any]) -> bool:
     return bool(row and row[0])
 
 
+# --- entry points (MR-102) ----------------------------------------------------------------------
+
+
+def run_job(
+    db_url: str, *, today: dt.date | None = None, days: int = DEFAULT_DAYS
+) -> NightlyResult | None:
+    """The scheduled run: every tenant, one run at a time. None when another run holds the lock.
+
+    Raises ServiceRoleError when the session cannot become service_role, and psycopg errors when
+    the database cannot be reached or the connection breaks (nothing else can run).
+    """
+    _check_days(days)
+    start = time.perf_counter()
+    with _connect(db_url) as conn:
+        _become_service_role(conn)
+        if not try_job_lock(conn):
+            log.warning("another nightly dish-cost run holds the job lock; skipping this run")
+            return None
+        result = run_nightly_dish_costs(conn, today=today, days=days)
+    _log_summary(f"nightly dish costs on {db_label(db_url)}", result, start)
+    return result
+
+
+def refresh_tenant(
+    db_url: str, tenant_id: UUID, *, today: dt.date | None = None, days: int = DEFAULT_DAYS
+) -> NightlyResult:
+    """One tenant's missing dish costs, without the job lock. Trusted callers only: `tenant_id`
+    comes from public.tenant or an approved upload, never from user or agent input.
+
+    Raises UnknownTenantError for an id not in public.tenant. A failure of the tenant itself (e.g.
+    its lock is busy) is reported in `failed`, tagged transient or not, and not raised.
+    """
+    if not isinstance(tenant_id, UUID):
+        raise TypeError(f"tenant_id must be a UUID, got {type(tenant_id).__name__}")
+    _check_days(days)
+    start = time.perf_counter()
+    with _connect(db_url) as conn:
+        _become_service_role(conn)
+        if not _tenants(conn, [tenant_id]):
+            raise UnknownTenantError(f"no tenant {tenant_id}")
+        result = run_nightly_dish_costs(conn, today=today, days=days, only=[tenant_id])
+    _log_summary(f"dish-cost refresh for tenant {tenant_id} on {db_label(db_url)}", result, start)
+    return result
+
+
+@contextmanager
+def _connect(db_url: str) -> Iterator[psycopg.Connection[Any]]:
+    with psycopg.connect(db_url, autocommit=False) as conn:
+        yield conn
+
+
+def _become_service_role(conn: psycopg.Connection[Any]) -> None:
+    try:
+        become_service_role(conn)
+    except psycopg.Error as error:
+        raise ServiceRoleError(f"cannot switch to {JOB_ROLE}: {failure_reason(error)}") from None
+
+
+def _log_summary(label: str, result: NightlyResult, start: float) -> None:
+    log.info(
+        "%s: %d tenants, %d rows, %d failed, %.1fs",
+        label,
+        len(result.done),
+        result.snapshots,
+        len(result.failed),
+        time.perf_counter() - start,
+    )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     db_url = os.environ.get("MERMIA_DB_URL")
@@ -251,22 +353,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("set MERMIA_DB_URL", file=sys.stderr)
         return EXIT_USAGE
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    start = time.perf_counter()
-    with psycopg.connect(db_url, autocommit=False) as conn:
-        try:
-            become_service_role(conn)
-        except psycopg.Error as error:
-            print(f"cannot switch to {JOB_ROLE}: {failure_reason(error)}", file=sys.stderr)
-            return EXIT_FAILED
-        if not try_job_lock(conn):
-            log.warning("another nightly dish-cost run holds the job lock; skipping this run")
-            return EXIT_OK
-        result = run_nightly_dish_costs(conn, today=args.today, days=args.days)
-    print(
-        f"nightly dish costs on {db_label(db_url)}: {len(result.done)} tenants, "
-        f"{result.snapshots} rows, {len(result.failed)} failed, "
-        f"{time.perf_counter() - start:.1f}s"
-    )
+    try:
+        result = run_job(db_url, today=args.today, days=args.days)
+    except ServiceRoleError as error:
+        print(error, file=sys.stderr)
+        return EXIT_FAILED
+    if result is None:
+        return EXIT_OK
     for tenant, failure in result.failed.items():
         kind = "transient" if failure.is_transient else "permanent"
         print(f"  failed {tenant}: {failure.reason} ({kind})", file=sys.stderr)
