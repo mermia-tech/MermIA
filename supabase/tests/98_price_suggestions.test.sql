@@ -62,7 +62,7 @@ select results_eq(
   $$select f.* from (values (2980, 8900), (2790, 8500), (2460, 7900)) d(cost, price)
     cross join lateral app.suggest_menu_price(d.cost, d.price, 0.16, 32.0) f$$,
   $$values (10803::bigint, 9500::bigint, 36.3858::numeric), (10114, 9000, 35.9582), (8918, 8500, 33.5699)$$,
-  'doc 12: Costra $89 -> $95 (36.4 %), Bistec $85 -> $90 (36.0 %; $101 reaches 32 %), Gringa $79 -> $85 (33.6 %)');
+  'doc 12: Costra $89 -> $95 (36.4 %), Bistec $85 -> $90 (36.0 %; $101.14 reaches 32 %), Gringa $79 -> $85 (33.6 %)');
 select is((select round(100.0 * (f.suggested_price - d.price) / d.price, 1)
            from (values (2980, 8900), (2790, 8500), (2460, 7900)) d(cost, price)
            cross join lateral app.suggest_menu_price(d.cost, d.price, null, 32.0) f
@@ -118,6 +118,12 @@ select is((select count(*) from public.price_suggestion p
              and p.menu_item_id in (select id from public.menu_item where name in ('Gringa de pastor', 'Tacos de bistec (orden de 3)', 'Tacos de suadero (orden de 3)'))),
           0::bigint, 'U4: stars (gringa, bistec, suadero) are not raised');
 select is((select count(*) from public.price_suggestion where tenant_id <> :'TENANT'), 0::bigint, 'nothing for another tenant');
+-- an estimated cost is never presented as confirmed: each suggestion carries its episode alert's confidence
+select is((select array_agg(distinct (a.confidence is not distinct from p.confidence)) from public.price_suggestion p
+           left join public.alert a
+             on a.tenant_id = p.tenant_id and a.rule = 'margin_breach' and a.location_id = p.location_id
+            and a.menu_item_id = p.menu_item_id and a.as_of = p.episode_start),
+          array[true], 'each suggestion has the confidence of its breach alert');
 
 select is(pg_temp.write(:'TENANT', '2026-10-12'), 0, 'a rerun writes nothing');
 select is((select count(*) from public.price_suggestion where version > 1), 0::bigint, 'and touches no row');
@@ -216,6 +222,10 @@ select is((select array_agg(p.status || ' from ' || p.episode_start order by p.a
                                       where menu_item_id = :'TORTA' and location_id = :'CENTRO' and status = 'dismissed'),
                 'open from 2026-10-14'],
           'the dismissal held for its episode only');
+-- the read path too: the old episode's dismissed row does not hold back the new episode's
+select ok(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L, %L)', '"last_7d"', :'CENTRO'), '2026-10-14') #> '{data,suggestions}' @>
+          format('[{"menu_item_id": "%s", "rationale_code": "review_portion_cost"}]', :'TORTA')::jsonb,
+          'and get_cost_alerts on 10-14 lists the new episode''s torta');
 rollback to savepoint new_episode;
 
 -- an open row the writer stopped refreshing is removed, and never shown ----------------------
