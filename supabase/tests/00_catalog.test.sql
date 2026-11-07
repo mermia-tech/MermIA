@@ -12,7 +12,9 @@ select set_eq($$select p.proname::text from pg_proc p where p.pronamespace = 'ap
               array['current_tenant_id', 'can_see_location', 'has_all_locations', 'has_location_list', 'location_scope_ids',
                     -- MR-17: the read RPCs run as the caller, so the caller runs their helpers
                     'business_today', 'resolve_period', 'previous_period', 'scope_locations', 'fmt_money', 'fmt_number',
-                    'fmt_pct', 'figure', 'data_as_of', 'rpc_ok', 'rpc_error', 'flag', 'sales_totals', 'item_rows', 'metric_value'],
+                    'fmt_pct', 'figure', 'data_as_of', 'rpc_ok', 'rpc_error', 'flag', 'sales_totals', 'item_rows', 'metric_value',
+                    -- MR-98: the open days of each location and the missing ones
+                    'open_location_days', 'missing_business_days'],
               'authenticated executes only the policy helpers and the read-RPC helpers');
 select ok(has_function_privilege('service_role', 'app.uuid_v7(timestamptz)', 'execute'), 'service_role can run the uuid default');
 select ok(has_schema_privilege('authenticated', 'app', 'usage'), 'authenticated has usage on app');
