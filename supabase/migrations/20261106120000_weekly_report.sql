@@ -11,7 +11,8 @@
 -- - cost_alerts: get_cost_alerts' shape (top 10 with *_total; dishes over target =
 --   breaches_total) from app.cost_alerts, with price moves and breaches over the week only (a price
 --   dated after Sunday does not change last week's report) and the suggestions as of today; each
---   breach carries its location, cost, prices and suggestion for [Ver márgenes] (W4).
+--   breach lists the locations where it is over target, with cost, prices and the suggestion
+--   priced on those figures, for [Ver márgenes] (W4).
 -- - locations: the locations in scope with their names, to label breaches and suggestions.
 -- - missing_business_days: the days of the week a visible location has no sales data (W2: the
 --   report goes out anyway and says so).
@@ -42,6 +43,35 @@ as $$
     where not exists (select 1 from covered c where c.location_id = l.id and c.business_date = d.day))
 $$;
 
+-- One location of a report breach ([Ver márgenes], WeeklyBreachAt): the dish's latest snapshot of
+-- the week there (cost, net price, food cost, confidence), the menu price with IVA that day, and
+-- its suggestion from `shown` only when it is priced on these figures: the dish's latest snapshot
+-- up to `today` has the same cost and net price (no price dated after Sunday re-costed it) and
+-- the suggestion's current price is this menu price. Otherwise null; it stays in `suggestions`.
+create function app.breach_at(item uuid, loc uuid, d date, snap_cost bigint, snap_net bigint,
+                              snap_confidence app.cost_confidence, today date, shown jsonb)
+returns jsonb
+language sql stable security invoker set search_path = ''
+as $$
+  with gross as (select app.menu_price_on(item, loc, d) as price)
+  select jsonb_build_object(
+    'location_id', loc,
+    'cost', app.money(snap_cost),
+    'net_price', app.money(snap_net),
+    'price_gross', app.money(g.price),
+    'food_cost', app.pct(100.0 * snap_cost / snap_net),
+    'confidence', snap_confidence,
+    'suggestion', (
+      select s from jsonb_array_elements(shown) s
+      where s ->> 'menu_item_id' = item::text and s ->> 'location_id' = loc::text
+        and (s #>> '{current_price,raw}')::bigint = g.price
+        and (select (x.cost, x.price_net) = (snap_cost, snap_net)
+             from public.dish_cost_snapshot x
+             where x.location_id = loc and x.menu_item_id = item and x.date between d and today
+             order by x.date desc limit 1)))
+  from gross g
+$$;
+
 -- The cost alerts of the locations, as get_cost_alerts lists them, returned as {data, flags}:
 -- - price moves and breaches over [f, t] (the ingredient prices of record up to t, the dish
 --   snapshots of [f, t]);
@@ -50,9 +80,9 @@ $$;
 --   breaches (the rules of 20261106110000_price_suggestions.sql).
 -- get_cost_alerts is t = today. The weekly report passes the week's Sunday as t, so a price dated
 -- after Sunday never moves last week's figures (the 9:00 and the 12:00 report agree), and
--- `detailed`: each breach also gets the location where its food cost is highest, the snapshot's
--- cost, net price and menu price (with IVA) that day, its confidence and that location's
--- suggestion or null ([Ver márgenes], doc 12 1b). The agent's breaches stay compact (doc 13).
+-- `detailed`: each breach also gets `at`, one app.breach_at per location in scope where the dish
+-- is over target, worst first ([Ver márgenes], doc 12 1b). The agent's breaches stay compact
+-- (doc 13).
 create function app.cost_alerts(locs uuid[], f date, t date, today date, detailed boolean default false)
 returns jsonb
 language plpgsql stable security invoker set search_path = ''
@@ -149,31 +179,31 @@ begin
     from public.dish_cost_snapshot s
     where s.location_id = any (locs) and s.date between f and t and s.price_net > 0
     order by s.menu_item_id, s.location_id, s.date desc
-  ), worst as (
-    select distinct on (l.menu_item_id) l.*, 100.0 * l.cost / l.price_net as fc
-    from latest l order by l.menu_item_id, 100.0 * l.cost / l.price_net desc, l.location_id
+  ), located as (
+    -- k = 1 is the dish's worst location
+    select l.*, 100.0 * l.cost / l.price_net as fc,
+           row_number() over (partition by l.menu_item_id order by 100.0 * l.cost / l.price_net desc, l.location_id) as k
+    from latest l
   ), ranked as (
     select b.*, m.name, row_number() over (order by round(b.fc, 4) desc, m.name, b.menu_item_id) as n
-    from worst b join public.menu_item m on m.id = b.menu_item_id
-    where b.fc > breach_above
+    from located b join public.menu_item m on m.id = b.menu_item_id
+    where b.k = 1 and b.fc > breach_above
   )
-  -- the top N by food cost; the confidence covers every breach, listed or not
+  -- the top N by food cost; the confidence covers every breach, listed or not (in the report,
+  -- every location over target)
   select coalesce(jsonb_agg(
            jsonb_build_object('menu_item_id', b.menu_item_id, 'name', b.name,
                               'food_cost', app.pct(b.fc), 'target', app.pct(app.food_cost_target()))
-           || case when detailed then jsonb_build_object(
-                'location_id', b.location_id,
-                'cost', app.money(b.cost),
-                'net_price', app.money(b.price_net),
-                'price_gross', app.money(app.menu_price_on(b.menu_item_id, b.location_id, b.date)),
-                'confidence', b.confidence,
-                'suggestion', (select s from jsonb_array_elements(shown) s
-                               where s ->> 'menu_item_id' = b.menu_item_id::text
-                                 and s ->> 'location_id' = b.location_id::text))
+           || case when detailed then jsonb_build_object('at', (
+                select jsonb_agg(app.breach_at(o.menu_item_id, o.location_id, o.date, o.cost, o.price_net, o.confidence,
+                                               today, shown) order by o.k)
+                from located o
+                where o.menu_item_id = b.menu_item_id and o.fc > breach_above and o.k <= top_n))
               else '{}' end
            order by b.n) filter (where b.n <= top_n), '[]'),
          count(*),
-         array_agg(distinct b.confidence)
+         case when detailed then (select array_agg(distinct o.confidence) from located o where o.fc > breach_above)
+              else array_agg(distinct b.confidence) end
   into breaches, breaches_total, levels
   from ranked b;
 
@@ -299,8 +329,10 @@ $$;
 -- Privileges ---------------------------------------------------------------------------------
 -- Runs as the caller, like the section RPCs it calls.
 revoke all on function app.missing_business_days(uuid[], date, date), app.cost_alerts(uuid[], date, date, date, boolean),
+  app.breach_at(uuid, uuid, date, bigint, bigint, app.cost_confidence, date, jsonb),
   api.build_weekly_report(jsonb, uuid)
   from public, anon;
 grant execute on function app.missing_business_days(uuid[], date, date), app.cost_alerts(uuid[], date, date, date, boolean),
+  app.breach_at(uuid, uuid, date, bigint, bigint, app.cost_confidence, date, jsonb),
   api.build_weekly_report(jsonb, uuid)
   to authenticated;

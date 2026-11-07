@@ -622,36 +622,63 @@ class BuildWeeklyReportArgs(Model):
         return self
 
 
-class WeeklyBreach(TargetBreach):
-    """A dish over target as `[Ver márgenes]` shows it (W4, doc 12 1b: "*Costra de pastor* — costo
-    $29.80, precio $89.00 → *38.8%*", then its suggestion).
+class WeeklyBreachAt(Model):
+    """One location where a dish of `[Ver márgenes]` is over target (W4, doc 12 1b: "*Costra de
+    pastor* — costo $29.80, precio $89.00 → *38.8%*", then its suggestion).
 
-    The report's only: get_cost_alerts keeps the compact TargetBreach (doc 13 budget). The figures
-    are the dish's latest snapshot of the week at `location_id`, the location where its food cost
-    is highest: `cost`, `net_price` (without IVA; `food_cost` = cost / net_price) and
-    `price_gross` (the menu price with IVA that day, the one to quote), with the cost's
-    `confidence` ("Receta estimada"). `suggestion` is that dish's suggestion at that location (one
-    of `CostAlertsData.suggestions` or a lower-ranked one), or null when it has none (a resale
-    item, a star, a cost not evaluated yet).
+    The figures are the dish's latest snapshot of the week at `location_id`: `cost`,
+    `net_price` (without IVA; `food_cost` = cost / net_price) and `price_gross` (the menu price
+    with IVA that day, the one to quote), with the cost's `confidence` ("Receta estimada").
+    `suggestion` is that dish's suggestion at that location (one of `CostAlertsData.suggestions`
+    or a lower-ranked one) only when it is priced on these figures: the dish's latest snapshot up
+    to the report day has the same cost and net price, and the suggestion's current price is
+    `price_gross`. Otherwise null (a resale item, a star, a cost not evaluated yet, or a cost or
+    price that moved after Sunday: that suggestion is in `suggestions` only).
     """
 
     location_id: UUID
     cost: Money
     net_price: PositiveMoney
     price_gross: PositiveMoney
+    food_cost: Pct
     confidence: CostConfidence
     suggestion: PriceSuggestion | None
 
     @model_validator(mode="after")
-    def _priced(self) -> WeeklyBreach:
+    def _priced(self) -> WeeklyBreachAt:
         if self.net_price.raw > self.price_gross.raw:
             raise ValueError("net_price must not exceed price_gross")
         _check_food_cost(self.food_cost, self.cost.raw, self.net_price.raw)
         s = self.suggestion
-        if s is not None and (s.menu_item_id, s.location_id) != (
-            self.menu_item_id,
-            self.location_id,
-        ):
+        if s is not None and s.location_id != self.location_id:
+            raise ValueError("a breach's suggestion is for the same dish and location")
+        if s is not None and s.current_price.raw != self.price_gross.raw:
+            raise ValueError("a breach's suggestion is at the breach's menu price")
+        return self
+
+
+class WeeklyBreach(TargetBreach):
+    """A dish over target as `[Ver márgenes]` shows it: one entry in `at` per location in scope
+    where the dish's latest snapshot of the week is over target, worst first (at most 10).
+    `food_cost` is the worst location's, as in get_cost_alerts, so `breaches_total` still counts
+    dishes. The report's only: get_cost_alerts keeps the compact TargetBreach (doc 13 budget).
+    """
+
+    at: Annotated[list[WeeklyBreachAt], Field(min_length=1, max_length=COST_ALERTS_TOP_N)]
+
+    @model_validator(mode="after")
+    def _located(self) -> WeeklyBreach:
+        if self.food_cost != self.at[0].food_cost:
+            raise ValueError("a breach's food_cost is its worst location's")
+        costs = [e.food_cost.raw for e in self.at]
+        if costs != sorted(costs, reverse=True):
+            raise ValueError("a breach lists its locations worst first")
+        ids = [e.location_id for e in self.at]
+        if len(set(ids)) != len(ids):
+            raise ValueError("a breach lists each location once")
+        if any(e.food_cost.raw <= self.target.raw for e in self.at):
+            raise ValueError("a breach lists only locations over target")
+        if any(e.suggestion and e.suggestion.menu_item_id != self.menu_item_id for e in self.at):
             raise ValueError("a breach's suggestion is for the same dish and location")
         return self
 
@@ -676,8 +703,9 @@ class WeeklyReportData(Model):
     `breaches_total`) with two differences. Price moves and breaches cover the week only, Monday to
     Sunday, so a price dated after Sunday never shows and the report built at 9:00 and at 12:00
     says the same. Suggestions are as of the day the report is built (open and fresh today, at
-    today's menu price), as the owner would act on them. Each breach carries its cost, prices,
-    location and suggestion (WeeklyBreach), so `[Ver márgenes]` needs no other call.
+    today's menu price), as the owner would act on them. Each breach carries, per location over
+    target, its cost, prices and the suggestion priced on those figures (WeeklyBreach), so
+    `[Ver márgenes]` needs no other call.
     """
 
     week: DateRange
@@ -710,7 +738,7 @@ class WeeklyReportData(Model):
         if len(set(ids)) != len(ids):
             raise ValueError("locations are distinct")
         alerts = self.cost_alerts
-        placed = [b.location_id for b in alerts.breaches] + [
+        placed = [e.location_id for b in alerts.breaches for e in b.at] + [
             s.location_id for s in alerts.suggestions
         ]
         if not set(placed) <= set(ids):

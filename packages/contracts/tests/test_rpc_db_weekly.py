@@ -98,16 +98,52 @@ def test_the_week_of_09_21_stops_on_its_sunday(db_url: str) -> None:
 
 def _week_costs(r: Any) -> Any:
     alerts = r["data"]["cost_alerts"]
-    breaches = [{k: v for k, v in b.items() if k != "suggestion"} for b in alerts["breaches"]]
-    return (alerts["price_moves"], alerts["price_moves_total"], breaches, alerts["breaches_total"])
+    return (
+        alerts["price_moves"],
+        alerts["price_moves_total"],
+        alerts["breaches"],
+        alerts["breaches_total"],
+        r["flags"],
+    )
+
+
+def _without_suggestion(r: Any, names: set[str]) -> Any:
+    """The report with the [Ver márgenes] suggestions of these dishes taken out."""
+    out = json.loads(json.dumps(r))
+    for b in out["data"]["cost_alerts"]["breaches"]:
+        if b["name"] in names:
+            b["at"] = [{**e, "suggestion": None} for e in b["at"]]
+    return out
+
+
+def _suggestion_follows_its_figures(e: Any, target_pct: float) -> bool:
+    """A breach entry's suggestion is priced on that entry's cost and menu price: its current
+    price is the entry's menu price and its target price is the cost at the target food cost with
+    the dish's IVA (within centavo rounding)."""
+    s = e["suggestion"]
+    if s is None:
+        return True
+    gross, net, cost = e["price_gross"]["raw"], e["net_price"]["raw"], e["cost"]["raw"]
+    target = cost * gross / net * 100 / target_pct
+    return bool(s["current_price"]["raw"] == gross and abs(s["target_price"]["raw"] - target) <= 2)
 
 
 def test_a_price_dated_after_sunday_does_not_move_last_weeks_report(db_url: str) -> None:
-    """W2: the 9:00 and the 12:00 report agree even if a Monday-dated price lands in between."""
+    """W2: the 9:00 and the 12:00 report agree even if a Monday-dated price lands in between:
+    same price moves, breaches, figures and flags. The Monday price re-prices the suggestions of
+    the dishes it touches (Alambre de res and Volcán de pastor use Queso Oaxaca); those no longer
+    match the week's figures, so [Ver márgenes] leaves them out (N1) and they stay in
+    `suggestions` only."""
     before = call(db_url, {}, OWNER)
     after = call(db_url, {}, OWNER, QUESO_DOUBLES_ON_MONDAY)
-    assert _week_costs(after) == _week_costs(before)
+    moved = {"Alambre de res", "Volcán de pastor"}
+    assert _week_costs(after) == _week_costs(_without_suggestion(before, moved))
     assert after["data"]["cost_alerts"]["price_moves_total"] == 0
+    for r in (before, after):
+        for b in r["data"]["cost_alerts"]["breaches"]:
+            assert all(_suggestion_follows_its_figures(e, b["target"]["raw"]) for e in b["at"])
+    listed = {(s["name"], s["location_id"]) for s in after["data"]["cost_alerts"]["suggestions"]}
+    assert {("Alambre de res", CENTRO), ("Volcán de pastor", CENTRO)} <= listed
 
 
 def test_ver_margenes_comes_from_the_payload(db_url: str) -> None:
@@ -117,21 +153,45 @@ def test_ver_margenes_comes_from_the_payload(db_url: str) -> None:
     names = {loc["location_id"]: loc["name"] for loc in data["locations"]}
     assert names == {CENTRO: "Centro", POLANCO: "Polanco"}
     torta = next(b for b in data["cost_alerts"]["breaches"] if b["name"] == "Torta de pastor")
+    e = torta["at"][0]
     line = (
-        f"{torta['name']} ({names[torta['location_id']]}) — costo {torta['cost']['text']},"
-        f" precio {torta['price_gross']['text']} → {torta['food_cost']['text']}"
+        f"{torta['name']} ({names[e['location_id']]}) — costo {e['cost']['text']},"
+        f" precio {e['price_gross']['text']} → {e['food_cost']['text']}"
     )
     assert line == "Torta de pastor (Centro) — costo $34.49, precio $80.00 → 50.0%"
-    assert torta["net_price"]["raw"] == round(8000 / 1.16)
-    assert torta["suggestion"]["location_id"] == torta["location_id"] == CENTRO
-    assert torta["suggestion"]["rationale_code"] == "review_portion_cost"
+    assert e["net_price"]["raw"] == round(8000 / 1.16)
+    assert e["suggestion"]["location_id"] == e["location_id"] == CENTRO
+    assert e["suggestion"]["rationale_code"] == "review_portion_cost"
+
+
+def test_ver_margenes_lists_every_location_over_target(db_url: str) -> None:
+    """N2: with Queso Oaxaca at $280/kg the quesadilla is over target at both locations: Centro
+    50.0 % at $45 (no suggestion) and Polanco 45.0 % at $50, raise to $55. Both lines show."""
+    data = call(db_url, {}, OWNER, QUESO_DOUBLES)["data"]
+    WeeklyReportData.model_validate(data)
+    quesadilla = next(
+        b for b in data["cost_alerts"]["breaches"] if b["name"] == "Quesadilla de queso"
+    )
+    assert quesadilla["food_cost"] == quesadilla["at"][0]["food_cost"]
+    lines = [
+        (
+            e["location_id"],
+            e["price_gross"]["text"],
+            e["food_cost"]["text"],
+            e["suggestion"] and e["suggestion"]["suggested_price"]["text"],
+        )
+        for e in quesadilla["at"]
+    ]
+    assert lines == [(CENTRO, "$45.00", "50.0%", None), (POLANCO, "$50.00", "45.0%", "$55.00")]
 
 
 def test_a_polanco_manager_gets_polanco_only(db_url: str) -> None:
     r = report(db_url, POLANCO_MANAGER)
     assert r["data"]["sales"]["net_sales"]["raw"] == 16092080
     assert {s["location_id"] for s in r["data"]["cost_alerts"]["suggestions"]} == {POLANCO}
-    assert {b["location_id"] for b in r["data"]["cost_alerts"]["breaches"]} == {POLANCO}
+    assert {e["location_id"] for b in r["data"]["cost_alerts"]["breaches"] for e in b["at"]} == {
+        POLANCO
+    }
     assert r["data"]["locations"] == [{"location_id": POLANCO, "name": "Polanco"}]
     denied = report(db_url, POLANCO_MANAGER, location_id=CENTRO)
     assert denied["ok"] is False and denied["error"]["code"] == "not_found"

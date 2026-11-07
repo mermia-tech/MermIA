@@ -161,22 +161,38 @@ def test_weekly_report_raise_variant_has_a_price_to_suggest() -> None:
 
 
 def test_weekly_report_has_what_ver_margenes_needs() -> None:
-    """W4: the top breaches with cost, menu price, location name and suggestion, no other call."""
+    """W4: the top breaches with, per location over target, cost, menu price, location name and
+    suggestion, no other call."""
     d = _data("build_weekly_report")
     names = {loc["location_id"]: loc["name"] for loc in d["locations"]}
     top = d["cost_alerts"]["breaches"][:3]
     lines = [
-        (
-            names[b["location_id"]],
-            b["cost"]["text"],
-            b["price_gross"]["text"],
-            b["food_cost"]["text"],
-        )
+        [
+            (
+                names[e["location_id"]],
+                e["cost"]["text"],
+                e["price_gross"]["text"],
+                e["food_cost"]["text"],
+            )
+            for e in b["at"]
+        ]
         for b in top
     ]
-    assert lines[1] == ("Centro", "$34.49", "$80.00", "50.0%")
-    assert [b["suggestion"] and b["suggestion"]["rationale_code"] for b in top] == [
+    assert lines[1][0] == ("Centro", "$34.49", "$80.00", "50.0%")
+    assert [
+        b["at"][0]["suggestion"] and b["at"][0]["suggestion"]["rationale_code"] for b in top
+    ] == [
         None,
         "review_portion_cost",
         "review_portion_cost",
     ]
+
+
+def test_weekly_report_raise_variant_lists_each_location_over_target() -> None:
+    d = _data("build_weekly_report", "raise")
+    names = {loc["location_id"]: loc["name"] for loc in d["locations"]}
+    quesadilla = next(b for b in d["cost_alerts"]["breaches"] if b["name"] == "Quesadilla de queso")
+    assert [
+        (names[e["location_id"]], e["suggestion"] and e["suggestion"]["suggested_price"]["text"])
+        for e in quesadilla["at"]
+    ] == [("Centro", None), ("Polanco", "$55.00")]

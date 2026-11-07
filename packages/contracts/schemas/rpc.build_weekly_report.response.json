@@ -614,7 +614,47 @@
     },
     "WeeklyBreach": {
       "additionalProperties": false,
-      "description": "A dish over target as `[Ver márgenes]` shows it (W4, doc 12 1b: \"*Costra de pastor* — costo\n$29.80, precio $89.00 → *38.8%*\", then its suggestion).\n\nThe report's only: get_cost_alerts keeps the compact TargetBreach (doc 13 budget). The figures\nare the dish's latest snapshot of the week at `location_id`, the location where its food cost\nis highest: `cost`, `net_price` (without IVA; `food_cost` = cost / net_price) and\n`price_gross` (the menu price with IVA that day, the one to quote), with the cost's\n`confidence` (\"Receta estimada\"). `suggestion` is that dish's suggestion at that location (one\nof `CostAlertsData.suggestions` or a lower-ranked one), or null when it has none (a resale\nitem, a star, a cost not evaluated yet).",
+      "description": "A dish over target as `[Ver márgenes]` shows it: one entry in `at` per location in scope\nwhere the dish's latest snapshot of the week is over target, worst first (at most 10).\n`food_cost` is the worst location's, as in get_cost_alerts, so `breaches_total` still counts\ndishes. The report's only: get_cost_alerts keeps the compact TargetBreach (doc 13 budget).",
+      "properties": {
+        "at": {
+          "items": {
+            "$ref": "#/$defs/WeeklyBreachAt"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "At",
+          "type": "array"
+        },
+        "food_cost": {
+          "$ref": "#/$defs/Pct"
+        },
+        "menu_item_id": {
+          "format": "uuid",
+          "title": "Menu Item Id",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/Pct"
+        }
+      },
+      "required": [
+        "menu_item_id",
+        "name",
+        "food_cost",
+        "target",
+        "at"
+      ],
+      "title": "WeeklyBreach",
+      "type": "object"
+    },
+    "WeeklyBreachAt": {
+      "additionalProperties": false,
+      "description": "One location where a dish of `[Ver márgenes]` is over target (W4, doc 12 1b: \"*Costra de\npastor* — costo $29.80, precio $89.00 → *38.8%*\", then its suggestion).\n\nThe figures are the dish's latest snapshot of the week at `location_id`: `cost`,\n`net_price` (without IVA; `food_cost` = cost / net_price) and `price_gross` (the menu price\nwith IVA that day, the one to quote), with the cost's `confidence` (\"Receta estimada\").\n`suggestion` is that dish's suggestion at that location (one of `CostAlertsData.suggestions`\nor a lower-ranked one) only when it is priced on these figures: the dish's latest snapshot up\nto the report day has the same cost and net price, and the suggestion's current price is\n`price_gross`. Otherwise null (a resale item, a star, a cost not evaluated yet, or a cost or\nprice that moved after Sunday: that suggestion is in `suggestions` only).",
       "properties": {
         "confidence": {
           "$ref": "#/$defs/CostConfidence"
@@ -628,16 +668,6 @@
         "location_id": {
           "format": "uuid",
           "title": "Location Id",
-          "type": "string"
-        },
-        "menu_item_id": {
-          "format": "uuid",
-          "title": "Menu Item Id",
-          "type": "string"
-        },
-        "name": {
-          "pattern": "\\S",
-          "title": "Name",
           "type": "string"
         },
         "net_price": {
@@ -655,24 +685,18 @@
               "type": "null"
             }
           ]
-        },
-        "target": {
-          "$ref": "#/$defs/Pct"
         }
       },
       "required": [
-        "menu_item_id",
-        "name",
-        "food_cost",
-        "target",
         "location_id",
         "cost",
         "net_price",
         "price_gross",
+        "food_cost",
         "confidence",
         "suggestion"
       ],
-      "title": "WeeklyBreach",
+      "title": "WeeklyBreachAt",
       "type": "object"
     },
     "WeeklyCostAlerts": {
@@ -735,7 +759,7 @@
     },
     "WeeklyReportData": {
       "additionalProperties": false,
-      "description": "Everything the Monday report needs, for MR-38 to render (decisions W1-W4).\n\nEach section is the data of the read RPC of the same shape over `week`: `sales` is\nget_sales_summary (`change_vs_previous` is vs `previous_week`, W3), `top_dishes` get_top_dishes\nby units (top 3), `food_cost` get_food_cost_pct (null when the week has no costed sales),\n`stale_costs` get_data_status today. `missing_business_days` are the days of the week a\nlocation in scope has no sales data (W2: the report goes out and says so). `locations` are the\nlocations in scope with their names, to label a breach or a suggestion (\"Centro\").\n\n`cost_alerts` is get_cost_alerts' shape (top 10 of each list; dishes over target =\n`breaches_total`) with two differences. Price moves and breaches cover the week only, Monday to\nSunday, so a price dated after Sunday never shows and the report built at 9:00 and at 12:00\nsays the same. Suggestions are as of the day the report is built (open and fresh today, at\ntoday's menu price), as the owner would act on them. Each breach carries its cost, prices,\nlocation and suggestion (WeeklyBreach), so `[Ver márgenes]` needs no other call.",
+      "description": "Everything the Monday report needs, for MR-38 to render (decisions W1-W4).\n\nEach section is the data of the read RPC of the same shape over `week`: `sales` is\nget_sales_summary (`change_vs_previous` is vs `previous_week`, W3), `top_dishes` get_top_dishes\nby units (top 3), `food_cost` get_food_cost_pct (null when the week has no costed sales),\n`stale_costs` get_data_status today. `missing_business_days` are the days of the week a\nlocation in scope has no sales data (W2: the report goes out and says so). `locations` are the\nlocations in scope with their names, to label a breach or a suggestion (\"Centro\").\n\n`cost_alerts` is get_cost_alerts' shape (top 10 of each list; dishes over target =\n`breaches_total`) with two differences. Price moves and breaches cover the week only, Monday to\nSunday, so a price dated after Sunday never shows and the report built at 9:00 and at 12:00\nsays the same. Suggestions are as of the day the report is built (open and fresh today, at\ntoday's menu price), as the owner would act on them. Each breach carries, per location over\ntarget, its cost, prices and the suggestion priced on those figures (WeeklyBreach), so\n`[Ver márgenes]` needs no other call.",
       "properties": {
         "cost_alerts": {
           "$ref": "#/$defs/WeeklyCostAlerts"

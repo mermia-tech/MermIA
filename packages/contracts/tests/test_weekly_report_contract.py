@@ -134,21 +134,57 @@ def _with_breach(i: int, **change: Any) -> dict[str, Any]:
     return data
 
 
+def _with_at(i: int, k: int, **change: Any) -> dict[str, Any]:
+    data = copy.deepcopy(_data())
+    at = data["cost_alerts"]["breaches"][i]["at"]
+    at[k] = {**at[k], **change}
+    return data
+
+
+def _raise_data() -> dict[str, Any]:
+    out: dict[str, Any] = json.loads(EXAMPLE.with_suffix(".raise.json").read_text())["response"][
+        "data"
+    ]
+    return out
+
+
 def test_a_breach_line_of_ver_margenes_comes_from_the_payload() -> None:
     """Doc 12 1b: "*1. Costra de pastor* — costo $29.80, precio $89.00 → *38.8%*", then the
-    suggestion of that dish at that location, labelled with the location's name."""
+    suggestion of that dish at that location, labelled with the location's name; one line per
+    location over target, worst first."""
     report = WeeklyReportData.model_validate(_data())
     names = {loc.location_id: loc.name for loc in report.locations}
     for b in report.cost_alerts.breaches:
-        assert b.location_id in names
-        assert b.net_price.raw <= b.price_gross.raw
-        line = f"{b.name} — costo {b.cost.text}, precio {b.price_gross.text} → {b.food_cost.text}"
-        assert "$" in line and line.endswith("%")
-        if b.suggestion is not None:
-            assert (b.suggestion.menu_item_id, b.suggestion.location_id) == (
-                b.menu_item_id,
-                b.location_id,
+        assert b.at and b.food_cost == b.at[0].food_cost
+        for e in b.at:
+            assert e.location_id in names
+            assert e.net_price.raw <= e.price_gross.raw
+            line = (
+                f"{b.name} — costo {e.cost.text}, precio {e.price_gross.text} → {e.food_cost.text}"
             )
+            assert "$" in line and line.endswith("%")
+            if e.suggestion is not None:
+                assert (e.suggestion.menu_item_id, e.suggestion.location_id) == (
+                    b.menu_item_id,
+                    e.location_id,
+                )
+
+
+def test_a_dish_over_target_at_two_locations_lists_both() -> None:
+    """N2: Quesadilla over target at Centro (no suggestion) and at Polanco ($50 -> $55)."""
+    report = WeeklyReportData.model_validate(_raise_data())
+    names = {loc.location_id: loc.name for loc in report.locations}
+    quesadilla = next(b for b in report.cost_alerts.breaches if b.name == "Quesadilla de queso")
+    lines = [
+        (
+            names[e.location_id],
+            e.price_gross.text,
+            e.food_cost.text,
+            e.suggestion and e.suggestion.suggested_price and e.suggestion.suggested_price.text,
+        )
+        for e in quesadilla.at
+    ]
+    assert lines == [("Centro", "$45.00", "50.0%", None), ("Polanco", "$50.00", "45.0%", "$55.00")]
 
 
 def test_the_agent_tool_keeps_its_compact_breach() -> None:
@@ -166,21 +202,84 @@ def test_the_agent_tool_keeps_its_compact_breach() -> None:
         TypeAdapter(agent).validate_python([_breaches()[0]])
 
 
+def _with_suggestion() -> tuple[int, dict[str, Any]]:
+    """The first breach whose worst location has a review suggestion, and that suggestion."""
+    i, b = next(
+        (n, b)
+        for n, b in enumerate(_breaches())
+        if b["at"][0]["suggestion"]
+        and b["at"][0]["suggestion"]["rationale_code"] == "review_portion_cost"
+    )
+    suggestion: dict[str, Any] = b["at"][0]["suggestion"]
+    return i, suggestion
+
+
 def test_a_breach_suggestion_is_for_the_same_dish_and_location() -> None:
-    other = next(s for s in _data()["cost_alerts"]["suggestions"])
-    i = next(n for n, b in enumerate(_breaches()) if b["menu_item_id"] != other["menu_item_id"])
+    i, s = _with_suggestion()
+    other = next(b["menu_item_id"] for b in _breaches() if b["menu_item_id"] != s["menu_item_id"])
     with pytest.raises(ValidationError, match="same dish and location"):
-        WeeklyReportData.model_validate(_with_breach(i, suggestion=other))
+        WeeklyReportData.model_validate(_with_at(i, 0, suggestion={**s, "menu_item_id": other}))
+
+
+def test_a_breach_suggestion_is_at_the_breach_menu_price() -> None:
+    """N1: a suggestion priced on another menu price (or cost) is not on the line."""
+    i, s = _with_suggestion()
+    price = {"raw": s["current_price"]["raw"] + 100, "text": "x"}
+    with pytest.raises(ValidationError, match="menu price"):
+        WeeklyReportData.model_validate(_with_at(i, 0, suggestion={**s, "current_price": price}))
 
 
 def test_a_breach_food_cost_is_its_cost_on_the_net_price() -> None:
-    b = _breaches()[0]
-    cost = {"raw": b["cost"]["raw"] + 500, "text": "x"}
+    e = _breaches()[0]["at"][0]
+    cost = {"raw": e["cost"]["raw"] + 500, "text": "x"}
     with pytest.raises(ValidationError, match="cost / net_price"):
-        WeeklyReportData.model_validate(_with_breach(0, cost=cost))
-    gross = {"raw": b["net_price"]["raw"] - 1, "text": "x"}
+        WeeklyReportData.model_validate(_with_at(0, 0, cost=cost))
+    gross = {"raw": e["net_price"]["raw"] - 1, "text": "x"}
     with pytest.raises(ValidationError, match="net_price must not exceed price_gross"):
-        WeeklyReportData.model_validate(_with_breach(0, price_gross=gross))
+        WeeklyReportData.model_validate(_with_at(0, 0, price_gross=gross))
+
+
+def test_a_breach_food_cost_is_its_worst_location() -> None:
+    b = _breaches()[0]
+    worse = {"raw": b["food_cost"]["raw"] + 1, "text": "x"}
+    with pytest.raises(ValidationError, match="worst location"):
+        WeeklyReportData.model_validate(_with_breach(0, food_cost=worse))
+    with pytest.raises(ValidationError, match="at least 1"):
+        WeeklyReportData.model_validate(_with_breach(0, at=[]))
+
+
+def test_a_breach_lists_each_location_once_worst_first() -> None:
+    data = _raise_data()
+    i, b = next((n, b) for n, b in enumerate(data["cost_alerts"]["breaches"]) if len(b["at"]) > 1)
+    WeeklyReportData.model_validate(data)
+    swapped = copy.deepcopy(data)
+    swapped["cost_alerts"]["breaches"][i]["at"] = b["at"][::-1]
+    swapped["cost_alerts"]["breaches"][i]["food_cost"] = b["at"][-1]["food_cost"]
+    with pytest.raises(ValidationError, match="worst first"):
+        WeeklyReportData.model_validate(swapped)
+    twice = copy.deepcopy(data)
+    twice["cost_alerts"]["breaches"][i]["at"] = [b["at"][0], b["at"][0]]
+    with pytest.raises(ValidationError, match="each location once"):
+        WeeklyReportData.model_validate(twice)
+
+
+def test_a_breach_location_is_over_target() -> None:
+    e = _breaches()[0]["at"][0]
+    under = copy.deepcopy(_data())
+    b = under["cost_alerts"]["breaches"][0]
+    cost = e["net_price"]["raw"] * 30 // 100
+    pct = round(100 * cost / e["net_price"]["raw"], 3)
+    b["at"] = [
+        {
+            **e,
+            "cost": {"raw": cost, "text": "x"},
+            "food_cost": {"raw": pct, "text": "x"},
+            "suggestion": None,
+        }
+    ]
+    b["food_cost"] = b["at"][0]["food_cost"]
+    with pytest.raises(ValidationError, match="over target"):
+        WeeklyReportData.model_validate(under)
 
 
 def test_a_breach_is_at_a_location_of_the_report() -> None:
