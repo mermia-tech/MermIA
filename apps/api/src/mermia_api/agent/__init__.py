@@ -5,19 +5,16 @@ broker for everything else. Spec: docs/superpowers/specs/2026-11-04-mr-26-router
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Mapping
-from typing import Any
+from collections.abc import Mapping
 from uuid import UUID
 
-from mermia_api.agent.broker import Broker
+from mermia_api.agent.broker import Broker, RpcCall
 from mermia_api.agent.router import Match, menu, route
 from mermia_api.agent.templates import no_data, render
 from mermia_contracts.agent import AgentRequest, AgentResponse, AgentRoute, TextMsg
-from mermia_contracts.rpc import RPCS, RpcEnvelope, RpcErrorCode
+from mermia_contracts.rpc import RPCS, RpcErrorCode
 
 logger = logging.getLogger(__name__)
-
-RpcCall = Callable[[str, dict[str, Any]], RpcEnvelope[Any]]
 
 UNAVAILABLE = "No pude consultar eso ahora, inténtalo en un momento."
 
@@ -35,7 +32,7 @@ def answer(
     elif request.input.type == "action" and request.input.action_id in menu(locations):
         _, match = menu(locations)[request.input.action_id]
     if match is None:
-        return broker(request, locations)
+        return broker(request, locations, rpc)
     return _template(match, locations, rpc)
 
 

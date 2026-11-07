@@ -44,7 +44,7 @@ def test_build_model_sets_a_timeout() -> None:
 
 def test_build_model_rejects_unknown_provider() -> None:
     with pytest.raises(ValueError):
-        build_model("deepseek:v4")
+        build_model("mistral:large")
 
 
 def test_prompt_states_today() -> None:
