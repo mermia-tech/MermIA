@@ -160,12 +160,12 @@ def _data_status(
     data: DataStatusData, args: dict[str, Any], locations: Mapping[UUID, str]
 ) -> list[str]:
     loaded = [s.last_batch_at for s in data.sources if s.last_batch_at is not None]
+    where = f" {_where(args, locations)}" if "location_id" in args else ""
     if loaded:
         day = max(loaded).astimezone(MEXICO_CITY).date()
-        where = f" {_where(args, locations)}" if "location_id" in args else ""
         lines = [f"Último reporte cargado{where} el {_day(day)} de {day.year}."]
     else:
-        lines = ["Todavía no hay reportes cargados."]
+        lines = [f"Todavía no hay reportes cargados{where}."]
     if data.missing_business_days:
         lines.append(f"Faltan datos de: {', '.join(map(_day, data.missing_business_days))}.")
     else:
