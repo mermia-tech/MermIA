@@ -66,10 +66,11 @@ declare
   b1 constant uuid := 'b1b1b1b1-0000-7000-8000-000000000001';
   pins_recipe constant jsonb := '{"menu_item_id": "gen_random_uuid()"}';
   pins_line constant jsonb := '{"ingredient_id": "gen_random_uuid()"}';
+  pins_alert constant jsonb := '{"rule": "''margin_breach''", "menu_item_id": "gen_random_uuid()", "as_of": "current_date", "value": "40", "threshold": "35"}';
   p jsonb;
 begin
   for r in select * from pg_temp.cls order by tbl loop
-    p := case r.tbl when 'recipe' then pins_recipe when 'recipe_line' then pins_line else '{}'::jsonb end;
+    p := case r.tbl when 'recipe' then pins_recipe when 'recipe_line' then pins_line when 'alert' then pins_alert else '{}'::jsonb end;
     if r.tbl = 'tenant' then
       perform pg_temp.dummy_row('public.tenant', ta, null, ta);
       perform pg_temp.dummy_row('public.tenant', tb, null, tb);

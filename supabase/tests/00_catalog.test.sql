@@ -17,7 +17,9 @@ select set_eq($$select p.proname::text from pg_proc p where p.pronamespace = 'ap
                     'food_cost_target', 'pct', 'money', 'confidence_flag', 'item_cost_rows', 'menu_price_on', 'cost_drivers',
                     'norm_name', 'price_text', 'paid_tickets', 'staff_names', 'breakdown_rows', 'cancellation_detail',
                     'discount_detail', 'price_of_record', 'recipe_of_record', 'recipe_cost',
-                    'menu_price_row', 'net_ex_iva', 'live_ingredients', 'subject_item', 'cancellation_days', 'food_cost'],
+                    'menu_price_row', 'net_ex_iva', 'live_ingredients', 'subject_item', 'cancellation_days', 'food_cost',
+                    -- MR-33: get_cost_alerts reads price moves through the shared jump rule
+                    'cost_alert_settings', 'price_jumps'],
               'authenticated executes only the policy helpers and the read-RPC helpers');
 select ok(has_function_privilege('service_role', 'app.uuid_v7(timestamptz)', 'execute'), 'service_role can run the uuid default');
 select ok(has_schema_privilege('authenticated', 'app', 'usage'), 'authenticated has usage on app');
