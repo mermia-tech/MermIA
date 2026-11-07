@@ -536,6 +536,8 @@ select results_eq(
     from public.alert a
     where a.rule = 'margin_breach' and a.menu_item_id = 'f496f051-9f85-5f8a-a4b6-c1a814d37c73' and a.location_id = '705e8e51-376b-5785-adbb-405eff4e2a22'$$,
   $$values ('2026-10-01'::date, 'confirmed'::text, true, true)$$, 'a catch-up flips on the first confirmed day that is fresh');
+select is((select a.awaits_confirmation from public.alert a where a.rule = 'margin_breach' and a.menu_item_id = :'PASTOR' and a.location_id = :'CENTRO'),
+          false, 'and the flip uses up its one chance (R4)');
 rollback to savepoint flip_catchup_range;
 
 savepoint value_only_refresh;
@@ -661,6 +663,126 @@ delete from public.dish_cost_snapshot where location_id = :'POLANCO' and date = 
 select is(pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12', '2026-10-12'), 0, 'no Polanco snapshot today: no Polanco breach');
 rollback to savepoint episodes;
 
+-- owner rules R1-R4: urgency at most once, only for a new breach on a confirmed fresh day -------
+\set QUESO '7724df82-1a06-5a9b-8bb9-6f56aeba7e37'
+create function pg_temp.pastor_centro() returns table (as_of date, confidence text, urgent boolean, awaits boolean)
+language sql as $$
+  select a.as_of, a.confidence::text, a.urgent, a.awaits_confirmation from public.alert a
+  where a.rule = 'margin_breach' and a.menu_item_id = 'f496f051-9f85-5f8a-a4b6-c1a814d37c73'
+    and a.location_id = '705e8e51-376b-5785-adbb-405eff4e2a22' $$;
+create function pg_temp.version_of(item uuid) returns int
+language sql as $$
+  select a.version from public.alert a
+  where a.rule = 'margin_breach' and a.menu_item_id = item and a.location_id = '705e8e51-376b-5785-adbb-405eff4e2a22' $$;
+
+savepoint p5_first_run_estimated;
+-- P5 (R3): a first run on 10-11 on estimated costs records the breaches that started on 08-17;
+-- their costs are confirmed on 10-12, a fresh day: none was new, so none waits or becomes urgent
+delete from public.alert;
+update public.dish_cost_snapshot set confidence = case when date = '2026-10-12' then 'confirmed' else 'estimated' end::app.cost_confidence
+where tenant_id = :'TENANT';
+select ok(pg_temp.evaluate_daily(:'TENANT', '2026-10-11', '2026-10-11') > 0, 'P5: first run on 10-11');
+select is((select row(count(*), count(*) filter (where awaits_confirmation), count(*) filter (where urgent), min(as_of))
+           from public.alert where rule = 'margin_breach'),
+          row(17::bigint, 0::bigint, 0::bigint, '2026-08-17'::date), 'P5: the existing breaches are recorded estimated, none waiting, none urgent');
+select is(pg_temp.evaluate_daily(:'TENANT', '2026-10-12', '2026-10-12'), 0, 'P5: 10-12 adds no breach');
+select is((select row(count(*) filter (where confidence = 'confirmed'), count(*) filter (where urgent))
+           from public.alert where rule = 'margin_breach'),
+          row(17::bigint, 0::bigint), 'P5: confirmed on 10-12, still none urgent');
+rollback to savepoint p5_first_run_estimated;
+
+savepoint p6_existing_blip;
+-- P6 (R3): every cost confirmed, a first run on 10-12: none urgent; the costs turn estimated and
+-- are confirmed again the same day: still none urgent
+delete from public.alert;
+update public.dish_cost_snapshot set confidence = 'confirmed' where tenant_id = :'TENANT';
+select ok(pg_temp.evaluate_daily(:'TENANT', '2026-10-12', '2026-10-12') > 0, 'P6: first run on 10-12');
+select is((select count(*) from public.alert where rule = 'margin_breach' and urgent), 0::bigint, 'P6: none urgent');
+update public.dish_cost_snapshot set confidence = 'estimated' where tenant_id = :'TENANT' and date = '2026-10-12';
+select is(pg_temp.evaluate_daily(:'TENANT', '2026-10-12', '2026-10-12'), 0, 'P6: rerun on estimated costs');
+update public.dish_cost_snapshot set confidence = 'confirmed' where tenant_id = :'TENANT' and date = '2026-10-12';
+select is(pg_temp.evaluate_daily(:'TENANT', '2026-10-12', '2026-10-12'), 0, 'P6: rerun on confirmed costs again');
+select is((select row(count(*) filter (where confidence = 'confirmed'), count(*) filter (where urgent), count(*) filter (where awaits_confirmation))
+           from public.alert where rule = 'margin_breach'),
+          row(17::bigint, 0::bigint, 0::bigint), 'P6: confirmed, none urgent, none waiting');
+rollback to savepoint p6_existing_blip;
+
+savepoint p7_no_regrant;
+-- P7 (R4): urgent on 10-11, its cost turns estimated on 10-12 (not urgent, R1), then is confirmed
+-- again: urgency is never granted twice, and the row stops changing
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'MEAT', 0.300, '2026-10-11', 'cfdi');
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-11', '2026-10-12') > 0, 'P7: two days recomputed');
+update public.dish_cost_snapshot set confidence = 'confirmed' where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date >= '2026-10-11';
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-11', '2026-10-11');
+select results_eq($$select * from pg_temp.pastor_centro()$$, $$values ('2026-10-11'::date, 'confirmed'::text, true, false)$$,
+                  'P7: a new confirmed breach on a top-10 dish is urgent');
+update public.dish_cost_snapshot set confidence = 'estimated' where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date = '2026-10-12';
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-12', '2026-10-12');
+select results_eq($$select * from pg_temp.pastor_centro()$$, $$values ('2026-10-11'::date, 'estimated'::text, false, false)$$,
+                  'P7: estimated: not urgent, and not waiting again');
+update public.dish_cost_snapshot set confidence = 'confirmed' where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date = '2026-10-12';
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-12', '2026-10-12');
+select results_eq($$select * from pg_temp.pastor_centro()$$, $$values ('2026-10-11'::date, 'confirmed'::text, false, false)$$,
+                  'P7: confirmed again: stays not urgent (urgency at most once)');
+create temp table p7_version as select pg_temp.version_of(:'PASTOR') as v;
+select is(pg_temp.evaluate_daily(:'TENANT', '2026-10-12', '2026-10-12'), 0, 'P7: an identical rerun adds nothing');
+select is(pg_temp.version_of(:'PASTOR'), (select v from p7_version), 'P7: and writes no new version');
+rollback to savepoint p7_no_regrant;
+
+savepoint r2_daily_once;
+-- R2: daily runs on a breach that starts on 10-08, estimated to 10-10, confirmed from 10-11: it
+-- waits, becomes urgent once on 10-11 and stays so; reruns write nothing
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'MEAT', 0.300, '2026-10-08', 'cfdi');
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-08', '2026-10-12') > 0, 'R2: five days recomputed');
+update public.dish_cost_snapshot set confidence = case when date >= '2026-10-11' then 'confirmed' else 'estimated' end::app.cost_confidence
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date >= '2026-10-08';
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-08', '2026-10-10');
+select results_eq($$select * from pg_temp.pastor_centro()$$, $$values ('2026-10-08'::date, 'estimated'::text, false, true)$$,
+                  'R2: a new breach on an estimated cost waits, not urgent');
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-11', '2026-10-11');
+select results_eq($$select * from pg_temp.pastor_centro()$$, $$values ('2026-10-08'::date, 'confirmed'::text, true, false)$$,
+                  'R2: confirmed on a fresh day while still over the limit: urgent, the wait is over');
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-12', '2026-10-12');
+create temp table r2_version as select pg_temp.version_of(:'PASTOR') as v;
+select is(pg_temp.evaluate_daily(:'TENANT', '2026-10-12', '2026-10-12'), 0, 'R2: a rerun adds nothing');
+select results_eq($$select * from pg_temp.pastor_centro()$$, $$values ('2026-10-08'::date, 'confirmed'::text, true, false)$$,
+                  'R2: one row, still urgent');
+select is(pg_temp.version_of(:'PASTOR'), (select v from r2_version), 'R2: and no new version');
+rollback to savepoint r2_daily_once;
+
+savepoint f4_chance_used;
+-- F4 (R4): quesadilla de queso (Centro's 11th dish by net sales) breaches from 10-11 on an
+-- estimated cost and waits; confirmed on a fresh 10-12 outside the top 10, the chance is used up
+-- (not urgent), so it stays not urgent once it enters the top 10
+update public.dish_cost_snapshot set cost = price_net / 2,
+  confidence = case date when '2026-10-11' then 'estimated' else 'confirmed' end::app.cost_confidence
+where menu_item_id = :'QUESO' and location_id = :'CENTRO' and date >= '2026-10-11';
+select is(pg_temp.evaluate_daily(:'TENANT', '2026-10-11', '2026-10-11'), 1, 'F4: the new breach is recorded on 10-11');
+select results_eq($$select a.confidence::text, a.urgent, a.awaits_confirmation from public.alert a
+                    where a.rule = 'margin_breach' and a.menu_item_id = '7724df82-1a06-5a9b-8bb9-6f56aeba7e37'
+                      and a.location_id = '705e8e51-376b-5785-adbb-405eff4e2a22'$$,
+                  $$values ('estimated'::text, false, true)$$, 'F4: estimated, waiting');
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-12', '2026-10-12');
+select results_eq($$select a.confidence::text, a.urgent, a.awaits_confirmation from public.alert a
+                    where a.rule = 'margin_breach' and a.menu_item_id = '7724df82-1a06-5a9b-8bb9-6f56aeba7e37'
+                      and a.location_id = '705e8e51-376b-5785-adbb-405eff4e2a22'$$,
+                  $$values ('confirmed'::text, false, false)$$, 'F4: confirmed on a fresh day outside the top 10: the wait is over, not urgent');
+create temp table f4_version as select pg_temp.version_of(:'QUESO') as v;
+select is(pg_temp.evaluate_daily(:'TENANT', '2026-10-12', '2026-10-12'), 0, 'F4: an identical rerun adds nothing');
+select is(pg_temp.version_of(:'QUESO'), (select v from f4_version), 'F4: and writes no new version');
+update public.item_sales_agg set net = net + 1000000, gross = gross + 1000000
+where tenant_id = :'TENANT' and location_id = :'CENTRO' and menu_item_id = :'QUESO' and period_from = '2026-10-11';
+select ok((select x.n <= 10 from (
+             select v.menu_item_id, row_number() over (order by sum(v.net) desc, v.menu_item_id) as n
+             from app.v_item_sales_daily v where v.location_id = :'CENTRO' and v.business_date between '2026-09-13' and '2026-10-12'
+             group by v.menu_item_id) x where x.menu_item_id = :'QUESO'), 'F4: a late-booked 10-11 sale lifts it into the top 10 (the seed''s last sales day)');
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-12', '2026-10-12');
+select is((select a.urgent from public.alert a where a.rule = 'margin_breach' and a.menu_item_id = :'QUESO' and a.location_id = :'CENTRO'),
+          false, 'F4: in the top 10 now, still not urgent: its chance was used');
+rollback to savepoint f4_chance_used;
+
 -- the alert row's shape -------------------------------------------------------------------------
 select throws_ok(format($$insert into public.alert (tenant_id, rule, menu_item_id, as_of, value, threshold) values (%L, 'mix_shift', %L, '2026-10-12', 1, 1)$$, :'TENANT', :'PASTOR'),
                  '23514', null, 'only known rules');
@@ -674,6 +796,14 @@ select throws_ok(format($$insert into public.alert (tenant_id, location_id, rule
                  '23514', null, 'only known statuses');
 select throws_ok(format($$insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, confidence) values (%L, %L, 'margin_breach', %L, '2026-10-12', 40, 35, 'confirmed')$$, :'OTHER', :'CENTRO', :'PASTOR'),
                  '23503', null, 'a dish and a location of another tenant are refused');
+select throws_ok(format($$insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, confidence, urgent) values (%L, %L, 'margin_breach', %L, '2026-10-12', 40, 35, 'estimated', true)$$, :'TENANT', :'CENTRO', :'PASTOR'),
+                 '23514', null, 'an urgent breach on an estimated cost is refused (R1)');
+select throws_ok(format($$insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, confidence, urgent, awaits_confirmation) values (%L, %L, 'margin_breach', %L, '2026-10-12', 40, 35, 'confirmed', true, true)$$, :'TENANT', :'CENTRO', :'PASTOR'),
+                 '23514', null, 'an urgent breach still waiting is refused (R4)');
+select throws_ok(format($$insert into public.alert (tenant_id, rule, ingredient_id, as_of, value, threshold, old_unit_price, new_unit_price, avg_unit_price, awaits_confirmation) values (%L, 'price_jump', %L, '2026-10-12', 20, 15, 0.1, 0.12, 0.1, true)$$, :'TENANT', :'MEAT'),
+                 '23514', null, 'a price jump never waits for a confirmed cost');
+select lives_ok(format($$insert into public.alert (tenant_id, rule, ingredient_id, as_of, value, threshold, old_unit_price, new_unit_price, avg_unit_price, urgent) values (%L, 'price_jump', %L, '2026-10-13', 20, 15, 0.1, 0.12, 0.1, true)$$, :'TENANT', :'MEAT'),
+                'an urgent price jump (no dish cost) is allowed');
 
 select * from finish();
 rollback;
