@@ -96,14 +96,28 @@ returns table (ingredient_id uuid, started date, old_unit_price numeric, new_uni
                avg_unit_price numeric, change_pct numeric, threshold_pct numeric)
 language sql stable set search_path = ''
 as $$
-  with k as (
+  with recursive k as (
     select * from app.cost_alert_settings()
+  ), used(recipe_id, depth) as (
+    -- app.live_ingredients(to_date) with a tenant filter (it has none: under service_role it would
+    -- walk every tenant's dishes)
+    select app.recipe_of_record(m.id, null, to_date), 0
+    from public.menu_item m where m.tenant_id = tenant and m.is_active
+    union
+    select app.recipe_of_record(null, sr.produces_ingredient_id, to_date), u.depth + 1
+    from used u
+    join public.recipe_line rl on rl.recipe_id = u.recipe_id
+    join public.recipe sr on sr.id = rl.sub_recipe_id
+    where u.depth < 8
+  ), live as (
+    select distinct rl.ingredient_id from used u join public.recipe_line rl on rl.recipe_id = u.recipe_id
+    where rl.ingredient_id is not null
   ), candidate as (
     select distinct p.ingredient_id, d.day
     from public.ingredient_price p
     cross join lateral (values (p.effective_from), (p.effective_to + 1)) d(day)
     where p.tenant_id = tenant and d.day between from_date and to_date
-      and p.ingredient_id in (select u.ingredient_id from app.live_ingredients(to_date) u)
+      and p.ingredient_id in (select l.ingredient_id from live l)
   ), move as (
     select c.ingredient_id, c.day, o.unit_price_net as old_price, n.unit_price_net as new_price,
            (select avg(h.unit_price_net)
@@ -233,6 +247,25 @@ begin
       where v.tenant_id = tenant and v.business_date between on_date - (k.ranking_days - 1) and on_date
       group by v.location_id, v.menu_item_id
     ) x where x.n <= k.top_dishes
+  ), refreshed as (
+    -- an open alert of a breach still on keeps the confidence of the on_date snapshot (a late CFDI
+    -- can move it either way). An estimated, not-urgent alert whose cost is now confirmed becomes
+    -- urgent if it meets the urgency rules (owner decision 2026-11-07); an urgent alert never
+    -- loses it, and it flips only on the estimated -> confirmed change, so once.
+    update public.alert a
+    set confidence = s.confidence,
+        urgent = a.urgent
+          or (a.confidence = 'estimated' and s.confidence = 'confirmed'
+              and a.as_of > today - k.fresh_days
+              and exists (select 1 from top_dish t where t.location_id = a.location_id and t.menu_item_id = a.menu_item_id))
+    from episode e
+    join public.dish_cost_snapshot s
+      on s.tenant_id = tenant and s.location_id = e.location_id and s.menu_item_id = e.menu_item_id and s.date = on_date
+    where a.tenant_id = tenant and a.rule = 'margin_breach' and a.status = 'open'
+      and a.location_id = e.location_id and a.menu_item_id = e.menu_item_id
+      and a.as_of between e.started and on_date
+      and a.confidence is distinct from s.confidence
+    returning 1
   )
   insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, confidence, urgent)
   select tenant, e.location_id, 'margin_breach', e.menu_item_id, e.started,
