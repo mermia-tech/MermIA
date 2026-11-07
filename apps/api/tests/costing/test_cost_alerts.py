@@ -16,7 +16,11 @@ import psycopg
 import pytest
 from pydantic import TypeAdapter
 
-from mermia_api.costing.alerts import evaluate_cost_alerts, evaluate_cost_alerts_range
+from mermia_api.costing.alerts import (
+    evaluate_cost_alerts,
+    evaluate_cost_alerts_range,
+    tenant_today,
+)
 from mermia_contracts.rpc import CostAlertsData, RpcEnvelope
 
 TENANT = UUID("03299e41-28bd-5779-bcc6-0e5e76580fad")
@@ -156,3 +160,12 @@ def test_the_run_writes_suggestions_the_rpc_returns(conn: psycopg.Connection[Any
         ("Alambre de res", 22243),
         ("Volcán de pastor", 5300),
     ]
+
+
+@pytest.mark.db
+def test_the_daily_run_looks_up_the_business_date_as_service_role(
+    conn: psycopg.Connection[Any],
+) -> None:
+    conn.execute("reset app.today")
+    assert isinstance(tenant_today(conn, TENANT), dt.date)
+    assert evaluate_cost_alerts_range(conn, TENANT, START, START) >= 0
