@@ -13,13 +13,19 @@ and the catalog decides.
 
 from __future__ import annotations
 
-import datetime as dt
-import re
 from decimal import Decimal
 
 from openpyxl.workbook.workbook import Workbook
 
 from mermia_api.ingestion.errors import MalformedReport
+from mermia_api.ingestion.parsers._sr_common import (
+    SEARCH_ROWS,
+    has_title,
+    is_number,
+    location_hint,
+    period,
+    read_table,
+)
 from mermia_api.ingestion.xlsx import Row, centavos, norm, number, rows, text
 from mermia_contracts.batch import (
     Grain,
@@ -27,7 +33,6 @@ from mermia_contracts.batch import (
     ItemSalesIn,
     MenuItemIn,
     NormalizedBatch,
-    Period,
     Totals,
 )
 from mermia_contracts.db.models import IssueSeverity, SourceKind
@@ -35,9 +40,7 @@ from mermia_contracts.db.models import IssueSeverity, SourceKind
 PARSER = "sr.productos_vendidos@v1"
 HEADER = ("clave", "descripcion", "grupo", "cantidad", "precio", "importe", "descuento", "total")
 TITLE = "productos vendidos"
-SEARCH_ROWS = 15  # the header sits in the title block at the top of the sheet
 MAX_ROWS = 50_000  # far above a real day's menu; a small zip cannot unpack into a huge sheet
-PERIOD = re.compile(r"del\s+(\d{1,2}/\d{1,2}/\d{4})\s+al\s+(\d{1,2}/\d{1,2}/\d{4})")
 UNITS = Decimal("0.000001")
 
 
@@ -53,49 +56,13 @@ def _sheet_name(wb: Workbook) -> str | None:
     for name in wb.sheetnames:
         top = rows(wb, name, max_row=SEARCH_ROWS)
         h = _header_at(top)
-        if h is not None and any(TITLE in norm(c) for row in top[:h] for c in row):
+        if h is not None and has_title(top, h, TITLE, f"{TITLE} en general"):
             return name
     return None
 
 
 def matches(wb: Workbook) -> bool:
     return _sheet_name(wb) is not None
-
-
-def _date(value: str) -> dt.date:
-    day, month, year = (int(x) for x in value.split("/"))
-    try:
-        return dt.date(year, month, day)
-    except ValueError as e:
-        raise MalformedReport(
-            f"La fecha {value} del encabezado no es válida.", f"bad date {value!r}"
-        ) from e
-
-
-def _period(title: list[Row]) -> Period:
-    for row in title:
-        for cell in row:
-            m = PERIOD.search(norm(cell))
-            if m:
-                start, end = _date(m[1]), _date(m[2])
-                if start > end:
-                    raise MalformedReport(
-                        f"El periodo del reporte empieza ({m[1]}) después de terminar ({m[2]}).",
-                        "period from > to",
-                    )
-                return Period.model_validate({"from": start, "to": end})
-    raise MalformedReport(
-        "No encontré el periodo del reporte (la línea «Del ... al ...»).",
-        "no period line in the title block",
-    )
-
-
-def _location_hint(title: list[Row]) -> str | None:
-    """The location after the last " - " of the first title line ("El Güero - Centro")."""
-    first = text(title[0][0]) if title and title[0] else None
-    if first and " - " in first:
-        return first.rsplit(" - ", 1)[1].strip() or None
-    return None
 
 
 def _units(value: object, where: str) -> Decimal:
@@ -108,15 +75,11 @@ def _units(value: object, where: str) -> Decimal:
     return units.quantize(UNITS)
 
 
-def _is_number(value: object) -> bool:
-    return isinstance(value, int | float | Decimal) and not isinstance(value, bool)
-
-
 def _is_total_row(clave: object, desc: object, cantidad: object, total: object) -> bool:
     """The closing row: Clave empty or "Total", the word Total, and numeric Cantidad and Total.
     An item that happens to be called "Total" has a Clave of its own, so it stays an item."""
     labelled = norm(clave) == "total" or (norm(clave) == "" and norm(desc) == "total")
-    return labelled and _is_number(cantidad) and _is_number(total)
+    return labelled and is_number(cantidad) and is_number(total)
 
 
 def parse(wb: Workbook) -> NormalizedBatch:
@@ -125,15 +88,9 @@ def parse(wb: Workbook) -> NormalizedBatch:
         raise MalformedReport("El reporte no tiene el formato esperado.", "header not found")
     h = _header_at(rows(wb, sheet_name, max_row=SEARCH_ROWS))
     assert h is not None
-    # at most MAX_ROWS rows below the header (one more is read to know there are too many)
-    sheet_rows = rows(wb, sheet_name, max_row=h + 1 + MAX_ROWS + 1)
-    if len(sheet_rows) > h + 1 + MAX_ROWS:
-        raise MalformedReport(
-            f"El reporte tiene más de {MAX_ROWS:,} renglones; envíame un periodo más corto.",
-            f"more than {MAX_ROWS} rows below the header",
-        )
+    sheet_rows = read_table(wb, sheet_name, h, MAX_ROWS)
     title = sheet_rows[:h]
-    period = _period(title)
+    batch_period = period(title)
 
     items: list[ItemSalesIn] = []
     menu: dict[str, MenuItemIn] = {}
@@ -207,8 +164,8 @@ def parse(wb: Workbook) -> NormalizedBatch:
             ItemSalesIn(
                 item_external_id=text(clave),
                 item_name=name,
-                period_from=period.from_,
-                period_to=period.to,
+                period_from=batch_period.from_,
+                period_to=batch_period.to,
                 units=units,
                 gross=gross,
                 discount=discount,
@@ -223,8 +180,8 @@ def parse(wb: Workbook) -> NormalizedBatch:
     return NormalizedBatch(
         parser=PARSER,
         source_kind=SourceKind.sr_report,
-        location_hint=_location_hint(title),
-        period=period,
+        location_hint=location_hint(title),
+        period=batch_period,
         grain=Grain.item_daily,
         totals=totals,
         menu_items=list(menu.values()),

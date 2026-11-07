@@ -28,6 +28,7 @@ exclude = ['/\.venv/']
 explicit_package_bases = true
 mypy_path = [
     "$MYPY_CONFIG_FILE_DIR/apps/api/src",
+    "$MYPY_CONFIG_FILE_DIR/apps/api/tests/ingestion",
     "$MYPY_CONFIG_FILE_DIR/apps/eval/src",
     "$MYPY_CONFIG_FILE_DIR/apps/mock-rpc/src",
     "$MYPY_CONFIG_FILE_DIR/packages/contracts/src",
@@ -37,6 +38,8 @@ mypy_path = [
 [tool.pytest.ini_options]
 testpaths = ["apps", "packages"]
 addopts = ["--import-mode=importlib"]
+# Lets the CFDI tests share apps/api/tests/ingestion/_cfdi_builder.py (importlib mode adds no paths).
+pythonpath = ["apps/api/tests/ingestion"]
 markers = [
   "db: needs the local Supabase database (MERMIA_DB_URL)",
   "rest: needs the local Supabase API (MERMIA_API_URL, MERMIA_JWT_SECRET, MERMIA_API_KEY)",

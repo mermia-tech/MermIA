@@ -27,8 +27,8 @@ def enums() -> list[type]:
     ]
 
 
-def test_forty_rows_and_twenty_four_enums() -> None:
-    assert len(rows()) == 40
+def test_forty_one_rows_and_twenty_four_enums() -> None:
+    assert len(rows()) == 41
     assert len(enums()) == 24
 
 
@@ -41,6 +41,7 @@ def test_rows_are_frozen_and_reject_unknown_columns() -> None:
         created_at=NOW,
         updated_at=NOW,
         version=1,
+        closed_weekdays=[],
     )
     with pytest.raises(ValidationError):
         row.name = "x"
@@ -59,6 +60,7 @@ def test_required_columns_are_required_and_nullable_ones_default_to_none() -> No
         created_at=NOW,
         updated_at=NOW,
         version=1,
+        closed_weekdays=[],
     )
     assert row.address is None and row.sr_version is None
 

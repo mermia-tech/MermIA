@@ -1,15 +1,12 @@
 """MR-15: the "Productos vendidos" parser and the registry that picks it.
 
-Golden test: the synthetic SR export (fixtures/sr/synthetic, MR-12) must parse to its golden
-NormalizedBatch. When the pilot's real export arrives (MR-5), add it under fixtures/sr/<version>/
-with its golden file and it joins GOLDEN below. Wrong files must raise a ReportError with a Spanish
-message, never crash.
+The golden file test for every SR sample is in test_golden.py. Wrong files must raise a
+ReportError with a Spanish message, never crash.
 """
 
 import io
 import zipfile
 from decimal import Decimal
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -22,10 +19,7 @@ from mermia_api.ingestion.errors import (
     UnreadableFile,
 )
 from mermia_api.ingestion.registry import parse_file
-from mermia_contracts.batch import NormalizedBatch
-
-SR = Path(__file__).parents[4] / "fixtures" / "sr"
-GOLDEN = sorted(SR.glob("*/productos_vendidos_*.xlsx"))
+from mermia_api.ingestion.xlsx import number
 
 HEADER = ["Clave", "Descripción", "Grupo", "Cantidad", "Precio", "Importe", "Descuento", "Total"]
 
@@ -57,17 +51,6 @@ def report(*lines: list[Any], total: list[Any] | None = None, header: list[str] 
 PASTOR = ["P001", "Tacos al pastor (orden de 3)", "Tacos", 2, 65, 130, 5, 125]
 COCA = ["P043", "Coca-Cola", "Bebidas", 1, 30, 30, 0, 30]
 AGUA = ["P040", "Agua de horchata", "Bebidas", 1, 35, 35, 0, 35]
-
-
-@pytest.mark.parametrize("path", GOLDEN, ids=lambda p: f"{p.parent.name}/{p.name}")
-def test_golden(path: Path) -> None:
-    golden = path.with_name(path.stem + ".golden.json")
-    expected = NormalizedBatch.model_validate_json(golden.read_text())
-    assert parse_file(path.read_bytes()) == expected
-
-
-def test_there_is_a_golden_file() -> None:
-    assert GOLDEN, "no Productos vendidos sample under fixtures/sr"
 
 
 def test_a_small_report() -> None:
@@ -146,10 +129,16 @@ def test_old_xls_is_named() -> None:
 
 
 def test_another_sr_report_is_not_recognized() -> None:
-    other = next(SR.glob("*/ventas_por_dia_*.xlsx"))
+    other = xlsx(
+        ["Taquería El Güero - Centro"],
+        ["Ventas por mesero"],
+        ["Del 11/10/2026 al 11/10/2026"],
+        ["Mesero", "Cuentas", "Venta"],
+        ["Lupita", 12, 2400],
+    )
     with pytest.raises(UnknownReport) as e:
-        parse_file(other.read_bytes())
-    assert "Productos vendidos" in e.value.message_es
+        parse_file(other)
+    assert "«Productos vendidos», «Ventas por día», «Recetas»" in e.value.message_es
 
 
 def test_a_spreadsheet_without_the_header_is_not_recognized() -> None:
@@ -356,3 +345,69 @@ def test_a_sheet_with_too_many_rows_is_refused(monkeypatch: pytest.MonkeyPatch) 
     with pytest.raises(MalformedReport) as e:
         parse_file(report(PASTOR, COCA, AGUA))
     assert "renglones" in e.value.message_es
+
+
+def test_the_en_general_title_is_recognized() -> None:
+    assert parse_file(report(PASTOR)).parser.startswith("sr.productos_vendidos")
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["Reporte de productos vendidos", "Productos vendidos del 11/10/2026 al 11/10/2026"],
+)
+def test_a_longer_report_name_is_not_recognized(name: str) -> None:
+    data = xlsx(
+        ["Taquería El Güero - Centro"],
+        [name],
+        ["Del 11/10/2026 al 11/10/2026"],
+        [],
+        HEADER,
+        PASTOR,
+        [None, "Total", None, 2, None, 130, 5, 125],
+    )
+    with pytest.raises(UnknownReport):
+        parse_file(data)
+
+
+# --- review on #72: commas in text numbers --------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("1,250", Decimal(1250)),
+        ("12,345.5", Decimal("12345.5")),
+        ("1,234,567.89", Decimal("1234567.89")),
+        ("-1,250", Decimal(-1250)),
+        (" 1,250.00 ", Decimal("1250.00")),
+        ("0.075", Decimal("0.075")),
+    ],
+)
+def test_a_text_number_with_thousands_commas_is_read(value: str, expected: Decimal) -> None:
+    assert number(value, "la fila 6 (Cantidad)") == expected
+
+
+@pytest.mark.parametrize(
+    "value", ["0,075", "1,5", "12,34", "1,2345", "01,250", "1,25,000", ",250", "1,250,", "1,,250"]
+)
+def test_a_comma_that_is_not_a_thousands_separator_is_refused(value: str) -> None:
+    with pytest.raises(MalformedReport) as e:
+        number(value, "la fila 6 (Cantidad)")
+    assert f"«{value}»" in e.value.message_es
+    assert "coma" in e.value.message_es
+
+
+def test_a_decimal_comma_quantity_refuses_the_report() -> None:
+    line = ["P099", "Carne por kilo", "Extras", "1,5", 189.9, 284.85, 0, 284.85]
+    with pytest.raises(MalformedReport) as e:
+        parse_file(report(line, total=[None, "Total", None, 1.5, None, 284.85, 0, 284.85]))
+    assert "coma" in e.value.message_es
+
+
+@pytest.mark.parametrize("value", ["$1,974.05", "(1,250)", "$ 1,250", "(1,250.00)"])
+def test_a_currency_sign_or_parentheses_is_named_not_blamed_on_the_comma(value: str) -> None:
+    with pytest.raises(MalformedReport) as e:
+        number(value, "la fila 6 (Importe)")
+    assert f"«{value}»" in e.value.message_es
+    assert "coma" not in e.value.message_es
+    assert "signo de pesos o paréntesis" in e.value.message_es

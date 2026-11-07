@@ -2,7 +2,7 @@
 -- get_sales_breakdown, get_cancellations, compare_locations. Same pattern as MR-17
 -- (20261019200000_read_rpcs_first4.sql): SECURITY INVOKER functions in `api`, so RLS decides the
 -- tenant and the locations. The money and percentage helpers come from
--- 20261104090000_read_rpcs_cost.sql.
+-- 20261108090000_read_rpcs_cost.sql.
 --
 -- Staff are named by first name only (09 section 4.2). Figures a source does not report stay
 -- null or are flagged, never zero (MR-11 D23).

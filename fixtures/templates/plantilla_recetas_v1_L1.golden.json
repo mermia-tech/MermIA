@@ -1,0 +1,578 @@
+{
+ "contract_version": 1,
+ "parser": "mermia.plantilla_recetas@v1",
+ "source_kind": "manual",
+ "quality": "file",
+ "location_hint": "Centro",
+ "period": {
+  "from": "2026-10-12",
+  "to": "2026-10-12"
+ },
+ "grain": "catalog",
+ "totals": {
+  "net_sales": null,
+  "units": null,
+  "lines": 15
+ },
+ "menu_items": [],
+ "item_sales": [],
+ "daily_sales": [],
+ "tickets": [],
+ "purchases": [],
+ "recipes": [
+  {
+   "menu_item_external_id": "P001",
+   "menu_item_name": "Tacos al pastor (orden de 3)",
+   "yield_qty": "1.000000",
+   "lines": [
+    {
+     "ingredient_name": "Tortilla de maíz",
+     "ingredient_external_id": null,
+     "qty_base": "75.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Carne al pastor (adobada)",
+     "ingredient_external_id": null,
+     "qty_base": "63.850000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Salsa verde (preparada)",
+     "ingredient_external_id": null,
+     "qty_base": "30.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Piña",
+     "ingredient_external_id": null,
+     "qty_base": "28.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Limón",
+     "ingredient_external_id": null,
+     "qty_base": "20.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Cebolla blanca",
+     "ingredient_external_id": null,
+     "qty_base": "15.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Cilantro",
+     "ingredient_external_id": null,
+     "qty_base": "5.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    }
+   ]
+  },
+  {
+   "menu_item_external_id": "P043",
+   "menu_item_name": "Coca-Cola",
+   "yield_qty": "1.000000",
+   "lines": [
+    {
+     "ingredient_name": "Coca-Cola 355 ml",
+     "ingredient_external_id": null,
+     "qty_base": "1.000000",
+     "unit": "pza",
+     "yield_override_pct": null
+    }
+   ]
+  },
+  {
+   "menu_item_external_id": "P002",
+   "menu_item_name": "Tacos de bistec (orden de 3)",
+   "yield_qty": "1.000000",
+   "lines": [
+    {
+     "ingredient_name": "Bistec de res",
+     "ingredient_external_id": null,
+     "qty_base": "90.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Tortilla de maíz",
+     "ingredient_external_id": null,
+     "qty_base": "75.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Salsa verde (preparada)",
+     "ingredient_external_id": null,
+     "qty_base": "30.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Limón",
+     "ingredient_external_id": null,
+     "qty_base": "20.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Cebolla blanca",
+     "ingredient_external_id": null,
+     "qty_base": "15.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Cilantro",
+     "ingredient_external_id": null,
+     "qty_base": "5.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    }
+   ]
+  },
+  {
+   "menu_item_external_id": "P040",
+   "menu_item_name": "Agua de horchata",
+   "yield_qty": "1.000000",
+   "lines": [
+    {
+     "ingredient_name": "Leche entera",
+     "ingredient_external_id": null,
+     "qty_base": "120.000000",
+     "unit": "ml",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Arroz",
+     "ingredient_external_id": null,
+     "qty_base": "35.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Azúcar",
+     "ingredient_external_id": null,
+     "qty_base": "30.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Canela en raja",
+     "ingredient_external_id": null,
+     "qty_base": "1.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    }
+   ]
+  },
+  {
+   "menu_item_external_id": "P003",
+   "menu_item_name": "Tacos de suadero (orden de 3)",
+   "yield_qty": "1.000000",
+   "lines": [
+    {
+     "ingredient_name": "Suadero",
+     "ingredient_external_id": null,
+     "qty_base": "90.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Tortilla de maíz",
+     "ingredient_external_id": null,
+     "qty_base": "75.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Salsa verde (preparada)",
+     "ingredient_external_id": null,
+     "qty_base": "30.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Limón",
+     "ingredient_external_id": null,
+     "qty_base": "20.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Cebolla blanca",
+     "ingredient_external_id": null,
+     "qty_base": "15.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Cilantro",
+     "ingredient_external_id": null,
+     "qty_base": "5.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    }
+   ]
+  },
+  {
+   "menu_item_external_id": "P048",
+   "menu_item_name": "Cerveza Corona",
+   "yield_qty": "1.000000",
+   "lines": [
+    {
+     "ingredient_name": "Cerveza Corona 355 ml",
+     "ingredient_external_id": null,
+     "qty_base": "1.000000",
+     "unit": "pza",
+     "yield_override_pct": null
+    }
+   ]
+  },
+  {
+   "menu_item_external_id": "P004",
+   "menu_item_name": "Tacos campechanos (orden de 3)",
+   "yield_qty": "1.000000",
+   "lines": [
+    {
+     "ingredient_name": "Tortilla de maíz",
+     "ingredient_external_id": null,
+     "qty_base": "75.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Bistec de res",
+     "ingredient_external_id": null,
+     "qty_base": "50.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Longaniza",
+     "ingredient_external_id": null,
+     "qty_base": "40.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Salsa verde (preparada)",
+     "ingredient_external_id": null,
+     "qty_base": "30.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Cebolla blanca",
+     "ingredient_external_id": null,
+     "qty_base": "15.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Cilantro",
+     "ingredient_external_id": null,
+     "qty_base": "5.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    }
+   ]
+  },
+  {
+   "menu_item_external_id": "P020",
+   "menu_item_name": "Quesadilla de queso",
+   "yield_qty": "1.000000",
+   "lines": [
+    {
+     "ingredient_name": "Masa de maíz",
+     "ingredient_external_id": null,
+     "qty_base": "90.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Queso Oaxaca",
+     "ingredient_external_id": null,
+     "qty_base": "60.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Salsa verde (preparada)",
+     "ingredient_external_id": null,
+     "qty_base": "20.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Aceite vegetal",
+     "ingredient_external_id": null,
+     "qty_base": "10.000000",
+     "unit": "ml",
+     "yield_override_pct": null
+    }
+   ]
+  },
+  {
+   "menu_item_external_id": "P009",
+   "menu_item_name": "Gringa de pastor",
+   "yield_qty": "1.000000",
+   "lines": [
+    {
+     "ingredient_name": "Carne al pastor (adobada)",
+     "ingredient_external_id": null,
+     "qty_base": "90.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Tortilla de harina",
+     "ingredient_external_id": null,
+     "qty_base": "70.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Queso Oaxaca",
+     "ingredient_external_id": null,
+     "qty_base": "50.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Piña",
+     "ingredient_external_id": null,
+     "qty_base": "20.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Salsa verde (preparada)",
+     "ingredient_external_id": null,
+     "qty_base": "20.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    }
+   ]
+  },
+  {
+   "menu_item_external_id": "P041",
+   "menu_item_name": "Agua de jamaica",
+   "yield_qty": "1.000000",
+   "lines": [
+    {
+     "ingredient_name": "Azúcar",
+     "ingredient_external_id": null,
+     "qty_base": "35.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Flor de jamaica",
+     "ingredient_external_id": null,
+     "qty_base": "12.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    }
+   ]
+  },
+  {
+   "menu_item_external_id": "P046",
+   "menu_item_name": "Agua mineral",
+   "yield_qty": "1.000000",
+   "lines": [
+    {
+     "ingredient_name": "Agua mineral 355 ml",
+     "ingredient_external_id": null,
+     "qty_base": "1.000000",
+     "unit": "pza",
+     "yield_override_pct": null
+    }
+   ]
+  },
+  {
+   "menu_item_external_id": "P010",
+   "menu_item_name": "Volcán de pastor",
+   "yield_qty": "1.000000",
+   "lines": [
+    {
+     "ingredient_name": "Carne al pastor (adobada)",
+     "ingredient_external_id": null,
+     "qty_base": "45.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Queso Oaxaca",
+     "ingredient_external_id": null,
+     "qty_base": "30.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Tortilla de maíz",
+     "ingredient_external_id": null,
+     "qty_base": "30.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Aceite vegetal",
+     "ingredient_external_id": null,
+     "qty_base": "5.000000",
+     "unit": "ml",
+     "yield_override_pct": null
+    }
+   ]
+  },
+  {
+   "menu_item_external_id": "P005",
+   "menu_item_name": "Tacos de longaniza (orden de 3)",
+   "yield_qty": "1.000000",
+   "lines": [
+    {
+     "ingredient_name": "Longaniza",
+     "ingredient_external_id": null,
+     "qty_base": "90.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Tortilla de maíz",
+     "ingredient_external_id": null,
+     "qty_base": "75.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Salsa verde (preparada)",
+     "ingredient_external_id": null,
+     "qty_base": "30.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Cebolla blanca",
+     "ingredient_external_id": null,
+     "qty_base": "15.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Cilantro",
+     "ingredient_external_id": null,
+     "qty_base": "5.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    }
+   ]
+  },
+  {
+   "menu_item_external_id": "P025",
+   "menu_item_name": "Torta de pastor",
+   "yield_qty": "1.000000",
+   "lines": [
+    {
+     "ingredient_name": "Carne al pastor (adobada)",
+     "ingredient_external_id": null,
+     "qty_base": "110.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Aguacate Hass",
+     "ingredient_external_id": null,
+     "qty_base": "40.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Jitomate",
+     "ingredient_external_id": null,
+     "qty_base": "30.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Frijol negro",
+     "ingredient_external_id": null,
+     "qty_base": "25.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Cebolla blanca",
+     "ingredient_external_id": null,
+     "qty_base": "15.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Pan telera",
+     "ingredient_external_id": null,
+     "qty_base": "1.000000",
+     "unit": "pza",
+     "yield_override_pct": null
+    }
+   ]
+  },
+  {
+   "menu_item_external_id": "P023",
+   "menu_item_name": "Alambre de res",
+   "yield_qty": "1.000000",
+   "lines": [
+    {
+     "ingredient_name": "Bistec de res",
+     "ingredient_external_id": null,
+     "qty_base": "180.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Tortilla de maíz",
+     "ingredient_external_id": null,
+     "qty_base": "100.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Queso Oaxaca",
+     "ingredient_external_id": null,
+     "qty_base": "60.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Cebolla blanca",
+     "ingredient_external_id": null,
+     "qty_base": "50.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Chorizo",
+     "ingredient_external_id": null,
+     "qty_base": "40.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    },
+    {
+     "ingredient_name": "Chile jalapeño",
+     "ingredient_external_id": null,
+     "qty_base": "30.000000",
+     "unit": "g",
+     "yield_override_pct": null
+    }
+   ]
+  }
+ ],
+ "issues": []
+}

@@ -1,6 +1,6 @@
 -- MR-24 (1 of 2): the cost read RPCs (09 section 4.1; C3 shapes in packages/contracts rpc.py):
 -- get_dish_margin, get_food_cost_pct, get_menu_engineering, get_cost_alerts, and the cost helpers
--- the sales RPCs of 20261104090100_read_rpcs_sales.sql also use.
+-- the sales RPCs of 20261108090100_read_rpcs_sales.sql also use.
 --
 -- Same pattern as MR-17 (20261019200000_read_rpcs_first4.sql): SECURITY INVOKER functions in
 -- `api`, so RLS decides the tenant and the locations; the MR-17 envelope, periods, location scope,
@@ -21,7 +21,7 @@
 --   price row has none), the rate the engine uses for the snapshot's net price, so food cost and
 --   margin agree across RPCs in the northern border zone (8 %) or for 0 % items. Item nets are
 --   taken out of IVA per row unrounded and the sum is rounded once (app.net_ex_iva); for one rate
---   that is MR-17's net - round(net x 16 / 116). 20261104090200_iva_by_tax_rate.sql moves
+--   that is MR-17's net - round(net x 16 / 116). 20261108090200_iva_by_tax_rate.sql moves
 --   compare_periods, compare_locations and get_top_dishes onto the same rule.
 -- - get_dish_margin flags `stale_cost` (and says `estimated`) when the snapshot is older than the
 --   location's latest one or than 30 days: the engine stopped costing the dish.

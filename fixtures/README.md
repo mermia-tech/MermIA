@@ -13,6 +13,10 @@ supabase db reset                          # loads supabase/seed.sql into the lo
 
 The restaurant itself is written by hand in `packages/fixtures/src/mermia_fixtures/restaurant.py`.
 
+The exception is `cfdi/`: CFDI 4.0 supplier invoices, each next to its `.golden.json` (MR-36).
+`cfdi/synthetic/` is written and checked by hand; a real anonymized invoice goes in
+`cfdi/<origin>/`. `test_golden.py` parses every one of them.
+
 ## What it contains
 
 - 2 locations: `L1` Centro and `L2` Polanco. Polanco sells less at prices about 10% higher.
@@ -71,7 +75,22 @@ Calibration: to land exactly on the two pinned weeks, calibration adds units acr
 
 - `productos_vendidos_L1_2026-10-11.xlsx`: one day at Centro.
 - `ventas_por_dia_L1_2026-10-05.xlsx`: Centro's last week.
+- `recetas_L1_2026-10-12.xlsx`: the 15 dish recipes, one row per line ("Recetas - Productos"). Quantities are in the purchase unit (KG, LT, PZA; the prepared salsa verde in GR), so the parser converts them to base units. Salsa verde's own recipe is not in it (that is "Recetas - Insumos elaborados"). The insumo codes (Clave insumo) are made up: the seed's ingredients have none.
 
 Each file has a `.golden.json` beside it: the `NormalizedBatch` a parser must produce from it.
+
+## Recipe template sample (`templates/`)
+
+- `plantilla_recetas_v1_L1.xlsx`: the MermIA recipe template for Centro on 2026-10-12, prefilled from the seed (the 15 recipes, biggest quantity first, then the items without one; modifiers left out), with its `.golden.json`.
+
+It is written by the template's CLI from the seeded database, not by `mermia_fixtures`. Regenerate it after changing the seed or the template:
+
+```bash
+MERMIA_DB_URL=... uv run python -m mermia_api.ingestion.templates.recetas \
+  --tenant 03299e41-28bd-5779-bcc6-0e5e76580fad --location 705e8e51-376b-5785-adbb-405eff4e2a22 \
+  --date 2026-10-12 --out fixtures/templates/plantilla_recetas_v1_L1.xlsx --golden
+```
+
+`test_the_committed_sample_is_what_the_cli_writes_from_the_seed` fails when it is stale.
 
 **These files are synthetic.** The column layout is a guess based on the SR 8 manual (`01` §3). The parsers (MR-15, MR-23) must be built against the pilot's real exports (MR-5). When those arrive, put them in `sr/<sr version>/` with their own golden files, and delete or keep these as extra cases.
