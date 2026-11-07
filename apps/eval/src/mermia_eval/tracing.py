@@ -1,42 +1,13 @@
 """Langfuse: Agno traces through OpenInference + OTLP, and the scores of each run."""
 
-import base64
 import sys
 from collections.abc import Mapping
 
 import httpx
-from openinference.instrumentation.agno import AgnoInstrumentor
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-_VARS = ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL")
+from mermia_api.agent.llm import auth_header, otlp_endpoint, setup_tracing
 
-
-def otlp_endpoint(base_url: str) -> str:
-    return base_url.rstrip("/") + "/api/public/otel/v1/traces"
-
-
-def auth_header(public_key: str, secret_key: str) -> str:
-    return "Basic " + base64.b64encode(f"{public_key}:{secret_key}".encode()).decode()
-
-
-def setup_tracing(env: Mapping[str, str]) -> TracerProvider | None:
-    """Start sending Agno traces to Langfuse; None (tracing off) when a variable is missing."""
-    if not all(env.get(v) for v in _VARS):
-        return None
-    exporter = OTLPSpanExporter(
-        endpoint=otlp_endpoint(env["LANGFUSE_BASE_URL"]),
-        headers={
-            "Authorization": auth_header(env["LANGFUSE_PUBLIC_KEY"], env["LANGFUSE_SECRET_KEY"])
-        },
-    )
-    provider = TracerProvider()
-    provider.add_span_processor(BatchSpanProcessor(exporter))
-    trace.set_tracer_provider(provider)  # so run_case's span joins the same trace
-    AgnoInstrumentor().instrument(tracer_provider=provider)
-    return provider
+__all__ = ["auth_header", "otlp_endpoint", "post_scores", "setup_tracing"]
 
 
 def post_scores(env: Mapping[str, str], trace_id: str | None, scores: Mapping[str, float]) -> None:

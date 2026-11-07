@@ -56,10 +56,10 @@ def fake_rpc(example: Any) -> FakeRpc:
 
 class CountingBroker:
     def __init__(self) -> None:
-        self.calls: list[tuple[AgentRequest, dict[UUID, str]]] = []
+        self.calls: list[tuple[AgentRequest, dict[UUID, str], Any]] = []
 
-    def __call__(self, request: AgentRequest, locations: Any) -> AgentResponse:
-        self.calls.append((request, dict(locations)))
+    def __call__(self, request: AgentRequest, locations: Any, rpc: Any) -> AgentResponse:
+        self.calls.append((request, dict(locations), rpc))
         return AgentResponse(messages=[TextMsg(kind="text", text="(broker)")], route="haiku")
 
 

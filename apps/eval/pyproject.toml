@@ -12,6 +12,7 @@ dependencies = [
     "openinference-instrumentation-agno",
     "opentelemetry-sdk",
     "opentelemetry-exporter-otlp-proto-http",
+    "mermia-api",
     "mermia-contracts",
     "mermia-mock-rpc",
 ]
@@ -20,6 +21,7 @@ dependencies = [
 mermia-eval = "mermia_eval.cli:main"
 
 [tool.uv.sources]
+mermia-api = { workspace = true }
 mermia-contracts = { workspace = true }
 mermia-mock-rpc = { workspace = true }
 
