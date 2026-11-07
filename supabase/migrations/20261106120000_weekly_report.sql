@@ -43,17 +43,34 @@ as $$
     where not exists (select 1 from covered c where c.location_id = l.id and c.business_date = d.day))
 $$;
 
+-- The target price app.write_price_suggestions gives a cost at a menu price and IVA rate (its
+-- app.suggest_menu_price call). The formula stays the backend's; members get only this number, a
+-- pure function of its arguments (security definer reads nothing).
+create function app.suggestion_target_price(cost bigint, price_gross bigint, tax_rate numeric)
+returns bigint
+language sql stable security definer set search_path = ''
+as $$
+  select f.target_price from app.suggest_menu_price(cost, price_gross, tax_rate, app.food_cost_target()) f
+$$;
+
 -- One location of a report breach ([Ver márgenes], WeeklyBreachAt): the dish's latest snapshot of
 -- the week there (cost, net price, food cost, confidence), the menu price with IVA that day, and
 -- its suggestion from `shown` only when it is priced on these figures: the dish's latest snapshot
--- up to `today` has the same cost and net price (no price dated after Sunday re-costed it) and
--- the suggestion's current price is this menu price. Otherwise null; it stays in `suggestions`.
+-- up to `today` has the same cost and net price (no price dated after Sunday re-costed it), the
+-- suggestion's current price is this menu price and its target price is the one this cost gives
+-- (app.suggestion_target_price on the menu price row of `d`: a price dated inside the week
+-- that landed after the evaluation re-costs the dish but leaves an open or pending row priced on
+-- the old cost). Otherwise null; it stays in `suggestions`.
 create function app.breach_at(item uuid, loc uuid, d date, snap_cost bigint, snap_net bigint,
                               snap_confidence app.cost_confidence, today date, shown jsonb)
 returns jsonb
 language sql stable security invoker set search_path = ''
 as $$
-  with gross as (select app.menu_price_on(item, loc, d) as price)
+  with gross as (
+    select r.price_gross as price, app.suggestion_target_price(snap_cost, r.price_gross, r.tax_rate) as target_price
+    from (select) one
+    left join app.menu_price_row(item, loc, d) r on true
+  )
   select jsonb_build_object(
     'location_id', loc,
     'cost', app.money(snap_cost),
@@ -65,6 +82,7 @@ as $$
       select s from jsonb_array_elements(shown) s
       where s ->> 'menu_item_id' = item::text and s ->> 'location_id' = loc::text
         and (s #>> '{current_price,raw}')::bigint = g.price
+        and (s #>> '{target_price,raw}')::bigint = g.target_price
         and (select (x.cost, x.price_net) = (snap_cost, snap_net)
              from public.dish_cost_snapshot x
              where x.location_id = loc and x.menu_item_id = item and x.date between d and today
@@ -329,10 +347,10 @@ $$;
 -- Privileges ---------------------------------------------------------------------------------
 -- Runs as the caller, like the section RPCs it calls.
 revoke all on function app.missing_business_days(uuid[], date, date), app.cost_alerts(uuid[], date, date, date, boolean),
-  app.breach_at(uuid, uuid, date, bigint, bigint, app.cost_confidence, date, jsonb),
+  app.suggestion_target_price(bigint, bigint, numeric), app.breach_at(uuid, uuid, date, bigint, bigint, app.cost_confidence, date, jsonb),
   api.build_weekly_report(jsonb, uuid)
   from public, anon;
 grant execute on function app.missing_business_days(uuid[], date, date), app.cost_alerts(uuid[], date, date, date, boolean),
-  app.breach_at(uuid, uuid, date, bigint, bigint, app.cost_confidence, date, jsonb),
+  app.suggestion_target_price(bigint, bigint, numeric), app.breach_at(uuid, uuid, date, bigint, bigint, app.cost_confidence, date, jsonb),
   api.build_weekly_report(jsonb, uuid)
   to authenticated;

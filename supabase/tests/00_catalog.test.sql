@@ -27,8 +27,9 @@ select set_eq($$select p.proname::text from pg_proc p where p.pronamespace = 'ap
                     'cost_alerts_top_n', 'suggestion_reopens', 'price_suggestion_settings',
                     -- MR-34: the weekly report's missing days of the week, and the cost alerts body
                     -- get_cost_alerts and the report share (the report's ends on the week's Sunday),
-                    -- and one location of a report breach
-                    'missing_business_days', 'cost_alerts', 'breach_at'],
+                    -- and one location of a report breach with the writer's target price to check
+                    -- its suggestion against
+                    'missing_business_days', 'cost_alerts', 'breach_at', 'suggestion_target_price'],
               'authenticated executes only the policy helpers and the read-RPC helpers');
 select ok(has_function_privilege('service_role', 'app.uuid_v7(timestamptz)', 'execute'), 'service_role can run the uuid default');
 select ok(has_schema_privilege('authenticated', 'app', 'usage'), 'authenticated has usage on app');

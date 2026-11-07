@@ -89,6 +89,11 @@ select is((select provolatile from pg_proc where oid = 'api.build_weekly_report(
           'stable: a read-only call');
 select ok(has_function_privilege('authenticated', 'api.build_weekly_report(jsonb, uuid)', 'execute'), 'members run it');
 select ok(not has_function_privilege('anon', 'api.build_weekly_report(jsonb, uuid)', 'execute'), 'anon does not');
+select is(app.suggestion_target_price(1941, 5000, 0.16),
+          (select f.target_price from app.suggest_menu_price(1941, 5000, 0.16, app.food_cost_target()) f),
+          'the report checks a suggestion against the writer''s target price ($70.37 on a $19.41 cost)');
+select ok(not has_function_privilege('anon', 'app.suggestion_target_price(bigint, bigint, numeric)', 'execute'),
+          'anon cannot run it');
 
 -- the backend's jobs, as on Monday 2026-10-12 ------------------------------------------------------
 select ok(app.compute_dish_costs(:'TENANT', '2026-09-01', '2026-10-12') > 0, 'dish costs computed');

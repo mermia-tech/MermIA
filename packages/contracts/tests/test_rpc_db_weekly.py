@@ -35,7 +35,11 @@ QUESO_DOUBLES_ON_MONDAY = (QUESO_DOUBLES[0].replace("'2026-09-28'", "'2026-10-12
 
 
 def call(
-    db_url: str, args: dict[str, Any], claims: dict[str, Any], setup: tuple[str, ...] = ()
+    db_url: str,
+    args: dict[str, Any],
+    claims: dict[str, Any],
+    setup: tuple[str, ...] = (),
+    after_evaluation: tuple[str, ...] = (),
 ) -> Any:
     params = ", ".join(
         f'"{name}" => %s::{"jsonb" if name == "period" else "uuid"}' for name in args
@@ -48,6 +52,8 @@ def call(
         conn.execute("set local role service_role")
         conn.execute("select app.evaluate_cost_alerts(%s, '2026-10-12', '2026-10-12')", [TENANT])
         conn.execute("reset role")
+        for statement in after_evaluation:
+            conn.execute(statement)  # test-only literals
         conn.execute("set local role authenticated")
         conn.execute("select set_config('request.jwt.claims', %s, true)", [json.dumps(claims)])
         conn.execute("set local app.today = '2026-10-12'")
@@ -144,6 +150,49 @@ def test_a_price_dated_after_sunday_does_not_move_last_weeks_report(db_url: str)
             assert all(_suggestion_follows_its_figures(e, b["target"]["raw"]) for e in b["at"])
     listed = {(s["name"], s["location_id"]) for s in after["data"]["cost_alerts"]["suggestions"]}
     assert {("Alambre de res", CENTRO), ("Volcán de pastor", CENTRO)} <= listed
+
+
+# Queso Oaxaca $250/kg dated Thursday 10-08 (inside the week), landing after the 10-12 evaluation
+# had priced Polanco's quesadilla suggestion on the $280/kg cost; the backend re-costs the dishes.
+LATE_QUESO_IN_THE_WEEK = (
+    QUESO_DOUBLES[0].replace("0.280, '2026-09-28'", "0.250, '2026-10-08'"),
+    f"select app.compute_dish_costs('{TENANT}', '2026-09-01', '2026-10-12')",
+)
+QUESADILLA_PENDING = (
+    "update public.price_suggestion p set status = 'pending' from public.menu_item m"
+    " where m.id = p.menu_item_id and m.name = 'Quesadilla de queso'"
+    f" and p.location_id = '{POLANCO}'",
+)
+
+
+@pytest.mark.parametrize(
+    "after_evaluation",
+    [
+        pytest.param(LATE_QUESO_IN_THE_WEEK, id="open"),
+        pytest.param(
+            QUESADILLA_PENDING
+            + LATE_QUESO_IN_THE_WEEK
+            + (f"select app.evaluate_cost_alerts('{TENANT}', '2026-10-12', '2026-10-12')",),
+            id="pending",
+        ),
+    ],
+)
+def test_a_suggestion_priced_on_an_older_cost_is_left_out(
+    db_url: str, after_evaluation: tuple[str, ...]
+) -> None:
+    """R3-1: a CFDI dated inside the week re-costs the quesadilla after its suggestion was priced
+    ($19.41 -> $17.61 at Polanco). The open (or pending) suggestion still targets $70.37, the old
+    cost's price, so [Ver márgenes] leaves it out; it stays in `suggestions`."""
+    data = call(db_url, {}, OWNER, QUESO_DOUBLES, after_evaluation)["data"]
+    for b in data["cost_alerts"]["breaches"]:
+        assert all(_suggestion_follows_its_figures(e, b["target"]["raw"]) for e in b["at"])
+    quesadilla = next(
+        b for b in data["cost_alerts"]["breaches"] if b["name"] == "Quesadilla de queso"
+    )
+    polanco = next(e for e in quesadilla["at"] if e["location_id"] == POLANCO)
+    assert (polanco["cost"]["text"], polanco["suggestion"]) == ("$17.61", None)
+    listed = {(s["name"], s["location_id"]) for s in data["cost_alerts"]["suggestions"]}
+    assert ("Quesadilla de queso", POLANCO) in listed
 
 
 def test_ver_margenes_comes_from_the_payload(db_url: str) -> None:
