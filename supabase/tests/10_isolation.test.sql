@@ -67,7 +67,7 @@ declare
   b1 constant uuid := 'b1b1b1b1-0000-7000-8000-000000000001';
   pins_recipe constant jsonb := '{"menu_item_id": "gen_random_uuid()"}';
   pins_line constant jsonb := '{"ingredient_id": "gen_random_uuid()"}';
-  pins_alert constant jsonb := '{"rule": "''margin_breach''", "menu_item_id": "gen_random_uuid()", "as_of": "current_date", "value": "40", "threshold": "35"}';
+  pins_alert constant jsonb := '{"rule": "''margin_breach''", "menu_item_id": "gen_random_uuid()", "as_of": "current_date", "value": "40", "threshold": "35", "confidence": "''confirmed''"}';
   p jsonb;
 begin
   for r in select * from pg_temp.cls order by tbl loop

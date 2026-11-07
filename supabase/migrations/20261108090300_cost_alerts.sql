@@ -12,13 +12,16 @@
 --   $195 -> $215). Either direction; a zero price is never a jump. The quoted change is the rule
 --   that fired: vs the last price when the 15 % rule does, else vs the average. One definition
 --   (app.price_jumps) for the evaluator and api.get_cost_alerts.
--- - Margin breach: a dish's snapshot food cost is above target + 3 pts (U1: 32 % + 3).
+-- - Margin breach: a dish's snapshot food cost is above target + 3 pts (U1: 32 % + 3). The alert
+--   carries the confidence of the snapshot it was evaluated on (03: never a margin without its tag).
 -- - Urgent (U3, for a same-day message sent by MR-37/38): a price rise of at least 15 % vs the last
 --   price on a top-20 ingredient by spend, or a breach on a top-10 dish by net sales at its
 --   location, both over the 30 days to the evaluation day, and only when the evidence is at most
 --   7 days old on the business day the run happens (today, not the day evaluated: a catch-up run
 --   over old days marks nothing urgent). The top-20 filter applies to
---   urgency only: every jump gets an alert for the weekly report.
+--   urgency only: every jump gets an alert for the weekly report. A breach is urgent only on a
+--   confirmed dish cost (owner decision 2026-11-07): one on an estimated cost is recorded, never
+--   urgent, and shows in the weekly report (MR-37) marked as estimated.
 -- - Spend is theoretical usage (units sold x recipe of record, through sub-recipes, x price of
 --   record): purchases are only partly captured in Phase 1.
 -- - Dedupe: one price_jump alert per (tenant, ingredient, day the price started); one
@@ -44,6 +47,7 @@ alter table public.alert
   add column old_unit_price numeric(20, 6),
   add column new_unit_price numeric(20, 6),
   add column avg_unit_price numeric(20, 6),
+  add column confidence app.cost_confidence,
   add foreign key (tenant_id, menu_item_id) references public.menu_item (tenant_id, id) on delete restrict,
   add foreign key (tenant_id, ingredient_id) references public.ingredient (tenant_id, id) on delete restrict;
 
@@ -59,7 +63,7 @@ alter table public.alert
       (rule = 'price_jump' and ingredient_id is not null and menu_item_id is null and location_id is null
         and old_unit_price > 0 and new_unit_price > 0 and avg_unit_price > 0)
       or (rule = 'margin_breach' and menu_item_id is not null and location_id is not null and ingredient_id is null
-        and old_unit_price is null and new_unit_price is null and avg_unit_price is null)), false));
+        and confidence is not null and old_unit_price is null and new_unit_price is null and avg_unit_price is null)), false));
 
 create unique index alert_price_jump_key on public.alert (tenant_id, ingredient_id, as_of) where rule = 'price_jump';
 create unique index alert_margin_breach_key on public.alert (tenant_id, location_id, menu_item_id, as_of)
@@ -72,6 +76,8 @@ comment on column public.alert.status is 'open | acknowledged | dismissed (alert
 comment on column public.alert.value is
   'percent points: the price change that fired (price_jump) or the food cost (margin_breach) on as_of';
 comment on column public.alert.threshold is 'percent points: the threshold that fired';
+comment on column public.alert.confidence is
+  'margin_breach: the confidence of the dish cost snapshot on as_of (an estimated breach is never urgent); null for price_jump';
 
 -- Settings -----------------------------------------------------------------------------------
 -- 03 defaults and U3; one place to calibrate them in the pilot.
@@ -228,10 +234,13 @@ begin
       group by v.location_id, v.menu_item_id
     ) x where x.n <= k.top_dishes
   )
-  insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, urgent)
+  insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, confidence, urgent)
   select tenant, e.location_id, 'margin_breach', e.menu_item_id, e.started,
-         round(100.0 * s.cost / s.price_net, 4), breach_above,
-         e.started > today - k.fresh_days
+         round(100.0 * s.cost / s.price_net, 4), breach_above, s.confidence,
+         -- urgent only on a confirmed dish cost (owner decision 2026-11-07): an estimated breach is
+         -- recorded for the weekly report, marked as estimated, and never sent the same day
+         s.confidence = 'confirmed'
+           and e.started > today - k.fresh_days
            and exists (select 1 from top_dish t where t.location_id = e.location_id and t.menu_item_id = e.menu_item_id)
   from episode e
   join public.dish_cost_snapshot s

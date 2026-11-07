@@ -1,7 +1,8 @@
 """MR-33: the cost alert rules on the El Güero seed, through the backend's caller.
 
 The seed has two price jumps (fixtures/README.md): carne al pastor $170 -> $195/kg on 2026-09-21
-and aguacate $55 -> $89/kg on 2026-09-28. Each test runs in a transaction that is rolled back.
+and aguacate $55 -> $89/kg on 2026-09-28. Each test runs in a transaction that is rolled back,
+except the one that checks the range commits day by day (it deletes what it added).
 """
 
 import datetime as dt
@@ -14,6 +15,7 @@ from uuid import UUID
 
 import psycopg
 import pytest
+from psycopg.pq import TransactionStatus
 from pydantic import TypeAdapter
 
 from mermia_api.costing.alerts import (
@@ -137,3 +139,37 @@ def test_the_daily_run_looks_up_the_business_date_as_service_role(
     conn.execute("reset app.today")
     assert isinstance(tenant_today(conn, TENANT), dt.date)
     assert evaluate_cost_alerts_range(conn, TENANT, START, START) >= 0
+
+
+@pytest.mark.db
+def test_the_range_commits_each_day_when_it_reads_the_business_today() -> None:
+    """No outer transaction: with `today` left out, each day must still commit on its own."""
+    url = os.environ.get("MERMIA_DB_URL")
+    if not url:
+        pytest.skip("MERMIA_DB_URL is not set")
+    alert_ids = "select coalesce(array_agg(id), '{}') from public.alert where tenant_id = %s"
+    with psycopg.connect(url) as admin, psycopg.connect(url) as conn:
+        before = admin.execute(alert_ids, (TENANT,)).fetchone()
+        admin.commit()
+        assert before is not None
+        conn.execute("set role service_role")
+        conn.commit()
+        try:
+            added = evaluate_cost_alerts_range(
+                conn, TENANT, dt.date(2026, 9, 19), dt.date(2026, 9, 30)
+            )
+            assert conn.info.transaction_status == TransactionStatus.IDLE
+            assert added > 0  # the aguacate jump of 09-28 at least
+            seen = admin.execute(
+                "select count(*) from public.alert where tenant_id = %s and not id = any(%s)",
+                (TENANT, before[0]),
+            ).fetchone()
+            assert seen == (added,)  # committed: another connection sees every day's alerts
+        finally:
+            conn.rollback()
+            admin.rollback()
+            admin.execute(
+                "delete from public.alert where tenant_id = %s and not id = any(%s)",
+                (TENANT, before[0]),
+            )
+            admin.commit()

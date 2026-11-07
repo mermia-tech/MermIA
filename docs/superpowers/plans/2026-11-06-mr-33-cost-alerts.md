@@ -4,7 +4,7 @@
 
 **Goal:** deterministic rules flag ingredient price jumps and dish margin breaches (and, in part b, suggest menu prices). Nothing is ever auto-applied.
 
-**Architecture:** one migration on top of PR #77 (`20261104090000_read_rpcs_cost.sql`: `app.food_cost_target`, `app.net_ex_iva`, `api.get_cost_alerts`) and MR-25 (`20261022090000_costing_engine.sql`). The rules live in SQL next to the costing engine: `app.price_jumps` is the one definition of a price jump, used by the evaluator and by `api.get_cost_alerts`; `app.evaluate_cost_alerts` (service_role only) writes `public.alert` rows idempotently; a thin Python caller in `apps/api/src/mermia_api/costing/alerts.py` runs it.
+**Architecture:** one migration on top of PR #77 (`20261108090000_read_rpcs_cost.sql`: `app.food_cost_target`, `app.net_ex_iva`, `api.get_cost_alerts`) and MR-25 (`20261022090000_costing_engine.sql`). The rules live in SQL next to the costing engine: `app.price_jumps` is the one definition of a price jump, used by the evaluator and by `api.get_cost_alerts`; `app.evaluate_cost_alerts` (service_role only) writes `public.alert` rows idempotently; a thin Python caller in `apps/api/src/mermia_api/costing/alerts.py` runs it.
 
 **Tech Stack:** Postgres 17 (Supabase), pgTAP, pytest + psycopg.
 
@@ -14,7 +14,7 @@
 
 - **U1 Target and breach:** one fixed 32 % food-cost target per tenant (`app.food_cost_target()`); a breach is food cost above 35 % (target + 3 pts). Per-category targets later.
 - **U2 Bottled drinks / resale items** (seed: Coca-Cola 54 %, Corona 46 %): alert as breaches, never a price suggestion (part b).
-- **U3 Frequency:** compute daily, silently; everything goes into the weekly report; at most one same-day message per tenant, only for urgent alerts: an ingredient price jump of at least 15 % on a top-20-by-spend ingredient, or a breach on a top-10 dish. MR-33 marks urgency; sending is MR-37 / MR-38.
+- **U3 Frequency:** compute daily, silently; everything goes into the weekly report; at most one same-day message per tenant, only for urgent alerts: an ingredient price jump of at least 15 % on a top-20-by-spend ingredient, or a breach on a top-10 dish. MR-33 marks urgency; sending is MR-37 / MR-38. Owner decision 2026-11-07: a breach is urgent only on a confirmed dish cost; one on an estimated cost is recorded (`alert.confidence`) and appears in the weekly report marked as estimated.
 - **U4 Suggestions** (part b): round to $5 under $250 and $10 at or above; at most +10 % per step (cap rounded down to a price point); never a decrease; no suggestion if the cap lands on the current price; Stars not raised; Dogs and Puzzles get "revisa porción/costo" (a rationale code) instead of a price; copy always "Son sugerencias, no cambio nada sin tu OK" plus a confidence tag; "Cambiar precios" creates a `menu_item_price.set` pending change. Prices include IVA.
 
 ## Split
@@ -44,7 +44,7 @@
 
 ### Task 2: Migration and caller
 
-- [x] `supabase/migrations/20261106100000_cost_alerts.sql` (after MR-32's `20261106090000`): alert columns (`menu_item_id`, `ingredient_id`, `as_of`, `urgent`, prices tagged `unit=pesos_per_base_unit`), rule / status / shape checks, dedupe indexes; `app.cost_alert_settings`, `app.price_jumps`, `app.ingredient_spend`, `app.evaluate_cost_alerts`; `api.get_cost_alerts` redefined on `app.price_jumps` with the same output.
+- [x] `supabase/migrations/20261108090300_cost_alerts.sql` (after #77's `20261108090200`): alert columns (`menu_item_id`, `ingredient_id`, `as_of`, `urgent`, `confidence` (required for margin_breach), prices tagged `unit=pesos_per_base_unit`), rule / status / shape checks, dedupe indexes; `app.cost_alert_settings`, `app.price_jumps`, `app.ingredient_spend`, `app.evaluate_cost_alerts`; `api.get_cost_alerts` redefined on `app.price_jumps` with the same output.
 - [x] `apps/api/src/mermia_api/costing/alerts.py`: `evaluate_cost_alerts(conn, tenant_id, as_of)` and a day-range catch-up.
 - [x] `supabase db reset`, `supabase test db`, `uv run pytest -m db`; regenerate models (`--check`).
 

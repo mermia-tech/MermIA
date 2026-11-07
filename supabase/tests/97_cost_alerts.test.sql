@@ -128,6 +128,13 @@ select results_eq(
            ('Polanco', 'Tacos de suadero (orden de 3)', '2026-08-17', 35.2968, 35.0, false),
            ('Polanco', 'Torta de pastor', '2026-08-17', 38.9533, 35.0, false)$$,
   'one breach per dish and location above 35 %, dated from the start of the breach (Volcán de pastor crossed with the pastor jump); none urgent: each started weeks before it was seen');
+select is((select count(*) from public.alert a
+           left join public.dish_cost_snapshot s on s.tenant_id = a.tenant_id and s.location_id = a.location_id
+                                                and s.menu_item_id = a.menu_item_id and s.date = a.as_of
+           where a.rule = 'margin_breach' and (a.confidence is null or a.confidence is distinct from s.confidence)), 0::bigint,
+          'every breach carries the confidence of the snapshot it was evaluated on');
+select is((select count(*) from public.alert a where a.rule = 'price_jump' and a.confidence is not null), 0::bigint,
+          'a price jump carries no dish cost confidence');
 select is((select count(*) from (select distinct s.location_id, s.menu_item_id from public.dish_cost_snapshot s
            where s.tenant_id = :'TENANT' and s.date between '2026-09-12' and '2026-10-12' and s.food_cost_pct > 35) x),
           (select count(*) from public.alert where rule = 'margin_breach'), 'exactly the dishes whose snapshots breach in the window');
@@ -270,19 +277,39 @@ rollback to savepoint retired;
 -- urgency (U3) ------------------------------------------------------------------------------
 savepoint urgent;
 -- meat to $300/kg today: a +53.8 % jump on the top ingredient by spend, and tacos al pastor (a
--- top-10 dish at both locations) breaches today
+-- top-10 dish at both locations, on an estimated cost in the seed) breaches today
 insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
 values (:'TENANT', :'MEAT', 0.300, '2026-10-12', 'cfdi');
 select ok(app.compute_dish_costs(:'TENANT', '2026-10-12', '2026-10-12') > 0, 'today recomputed');
 select ok(pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12', '2026-10-12') > 0, 'evaluated today');
 select is((select row(a.value, a.threshold, a.urgent) from public.alert a where a.rule = 'price_jump' and a.as_of = '2026-10-12'),
           row(53.8462::numeric, 15.0::numeric, true), 'the meat jump is urgent');
-select is((select array_agg(l.name order by l.name) from public.alert a join public.location l on l.id = a.location_id
-           where a.rule = 'margin_breach' and a.menu_item_id = :'PASTOR' and a.as_of = '2026-10-12' and a.urgent),
-          array['Centro', 'Polanco']::text[], 'a new breach on a top-10 dish is urgent');
+select is((select array_agg(l.name || ' ' || a.confidence || ' ' || a.urgent order by l.name) from public.alert a
+           join public.location l on l.id = a.location_id
+           where a.rule = 'margin_breach' and a.menu_item_id = :'PASTOR' and a.as_of = '2026-10-12'),
+          array['Centro estimated false', 'Polanco estimated false']::text[],
+          'a new breach on a top-10 dish whose seed cost is estimated is recorded, tagged estimated, and not urgent');
 select is((select count(*) from public.alert a where a.rule = 'margin_breach' and a.as_of < '2026-10-12' and a.urgent), 0::bigint,
           'ongoing breaches stay as they were');
 rollback to savepoint urgent;
+
+savepoint urgent_confidence;
+-- owner decision 2026-11-07: the same-day message goes out only on a confirmed dish cost. Tacos al
+-- pastor breach today at both locations, on a confirmed cost at Centro and an estimated one at
+-- Polanco: Centro's is urgent, Polanco's is recorded (for the weekly report, marked as estimated)
+-- but not urgent
+insert into public.ingredient_price (tenant_id, ingredient_id, unit_price_net, effective_from, source)
+values (:'TENANT', :'MEAT', 0.300, '2026-10-12', 'cfdi');
+select ok(app.compute_dish_costs(:'TENANT', '2026-10-12', '2026-10-12') > 0, 'today recomputed');
+update public.dish_cost_snapshot set confidence = case location_id when :'CENTRO' then 'confirmed' else 'estimated' end::app.cost_confidence
+where menu_item_id = :'PASTOR' and date = '2026-10-12';
+select ok(pg_temp.evaluate(:'TENANT', '2026-10-12', '2026-10-12', '2026-10-12') > 0, 'evaluated today');
+select results_eq(
+  $$select l.name, a.confidence::text, a.urgent from public.alert a join public.location l on l.id = a.location_id
+    where a.rule = 'margin_breach' and a.menu_item_id = 'f496f051-9f85-5f8a-a4b6-c1a814d37c73' and a.as_of = '2026-10-12' order by l.name$$,
+  $$values ('Centro'::text, 'confirmed'::text, true), ('Polanco', 'estimated', false)$$,
+  'a fresh breach on a top-10 dish is urgent on a confirmed cost; on an estimated cost it is recorded, tagged, not urgent');
+rollback to savepoint urgent_confidence;
 
 savepoint fresh;
 -- seen within 7 days of its start, a breach on a top-10 dish is urgent; bistec tacos are in
@@ -396,9 +423,11 @@ select throws_ok(format($$insert into public.alert (tenant_id, rule, ingredient_
                  '23514', null, 'a price jump carries its prices');
 select throws_ok(format($$insert into public.alert (tenant_id, rule, menu_item_id, as_of, value, threshold) values (%L, 'margin_breach', %L, '2026-10-12', 40, 35)$$, :'TENANT', :'PASTOR'),
                  '23514', null, 'a breach carries its location');
-select throws_ok(format($$insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, status) values (%L, %L, 'margin_breach', %L, '2026-10-12', 40, 35, 'closed')$$, :'TENANT', :'CENTRO', :'PASTOR'),
+select throws_ok(format($$insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold) values (%L, %L, 'margin_breach', %L, '2026-10-12', 40, 35)$$, :'TENANT', :'CENTRO', :'PASTOR'),
+                 '23514', null, 'a breach carries its cost confidence');
+select throws_ok(format($$insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, confidence, status) values (%L, %L, 'margin_breach', %L, '2026-10-12', 40, 35, 'confirmed', 'closed')$$, :'TENANT', :'CENTRO', :'PASTOR'),
                  '23514', null, 'only known statuses');
-select throws_ok(format($$insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold) values (%L, %L, 'margin_breach', %L, '2026-10-12', 40, 35)$$, :'OTHER', :'CENTRO', :'PASTOR'),
+select throws_ok(format($$insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, confidence) values (%L, %L, 'margin_breach', %L, '2026-10-12', 40, 35, 'confirmed')$$, :'OTHER', :'CENTRO', :'PASTOR'),
                  '23503', null, 'a dish and a location of another tenant are refused');
 
 select * from finish();
