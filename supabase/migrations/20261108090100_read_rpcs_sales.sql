@@ -35,8 +35,10 @@ $$;
 
 -- Staff as the agent may see them (09 section 4.2): the first name only, never the full name.
 -- When two of the staff in one answer share a first name, each gets its last-name initial
--- ("Luis M.", "Luis R."), so their rows can be told apart. No staff (or none visible) is
--- "Sin asignar". One row per id in `ids` (null included).
+-- ("Luis M.", "Luis R."), so their rows can be told apart. When that label is still shared
+-- ("Luis Martínez", "Luis Méndez"), the second and later by staff id get a number: "Luis M.",
+-- "Luis M. (2)"; never more of the name. No staff (or none visible) is "Sin asignar". One row
+-- per id in `ids` (null included).
 create function app.staff_names(ids uuid[]) returns table (staff_id uuid, name text)
 language sql stable set search_path = ''
 as $$
@@ -47,11 +49,16 @@ as $$
     cross join lateral (select regexp_split_to_array(btrim(s.display_name), '\s+') as w) x
   ), f as (
     select n.id, coalesce(nullif(n.first, ''), 'Sin asignar') as first, nullif(n.initial, '') as initial from n
+  ), l as (
+    select f.id,
+           case when f.id is not null and f.initial is not null and count(*) over (partition by f.first) > 1
+                then f.first || ' ' || upper(f.initial) || '.' else f.first end as label
+    from f
+  ), k as (
+    select l.id, l.label, row_number() over (partition by l.label order by l.id nulls first) as k from l
   )
-  select f.id,
-         case when f.id is not null and f.initial is not null and count(*) over (partition by f.first) > 1
-              then f.first || ' ' || upper(f.initial) || '.' else f.first end
-  from f
+  select k.id, case when k.k > 1 then k.label || ' (' || k.k || ')' else k.label end
+  from k
 $$;
 
 -- Breakdown rows (key, net_sales, tickets, order) for one dimension. `tickets` is null when a
@@ -395,7 +402,9 @@ $$;
 -- compare_locations -------------------------------------------------------------------------
 -- The compare_periods metric per location (app.metric_value), ranked best first: highest first,
 -- except food_cost_pct, where the lowest is best. diff_vs_best = value - the best value. A
--- location with no data for the metric is left out and named in a flag.
+-- location with no data for the metric is left out and named in a flag ("Sin datos para"),
+-- unless it has no open day in the period (all its days are closed weekdays, MR-98): then it
+-- gets the note "Polanco no abre ese día." ("esos días" for a longer period) instead.
 create function api.compare_locations(metric text, period jsonb, location_ids uuid[] default null) returns jsonb
 language plpgsql stable security invoker set search_path = ''
 as $$
@@ -405,6 +414,7 @@ declare
   s record;
   rows jsonb;
   missing text;
+  closed text[];
   levels app.cost_confidence[];
   flags jsonb := '[]';
 begin
@@ -437,14 +447,24 @@ begin
   select (select jsonb_agg(jsonb_build_object('location_id', x.id, 'name', x.name, 'value', app.figure(metric, x.value),
                                               'rank', x.rank, 'diff_vs_best', app.figure(metric, x.value - x.best, true))
                            order by x.rank, x.name, x.id) from ranked x),
-         (select string_agg(v.name, ', ' order by v.name) from v where v.value is null)
-  into rows, missing;
+         (select string_agg(v.name, ', ' order by v.name) from v
+          where v.value is null and exists (select from app.open_location_days(array[v.id], r[1], r[2]))),
+         (select array_agg(v.name order by v.name) from v
+          where v.value is null and not exists (select from app.open_location_days(array[v.id], r[1], r[2])))
+  into rows, missing, closed;
 
   if rows is null then
     return app.rpc_error('no_data', format('No %s data for the period', metric), locs);
   end if;
   if missing is not null then
     flags := flags || app.flag('missing_locations', 'Sin datos para: ' || missing || '.');
+  end if;
+  if closed is not null then
+    flags := flags || app.flag('closed_locations', format('%s no %s %s.',
+      case when cardinality(closed) = 1 then closed[1]
+           else array_to_string(closed[1:cardinality(closed) - 1], ', ') || ' y ' || closed[cardinality(closed)] end,
+      case when cardinality(closed) = 1 then 'abre' else 'abren' end,
+      case when r[1] = r[2] then 'ese día' else 'esos días' end));
   end if;
   if metric = 'food_cost_pct' then
     select array_agg(distinct c.confidence) into levels
