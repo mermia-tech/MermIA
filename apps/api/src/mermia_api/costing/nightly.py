@@ -48,6 +48,15 @@ Scheduling (Dev B, #38): call `run_job(db_url)` hourly with the default 2 days. 
 for missing rows, so hourly picks up each time zone soon after its midnight and each new dish soon
 after an upload; a 2-day run takes about 33-49 s for 50 tenants. A long catch-up (after an outage)
 is run by hand with the CLI and `--days N`, never by the schedule (30 days takes 5-9 min for 50).
+
+Caller rules for the weekly report and the scheduler (Dev B, #38):
+
+a. The Monday weekly report calls `refresh_tenant(db_url, tenant_id, days=8)`: today minus 7 is the
+   previous Monday, so `days=7` would miss it. Hourly runs keep DEFAULT_DAYS=2.
+b. A transient failure (e.g. a busy tenant lock) in `failed`: retry once, then build the report
+   anyway; its missing-days section shows any gap.
+c. `run_job` and `refresh_tenant` block on psycopg. Call them from a sync Procrastinate task or a
+   thread, never directly inside an async handler.
 """
 
 from __future__ import annotations
