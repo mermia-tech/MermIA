@@ -489,8 +489,21 @@
     },
     "PurchaseIn": {
       "additionalProperties": false,
-      "description": "Columns: purchase_doc (CFDI 4.0 fields in 03 C.3 are still to validate).",
+      "description": "Columns: purchase_doc (CFDI 4.0 fields in 03 C.3 are still to validate).\n\nbuyer_rfc is the RFC the invoice is addressed to (CFDI Receptor). It has no column: the loader\nchecks it against tenant.rfc and never stores or shows it.",
       "properties": {
+        "buyer_rfc": {
+          "anyOf": [
+            {
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Buyer Rfc"
+        },
         "cfdi_uuid": {
           "anyOf": [
             {

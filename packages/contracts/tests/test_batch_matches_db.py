@@ -141,7 +141,7 @@ LOADER_ONLY = {
     batch.ItemSalesIn: {"item_external_id", "item_name"},  # resolved to menu_item_id
     batch.TicketIn: {"staff", "lines", "payments"},
     batch.TicketLineIn: {"item_external_id", "item_name", "parent_line_index"},
-    batch.PurchaseIn: {"supplier", "lines"},
+    batch.PurchaseIn: {"supplier", "buyer_rfc", "lines"},  # buyer_rfc: checked, never stored
     batch.PurchaseLineIn: {"ingredient_name"},
     batch.RecipeIn: {"menu_item_external_id", "menu_item_name", "lines"},
     batch.RecipeLineIn: {"ingredient_name", "ingredient_external_id", "unit"},

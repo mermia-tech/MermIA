@@ -259,9 +259,14 @@ class PurchaseLineIn(Model):
 
 
 class PurchaseIn(Model):
-    """Columns: purchase_doc (CFDI 4.0 fields in 03 C.3 are still to validate)."""
+    """Columns: purchase_doc (CFDI 4.0 fields in 03 C.3 are still to validate).
+
+    buyer_rfc is the RFC the invoice is addressed to (CFDI Receptor). It has no column: the loader
+    checks it against tenant.rfc and never stores or shows it.
+    """
 
     supplier: SupplierIn
+    buyer_rfc: Text | None = None
     kind: PurchaseDocKind
     cfdi_uuid: UUID | None = None
     issued_at: AwareDatetime
