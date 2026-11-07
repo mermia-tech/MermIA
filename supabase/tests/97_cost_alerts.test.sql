@@ -832,7 +832,7 @@ rollback to savepoint s2_catchup_estimated;
 savepoint s5_episode_merge;
 -- S5 (R4): two breaches (10-05, 10-07..10-08) are recorded waiting; a recompute makes 10-06 breach
 -- too, so they are one episode from 10-05. Confirmed on a fresh 10-11: only the earliest row
--- (the episode's) turns urgent, the later one is left as it was
+-- (the episode's) turns urgent; the later one stops waiting (F3), so it can never be granted
 update public.dish_cost_snapshot set cost = price_net / 2,
   confidence = case when date <= '2026-10-08' then 'estimated' else 'confirmed' end::app.cost_confidence
 where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date in ('2026-10-05', '2026-10-07', '2026-10-08', '2026-10-11', '2026-10-12');
@@ -844,9 +844,50 @@ update public.dish_cost_snapshot set cost = price_net / 2, confidence = 'estimat
 where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date in ('2026-10-06', '2026-10-09', '2026-10-10');
 select pg_temp.evaluate_daily(:'TENANT', '2026-10-09', '2026-10-12');
 select results_eq($$select * from pg_temp.pastor_centro() order by as_of$$,
-                  $$values ('2026-10-05'::date, 'confirmed'::text, true, false), ('2026-10-07', 'estimated', false, true)$$,
-                  'S5: merged into one episode: one urgent row, the later row untouched');
+                  $$values ('2026-10-05'::date, 'confirmed'::text, true, false), ('2026-10-07', 'estimated', false, false)$$,
+                  'S5: merged into one episode: one urgent row, the later row no longer waits and is not urgent');
 rollback to savepoint s5_episode_merge;
+
+savepoint p1_merge_after_urgent;
+-- P1 (R4, F1): a breach on 10-05 is recorded waiting and ends on 10-06; a new one from 10-07 is
+-- recorded confirmed and urgent. A recompute makes 10-06 breach, so both rows are one episode
+-- from 10-05: the earliest row's chance was used by the 10-07 row, so a confirmed fresh 10-10
+-- ends its wait without urgency (one urgent row per breach)
+update public.dish_cost_snapshot set cost = price_net / 2,
+  confidence = case when date = '2026-10-05' then 'estimated' else 'confirmed' end::app.cost_confidence
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date in ('2026-10-05', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11', '2026-10-12');
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-05', '2026-10-09');
+select results_eq($$select * from pg_temp.pastor_centro() order by as_of$$,
+                  $$values ('2026-10-05'::date, 'estimated'::text, false, true), ('2026-10-07', 'confirmed', true, false)$$,
+                  'P1: a waiting breach that ended, then a new urgent one');
+update public.dish_cost_snapshot set cost = price_net / 2, confidence = 'estimated'
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date = '2026-10-06';
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-10', '2026-10-12');
+select results_eq($$select * from pg_temp.pastor_centro() order by as_of$$,
+                  $$values ('2026-10-05'::date, 'confirmed'::text, false, false), ('2026-10-07', 'confirmed', true, false)$$,
+                  'P1: merged, confirmed on fresh days: the earliest row stops waiting, still one urgent row');
+rollback to savepoint p1_merge_after_urgent;
+
+savepoint p2_head_acknowledged;
+-- P2 (R4, F2): the S5 merge; the earliest row turns urgent on 10-11 and the owner acknowledges
+-- it. The breach is that episode: the later row is never refreshed or granted on 10-12
+update public.dish_cost_snapshot set cost = price_net / 2,
+  confidence = case when date <= '2026-10-08' then 'estimated' else 'confirmed' end::app.cost_confidence
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date in ('2026-10-05', '2026-10-07', '2026-10-08', '2026-10-11', '2026-10-12');
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-05', '2026-10-08');
+update public.dish_cost_snapshot set cost = price_net / 2, confidence = 'estimated'
+where menu_item_id = :'PASTOR' and location_id = :'CENTRO' and date in ('2026-10-06', '2026-10-09', '2026-10-10');
+select pg_temp.evaluate_daily(:'TENANT', '2026-10-09', '2026-10-11');
+update public.alert set status = 'acknowledged'
+where rule = 'margin_breach' and menu_item_id = :'PASTOR' and location_id = :'CENTRO' and as_of = '2026-10-05';
+select is(pg_temp.evaluate_daily(:'TENANT', '2026-10-12', '2026-10-12'), 0, 'P2: 10-12 adds no row');
+select results_eq($$select a.as_of, a.status, a.confidence::text, a.urgent, a.awaits_confirmation from public.alert a
+                    where a.rule = 'margin_breach' and a.menu_item_id = 'f496f051-9f85-5f8a-a4b6-c1a814d37c73'
+                      and a.location_id = '705e8e51-376b-5785-adbb-405eff4e2a22' order by a.as_of$$,
+                  $$values ('2026-10-05'::date, 'acknowledged'::text, 'confirmed'::text, true, false),
+                           ('2026-10-07', 'open', 'estimated', false, false)$$,
+                  'P2: the acknowledged earliest row is left as it is; the later row never turns urgent');
+rollback to savepoint p2_head_acknowledged;
 
 -- the alert row's shape -------------------------------------------------------------------------
 select throws_ok(format($$insert into public.alert (tenant_id, rule, menu_item_id, as_of, value, threshold) values (%L, 'mix_shift', %L, '2026-10-12', 1, 1)$$, :'TENANT', :'PASTOR'),

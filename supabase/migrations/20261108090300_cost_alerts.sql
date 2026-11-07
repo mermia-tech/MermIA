@@ -30,7 +30,9 @@
 --      urgent, whatever its confidence later; it shows in the weekly report (MR-37).
 --   R4 one row per breach and urgency granted at most once in its life: the first confirmed fresh
 --      day uses up the chance (urgent or not); a later downgrade clears urgent and never re-grants
---      it, so no second same-day message goes out about the same problem.
+--      it, so no second same-day message goes out about the same problem. The breach is the
+--      episode: when a recompute merges two episodes, their rows share one chance, and only the
+--      earliest row is refreshed or can be granted it.
 -- - Spend is theoretical usage (units sold x recipe of record, through sub-recipes, x price of
 --   record): purchases are only partly captured in Phase 1.
 -- - Dedupe: one price_jump alert per (tenant, ingredient, day the price started); one
@@ -99,7 +101,8 @@ comment on column public.alert.urgent is
   'a downgrade to estimated clears it for good';
 comment on column public.alert.awaits_confirmation is
   'margin_breach only: a new breach first recorded on an unconfirmed cost, waiting for its one chance at urgency (R2); '
-  'cleared on the first confirmed fresh day, top 10 or not, and never set again (R4)';
+  'cleared on the first confirmed fresh day, top 10 or not, and never set again (R4). After a merge of episodes '
+  'the later rows stop waiting once the earliest does; dedupe margin_breach rows by episode, or take its earliest row';
 comment on column public.alert.evaluated_on is
   'margin_breach: the last day the evaluator applied to the row (on_date); a rerun of an older day leaves the row as it is';
 comment on column public.alert.confidence is
@@ -274,21 +277,25 @@ begin
       where v.tenant_id = tenant and v.business_date between on_date - (k.ranking_days - 1) and on_date
       group by v.location_id, v.menu_item_id
     ) x where x.n <= k.top_dishes
-  ), open_row as (
-    -- the episode's row: its earliest open alert. A recompute can merge two episodes into one; the
-    -- later row is left as it is (one urgency per breach, R4)
-    select distinct on (a.location_id, a.menu_item_id) a.id, a.location_id, a.menu_item_id, a.urgent,
-           a.awaits_confirmation, a.evaluated_on
+  ), head as (
+    -- the breach is the episode, across all its alert rows of any status. A late recompute can
+    -- merge two episodes into one; only the earliest row is the episode's (F2), and an owner's
+    -- acknowledge or dismiss on it leaves the whole episode as it is
+    select distinct on (a.location_id, a.menu_item_id) a.id, a.status, a.location_id, a.menu_item_id, a.as_of,
+           a.urgent, a.awaits_confirmation, a.evaluated_on, e.started
     from episode e
     join public.alert a
-      on a.tenant_id = tenant and a.rule = 'margin_breach' and a.status = 'open'
+      on a.tenant_id = tenant and a.rule = 'margin_breach'
      and a.location_id = e.location_id and a.menu_item_id = e.menu_item_id
      and a.as_of between e.started and on_date
     order by a.location_id, a.menu_item_id, a.as_of
   ), next_state as (
-    -- an open alert of a breach still on (the episode only holds snapshots over the limit, so a
+    -- the open head of a breach still on (the episode only holds snapshots over the limit, so a
     -- breach that ended is left as it is) takes the confidence and the food cost of the on_date
     -- snapshot together (a late CFDI can move them either way). Its urgency moves by R1-R4:
+    -- - another row of the episode already used its chance (it is urgent, or it no longer waits:
+    --   a later row stops waiting only once the head does, below): the head stops waiting and is
+    --   never urgent (F1, one urgency per breach, R4).
     -- - unconfirmed snapshot: not urgent (R1); a waiting row keeps waiting, a row that is not
     --   waiting is never set waiting again (R4).
     -- - confirmed snapshot on a fresh day of a waiting row: its one chance (R2, R4). It stops
@@ -299,15 +306,23 @@ begin
     -- A rerun of a day older than the last one applied to the row (a range rerun) leaves it as it
     -- is: an older day never undoes the state a later day set.
     select a.id, s.confidence, round(100.0 * s.cost / s.price_net, 4) as value,
-           case when s.confidence <> 'confirmed' then false
+           case when s.confidence <> 'confirmed' or u.spent then false
                 when a.awaits_confirmation and on_date > today - k.fresh_days
                   then exists (select 1 from top_dish t where t.location_id = a.location_id and t.menu_item_id = a.menu_item_id)
                 else a.urgent end as urgent,
-           a.awaits_confirmation and not (s.confidence = 'confirmed' and on_date > today - k.fresh_days) as awaits_confirmation
-    from open_row a
+           a.awaits_confirmation and not u.spent
+             and not (s.confidence = 'confirmed' and on_date > today - k.fresh_days) as awaits_confirmation
+    from head a
     join public.dish_cost_snapshot s
       on s.tenant_id = tenant and s.location_id = a.location_id and s.menu_item_id = a.menu_item_id and s.date = on_date
-    where a.evaluated_on is null or a.evaluated_on <= on_date
+    cross join lateral (
+      select a.awaits_confirmation and exists (
+               select 1 from public.alert o
+               where o.tenant_id = tenant and o.rule = 'margin_breach' and o.location_id = a.location_id
+                 and o.menu_item_id = a.menu_item_id and o.as_of between a.started and on_date and o.id <> a.id
+                 and (o.urgent or not o.awaits_confirmation)) as spent
+    ) u
+    where a.status = 'open' and (a.evaluated_on is null or a.evaluated_on <= on_date)
   ), refreshed as (
     -- only rows that change: an identical rerun of the same day writes nothing and bumps no version
     update public.alert a
@@ -317,6 +332,22 @@ begin
     where a.id = n.id
       and (a.confidence, a.value, a.urgent, a.awaits_confirmation, a.evaluated_on)
           is distinct from (n.confidence, n.value, n.urgent, n.awaits_confirmation, on_date)
+    returning 1
+  ), merged as (
+    -- F3: the episode's later open rows are never refreshed or granted. They keep waiting while
+    -- the head waits (so the head can tell a row that used its chance from one that only follows
+    -- it), and stop waiting for good once the head no longer waits or is no longer open. Their
+    -- value and confidence stay as they were last refreshed, and their status is left alone: the
+    -- weekly report (MR-37) and the same-day sender must dedupe margin_breach alerts by episode,
+    -- or take the episode's earliest row.
+    update public.alert o
+    set awaits_confirmation = false
+    from head h
+    left join next_state n on n.id = h.id
+    where o.tenant_id = tenant and o.rule = 'margin_breach' and o.status = 'open' and o.awaits_confirmation
+      and o.location_id = h.location_id and o.menu_item_id = h.menu_item_id
+      and o.as_of > h.as_of and o.as_of <= on_date
+      and (h.status <> 'open' or not coalesce(n.awaits_confirmation, h.awaits_confirmation))
     returning 1
   )
   insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, confidence, urgent, awaits_confirmation,
