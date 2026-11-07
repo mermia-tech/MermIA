@@ -20,9 +20,12 @@
 --   location, both over the 30 days to the evaluation day, and only when the evidence is at most
 --   7 days old on the business day the run happens (today, not the day evaluated: a catch-up run
 --   over old days marks nothing urgent). The top-20 filter applies to
---   urgency only: every jump gets an alert for the weekly report. A breach is urgent only on a
---   confirmed dish cost (owner decision 2026-11-07): one on an estimated cost is recorded, never
---   urgent, and shows in the weekly report (MR-37) marked as estimated.
+--   urgency only: every jump gets an alert for the weekly report. A breach is urgent only (owner
+--   decisions R1-R3, 2026-11-07) on a confirmed dish cost, and only if it is new: recorded when its
+--   start is within 7 days of the day evaluated, on a fresh day, in the top 10. An estimated breach
+--   is never urgent; it becomes urgent the first time its cost is confirmed on a fresh day while it
+--   is still over the limit. A breach that already existed (a first run, a catch-up) is recorded
+--   not urgent and shows in the weekly report (MR-37), marked as estimated when it is.
 -- - Spend is theoretical usage (units sold x recipe of record, through sub-recipes, x price of
 --   record): purchases are only partly captured in Phase 1.
 -- - Dedupe: one price_jump alert per (tenant, ingredient, day the price started); one
@@ -46,6 +49,7 @@ alter table public.alert
   add column ingredient_id uuid,
   add column as_of date,
   add column urgent boolean not null default false,
+  add column awaits_confirmation boolean not null default false,
   add column old_unit_price numeric(20, 6),
   add column new_unit_price numeric(20, 6),
   add column avg_unit_price numeric(20, 6),
@@ -78,6 +82,10 @@ comment on column public.alert.status is 'open | acknowledged | dismissed (alert
 comment on column public.alert.value is
   'percent points: the price change that fired on as_of (price_jump) or the food cost (margin_breach) of the snapshot that set confidence';
 comment on column public.alert.threshold is 'percent points: the threshold that fired';
+comment on column public.alert.urgent is
+  'a same-day message is due: never on an estimated cost, and for a breach only one that started within 7 days of the day it was recorded';
+comment on column public.alert.awaits_confirmation is
+  'margin_breach: recorded on, or back to, an estimated cost; becomes urgent the first time the cost is confirmed on a fresh day';
 comment on column public.alert.confidence is
   'margin_breach: the confidence of the dish cost snapshot value comes from (an estimated breach is never urgent); null for price_jump';
 
@@ -252,35 +260,48 @@ begin
   ), refreshed as (
     -- an open alert of a breach still on (the episode only holds snapshots over the limit, so a
     -- breach that ended is left as it is) takes the confidence and the food cost of the on_date
-    -- snapshot together (a late CFDI can move them either way). An estimated, not-urgent alert
-    -- whose cost is now confirmed becomes urgent if it meets the urgency rules (owner decision
-    -- 2026-11-07), judged on the evidence day on_date, so a catch-up stays not urgent; an urgent
-    -- alert never loses it, and it flips only on the estimated -> confirmed change, so once.
+    -- snapshot together (a late CFDI can move them either way; a value-only change is refreshed
+    -- too). Urgency (owner decisions R1, R2): an estimated alert is never urgent; a confirmed one
+    -- keeps it. A row recorded on an estimate (awaits_confirmation) becomes urgent the first time a
+    -- snapshot on a day fresh relative to today is confirmed, in the top 10; a catch-up over old
+    -- days confirms the tag but waits for a fresh day. An urgent alert whose cost turns estimated
+    -- loses it and waits again for a confirmed fresh day.
     update public.alert a
     set confidence = s.confidence,
         value = round(100.0 * s.cost / s.price_net, 4),
-        urgent = a.urgent
-          or (a.confidence = 'estimated' and s.confidence = 'confirmed'
-              and on_date > today - k.fresh_days
-              and exists (select 1 from top_dish t where t.location_id = a.location_id and t.menu_item_id = a.menu_item_id))
+        urgent = s.confidence = 'confirmed'
+          and (a.urgent
+               or (a.awaits_confirmation and on_date > today - k.fresh_days
+                   and exists (select 1 from top_dish t where t.location_id = a.location_id and t.menu_item_id = a.menu_item_id))),
+        awaits_confirmation = case
+          when s.confidence <> 'confirmed' then true
+          else a.awaits_confirmation and not (on_date > today - k.fresh_days
+                 and exists (select 1 from top_dish t where t.location_id = a.location_id and t.menu_item_id = a.menu_item_id))
+          end
     from episode e
     join public.dish_cost_snapshot s
       on s.tenant_id = tenant and s.location_id = e.location_id and s.menu_item_id = e.menu_item_id and s.date = on_date
     where a.tenant_id = tenant and a.rule = 'margin_breach' and a.status = 'open'
       and a.location_id = e.location_id and a.menu_item_id = e.menu_item_id
       and a.as_of between e.started and on_date
-      and a.confidence is distinct from s.confidence
+      and (a.confidence is distinct from s.confidence
+           or a.value is distinct from round(100.0 * s.cost / s.price_net, 4)
+           or (a.awaits_confirmation and s.confidence = 'confirmed'))
     returning 1
   )
-  insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, confidence, urgent)
-  -- as_of is the start of the episode; value, confidence and urgency come from the on_date snapshot
+  insert into public.alert (tenant_id, location_id, rule, menu_item_id, as_of, value, threshold, confidence, urgent, awaits_confirmation)
+  -- as_of is the start of the episode; value and confidence come from the on_date snapshot
   select tenant, e.location_id, 'margin_breach', e.menu_item_id, e.started,
          round(100.0 * s.cost / s.price_net, 4), breach_above, s.confidence,
-         -- urgent only on a confirmed dish cost (owner decision 2026-11-07): an estimated breach is
-         -- recorded for the weekly report, marked as estimated, and never sent the same day
-         s.confidence = 'confirmed'
+         -- urgent at insert needs all three (owner decisions R1, R3): a breach that started within
+         -- fresh_days of on_date (an existing problem goes to the weekly report), a confirmed
+         -- on_date cost (an estimated breach is never urgent) and a fresh on_date, in the top 10
+         e.started > on_date - k.fresh_days
+           and s.confidence = 'confirmed'
            and on_date > today - k.fresh_days
-           and exists (select 1 from top_dish t where t.location_id = e.location_id and t.menu_item_id = e.menu_item_id)
+           and exists (select 1 from top_dish t where t.location_id = e.location_id and t.menu_item_id = e.menu_item_id),
+         -- recorded on an estimate: urgent the first time it is confirmed on a fresh day (R2)
+         s.confidence = 'estimated'
   from episode e
   join public.dish_cost_snapshot s
     on s.tenant_id = tenant and s.location_id = e.location_id and s.menu_item_id = e.menu_item_id and s.date = on_date
