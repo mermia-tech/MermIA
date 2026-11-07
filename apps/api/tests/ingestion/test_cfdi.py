@@ -10,71 +10,12 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 import pytest
+from _cfdi_builder import UUID_, cfdi, concepto, traslado
 
 from mermia_api.ingestion.errors import MalformedReport, UnknownReport
 from mermia_api.ingestion.registry import parse_file
 from mermia_contracts.batch import Grain
 from mermia_contracts.db.models import IssueSeverity, PurchaseDocKind, SourceKind, SupplierKind
-
-UUID_ = "5D3E8A1C-7B2F-4E9A-9C61-0F4A2B7D8E13"
-
-
-def concepto(
-    desc: str = "CEBOLLA BLANCA",
-    cantidad: str = "5",
-    valor: str = "26.00",
-    importe: str = "130.00",
-    *,
-    unidad: str = "KGM",
-    descuento: str | None = None,
-    impuestos: str = "",
-) -> str:
-    dto = f' Descuento="{descuento}"' if descuento is not None else ""
-    return (
-        f'<cfdi:Concepto ClaveProdServ="50404900" Cantidad="{cantidad}" ClaveUnidad="{unidad}" '
-        f'Descripcion="{desc}" ValorUnitario="{valor}" Importe="{importe}"{dto} ObjetoImp="02">'
-        f"{impuestos}</cfdi:Concepto>"
-    )
-
-
-def traslado(impuesto: str, base: str = "130.00", importe: str = "0.00") -> str:
-    return (
-        f'<cfdi:Impuestos><cfdi:Traslados><cfdi:Traslado Base="{base}" Impuesto="{impuesto}" '
-        f'TipoFactor="Tasa" TasaOCuota="0.080000" Importe="{importe}"/>'
-        "</cfdi:Traslados></cfdi:Impuestos>"
-    )
-
-
-def cfdi(
-    *conceptos: str,
-    ns: str = "4",
-    version: str = "4.0",
-    tipo: str = "I",
-    moneda: str = "MXN",
-    fecha: str = "2026-10-08T09:15:00",
-    subtotal: str = "130.00",
-    descuento: str | None = None,
-    total: str = "130.00",
-    uuid: str | None = UUID_,
-) -> bytes:
-    dto = f' Descuento="{descuento}"' if descuento is not None else ""
-    timbre = (
-        f'<cfdi:Complemento><tfd:TimbreFiscalDigital Version="1.1" UUID="{uuid}"/>'
-        "</cfdi:Complemento>"
-        if uuid is not None
-        else ""
-    )
-    body = "".join(conceptos or (concepto(),))
-    return (
-        '<?xml version="1.0" encoding="UTF-8"?>'
-        f'<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/{ns}" '
-        'xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" '
-        f'Version="{version}" Fecha="{fecha}" SubTotal="{subtotal}"{dto} Moneda="{moneda}" '
-        f'Total="{total}" TipoDeComprobante="{tipo}" LugarExpedicion="37000">'
-        '<cfdi:Emisor Rfc="CSB150301AB1" Nombre="CARNES SELECTAS DEL BAJIO" RegimenFiscal="601"/>'
-        '<cfdi:Receptor Rfc="TEG190415MX2" Nombre="TAQUERIA EL GUERO" UsoCFDI="G01"/>'
-        f"<cfdi:Conceptos>{body}</cfdi:Conceptos>{timbre}</cfdi:Comprobante>"
-    ).encode()
 
 
 def malformed(data: bytes) -> str:
@@ -231,7 +172,7 @@ def test_subtotal_must_be_the_sum_of_the_lines() -> None:
     assert "SubTotal" in malformed(cfdi(subtotal="131.00", total="131.00"))
 
 
-def test_subtotal_within_a_centavo_per_line_is_a_warning() -> None:
+def test_subtotal_within_half_a_centavo_per_line_is_a_warning() -> None:
     # each Importe of 10.005 rounded up by the issuer: 20.02 against a sum of 20.01
     lines = [concepto("A", "1", "10.005", "10.005"), concepto("B", "1", "10.005", "10.005")]
     batch = parse_file(cfdi(*lines, subtotal="20.02", total="20.02"))
@@ -242,10 +183,12 @@ def test_subtotal_within_a_centavo_per_line_is_a_warning() -> None:
         None,
     )
     assert "SubTotal" in issue.message_es
+    assert "$0.01" in issue.message_es
+    assert "centavos" not in issue.message_es
     assert batch.purchases[0].subtotal == 2002
 
 
-def test_subtotal_beyond_a_centavo_per_line_is_refused() -> None:
+def test_subtotal_beyond_half_a_centavo_per_line_is_refused() -> None:
     lines = [concepto("A", "1", "10.005", "10.005"), concepto("B", "1", "10.005", "10.005")]
     assert "SubTotal" in malformed(cfdi(*lines, subtotal="20.04", total="20.04"))
 
