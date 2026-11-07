@@ -9,6 +9,8 @@ select * from no_plan();
 \set POLANCO 'fdda5e3b-6bcd-5c48-a6de-f524be37463e'
 \set PASTOR 'f496f051-9f85-5f8a-a4b6-c1a814d37c73'
 \set COCA '6ad0cd19-1e20-5d83-89d9-f35cb46afd05'
+\set TORTA '6a076c57-be40-5ece-b48f-4ab124f4e65c'
+\set ALAMBRE '81404715-16f4-518e-b9e7-07df075161eb'
 
 create function pg_temp.rpc(claims text, expr text, today text default '2026-10-12') returns jsonb
 language plpgsql as $$
@@ -257,16 +259,22 @@ select is(jsonb_array_length(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L,
 select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(%L)', '"tomorrow"')) #>> '{error,code}', 'invalid_args', 'a bad since');
 
 savepoint suggestions;
-insert into public.price_suggestion (tenant_id, location_id, rule, subject, status, suggested_price, rationale_code)
-values (:'TENANT', :'CENTRO', 'margin_breach', 'Coca-Cola', 'open', 3300, 'target_food_cost'),
-       (:'TENANT', :'CENTRO', 'margin_breach', 'Coca-Cola', 'applied', 3500, 'target_food_cost'),
-       (:'TENANT', null, 'portion_review', 'Revisar porción de aguacate', null, 1000, 'portion');
+-- rows as app.write_price_suggestions writes them (98_price_suggestions tests the writer)
+insert into public.price_suggestion (tenant_id, location_id, menu_item_id, as_of, episode_start, rule, value, threshold,
+                                     current_price, target_price, suggested_price, new_food_cost_pct, confidence, rationale_code, status)
+select :'TENANT', x.loc, x.item, '2026-10-12', '2026-10-01', 'margin_breach', 50, 35, app.menu_price_on(x.item, x.loc, '2026-10-12'),
+       12503, null, null, 'estimated', 'review_portion_cost', x.status
+from (values (:'CENTRO'::uuid, :'TORTA'::uuid, 'open'), (:'CENTRO', :'ALAMBRE', 'applied'), (:'POLANCO', :'TORTA', 'open')) x(loc, item, status);
 select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(location_id => %L)', :'CENTRO')) #> '{data,suggestions}',
-          format('[{"menu_item_id": "%s", "name": "Coca-Cola", "current_price": {"raw": 3000, "text": "$30.00"}, "suggested_price": {"raw": 3300, "text": "$33.00"}},
-                   {"menu_item_id": null, "name": "Revisar porción de aguacate", "current_price": null, "suggested_price": {"raw": 1000, "text": "$10.00"}}]', :'COCA')::jsonb,
-          'open suggestions only; a dish subject resolves to the dish and its current price');
+          format('[{"menu_item_id": "%s", "location_id": "%s", "name": "Torta de pastor",
+                    "current_price": {"raw": 8000, "text": "$80.00"}, "target_price": {"raw": 12503, "text": "$125.03"},
+                    "suggested_price": null, "change": null, "new_food_cost": null,
+                    "confidence": "estimated", "rationale_code": "review_portion_cost"}]', :'TORTA', :'CENTRO')::jsonb,
+          'open suggestions only, with the dish and its current price');
+select is(pg_temp.rpc(:POLANCO_MGR, 'api.get_cost_alerts()') #>> '{data,suggestions,0,location_id}', :'POLANCO',
+          'a Polanco manager sees Polanco''s suggestion only (RLS)');
 select is(jsonb_array_length(pg_temp.rpc(:POLANCO_MGR, 'api.get_cost_alerts()') #> '{data,suggestions}'), 1,
-          'a Polanco manager does not see Centro''s suggestion (RLS)');
+          'and not Centro''s');
 rollback to savepoint suggestions;
 
 -- isolation: a location-limited manager and another tenant ----------------------------------
@@ -305,9 +313,9 @@ select is(pg_temp.rpc(:OTHER_TENANT, format('api.compare_locations(%L, %L, %L)',
           'compare_locations: El Güero''s locations do not exist for another tenant');
 select is(pg_temp.rpc(:OTHER_TENANT, format('api.get_menu_engineering(%L)', '"last_30d"')) #>> '{error,code}', 'no_data', 'get_menu_engineering: nothing');
 select is(pg_temp.rpc(:OTHER_TENANT, format('api.get_cost_alerts(%L)', '"last_30d"')) -> 'data',
-          '{"price_moves": [], "breaches": [], "suggestions": []}', 'get_cost_alerts: no prices, dishes or suggestions of El Güero');
+          '{"price_moves": [], "price_moves_total": 0, "breaches": [], "breaches_total": 0, "suggestions": [], "suggestions_total": 0}', 'get_cost_alerts: no prices, dishes or suggestions of El Güero');
 select is(pg_temp.rpc('{}', format('api.get_cost_alerts(%L)', '"last_30d"')) -> 'data',
-          '{"price_moves": [], "breaches": [], "suggestions": []}', 'no claims, no alerts');
+          '{"price_moves": [], "price_moves_total": 0, "breaches": [], "breaches_total": 0, "suggestions": [], "suggestions_total": 0}', 'no claims, no alerts');
 
 -- PR #77 review fixes ---------------------------------------------------------------------
 -- H1: a day that reports the amount but not the count adds to neither; no count at all is no_data
@@ -402,22 +410,6 @@ select is(pg_temp.rpc(:OWNER, format('api.get_dish_margin(%L, %L)', 'tacos de bi
           'M3: a current snapshot is not stale');
 rollback to savepoint stale;
 
--- M4: a suggestion's subject resolves to an active dish priced at the location, never a guess
-savepoint subject;
-insert into public.menu_item (tenant_id, name, kind, is_active) values (:'TENANT', 'Coca-Cola', 'drink', false);
-insert into public.price_suggestion (tenant_id, location_id, rule, subject, status, suggested_price, rationale_code)
-values (:'TENANT', :'CENTRO', 'margin_breach', 'Coca-Cola', 'open', 3300, 'target_food_cost');
-select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(location_id => %L)', :'CENTRO')) #>> '{data,suggestions,0,menu_item_id}', :'COCA',
-          'M4: a retired dish with the same name is not the subject');
-insert into public.menu_item (id, tenant_id, name, kind) values ('eeeeeeee-0000-7000-8000-000000000301', :'TENANT', 'Coca-Cola', 'drink');
-select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(location_id => %L)', :'CENTRO')) #>> '{data,suggestions,0,menu_item_id}', :'COCA',
-          'M4: nor one not priced at the location');
-insert into public.menu_item_price (tenant_id, location_id, menu_item_id, price_gross, effective_from)
-values (:'TENANT', :'CENTRO', 'eeeeeeee-0000-7000-8000-000000000301', 2500, '2026-09-01');
-select is(pg_temp.rpc(:OWNER, format('api.get_cost_alerts(location_id => %L)', :'CENTRO')) #> '{data,suggestions,0}',
-          '{"menu_item_id": null, "name": "Coca-Cola", "current_price": null, "suggested_price": {"raw": 3300, "text": "$33.00"}}',
-          'M4: two priced dishes with that name: no dish, no current price');
-rollback to savepoint subject;
 
 -- M5: the confidence flag qualifies the breaches only
 savepoint breach_conf;

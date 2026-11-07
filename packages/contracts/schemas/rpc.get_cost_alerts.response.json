@@ -45,36 +45,70 @@
     },
     "CostAlertsData": {
       "additionalProperties": false,
+      "description": "Ingredient price moves, dishes over target and price suggestions (MR-33).\n\nDoc 13 keeps tool results small (top N only): `price_moves` holds the 10 largest moves (by\nsize, either way; listed by start day), `breaches` and `suggestions` the 10 highest food costs;\nthe `*_total` fields count every row, so the agent can say how many more there are.",
       "properties": {
         "breaches": {
           "items": {
             "$ref": "#/$defs/TargetBreach"
           },
+          "maxItems": 10,
           "title": "Breaches",
           "type": "array"
+        },
+        "breaches_total": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Breaches Total",
+          "type": "integer"
         },
         "price_moves": {
           "items": {
             "$ref": "#/$defs/PriceMove"
           },
+          "maxItems": 10,
           "title": "Price Moves",
           "type": "array"
+        },
+        "price_moves_total": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Price Moves Total",
+          "type": "integer"
         },
         "suggestions": {
           "items": {
             "$ref": "#/$defs/PriceSuggestion"
           },
+          "maxItems": 10,
           "title": "Suggestions",
           "type": "array"
+        },
+        "suggestions_total": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "title": "Suggestions Total",
+          "type": "integer"
         }
       },
       "required": [
         "price_moves",
+        "price_moves_total",
         "breaches",
-        "suggestions"
+        "breaches_total",
+        "suggestions",
+        "suggestions_total"
       ],
       "title": "CostAlertsData",
       "type": "object"
+    },
+    "CostConfidence": {
+      "enum": [
+        "confirmed",
+        "estimated",
+        "missing"
+      ],
+      "title": "CostConfidence",
+      "type": "string"
     },
     "Flag": {
       "additionalProperties": false,
@@ -150,29 +184,6 @@
       "title": "Meta",
       "type": "object"
     },
-    "Money": {
-      "additionalProperties": false,
-      "properties": {
-        "raw": {
-          "description": "unit=centavos",
-          "maximum": 9223372036854775807,
-          "minimum": -9223372036854775808,
-          "title": "Raw",
-          "type": "integer"
-        },
-        "text": {
-          "pattern": "\\S",
-          "title": "Text",
-          "type": "string"
-        }
-      },
-      "required": [
-        "raw",
-        "text"
-      ],
-      "title": "Money",
-      "type": "object"
-    },
     "Pct": {
       "additionalProperties": false,
       "description": "A calculated percentage in percent points (+7.2 is 7.2 %), not a database column.",
@@ -224,6 +235,30 @@
       "title": "Period",
       "type": "object"
     },
+    "PositiveMoney": {
+      "additionalProperties": false,
+      "description": "Money greater than zero: a price a dish is sold at.",
+      "properties": {
+        "raw": {
+          "description": "unit=centavos, greater than zero",
+          "exclusiveMinimum": 0,
+          "maximum": 9223372036854775807,
+          "title": "Raw",
+          "type": "integer"
+        },
+        "text": {
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "text"
+      ],
+      "title": "PositiveMoney",
+      "type": "object"
+    },
     "PriceMove": {
       "additionalProperties": false,
       "properties": {
@@ -249,44 +284,77 @@
     },
     "PriceSuggestion": {
       "additionalProperties": false,
-      "description": "`price_suggestion` has a free-text `subject` and no dish id or current price, so\n`menu_item_id` and `current_price` are present only when the subject resolves to a dish.",
+      "description": "A menu price suggestion for a dish at a location that breaches the target (MR-33).\n\nEvery price here is a MENU price with IVA included, the price on the menu (settles MR-11 spec\n7.2): `current_price` is the menu price today, `target_price` the lowest price that reaches the\ntarget food cost (to the centavo, not rounded to a price point), `suggested_price` the price\npoint to propose. `change` is suggested vs current; `new_food_cost` the food cost (on the net\nprice, as everywhere) at the suggested price. A review (`review_portion_cost`) has no\nsuggested price, change or new food cost. `confidence` is the cost's (confirmed: fresh CFDI\nprices and confirmed recipes). Stars and resale items (bottled drinks) never appear.\n\"Cambiar precios\" proposes a `menu_item_price.set` pending change for `location_id`.",
       "properties": {
-        "current_price": {
+        "change": {
           "anyOf": [
             {
-              "$ref": "#/$defs/Money"
+              "$ref": "#/$defs/Pct"
             },
             {
               "type": "null"
             }
-          ],
-          "default": null
+          ]
+        },
+        "confidence": {
+          "$ref": "#/$defs/CostConfidence"
+        },
+        "current_price": {
+          "$ref": "#/$defs/PositiveMoney"
+        },
+        "location_id": {
+          "format": "uuid",
+          "title": "Location Id",
+          "type": "string"
         },
         "menu_item_id": {
-          "anyOf": [
-            {
-              "format": "uuid",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Menu Item Id"
+          "format": "uuid",
+          "title": "Menu Item Id",
+          "type": "string"
         },
         "name": {
           "pattern": "\\S",
           "title": "Name",
           "type": "string"
         },
+        "new_food_cost": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pct"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rationale_code": {
+          "$ref": "#/$defs/SuggestionRationale"
+        },
         "suggested_price": {
-          "$ref": "#/$defs/Money"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PositiveMoney"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target_price": {
+          "$ref": "#/$defs/PositiveMoney"
         }
       },
       "required": [
+        "menu_item_id",
+        "location_id",
         "name",
-        "suggested_price"
+        "current_price",
+        "target_price",
+        "suggested_price",
+        "change",
+        "new_food_cost",
+        "confidence",
+        "rationale_code"
       ],
       "title": "PriceSuggestion",
       "type": "object"
@@ -318,6 +386,16 @@
         "internal"
       ],
       "title": "RpcErrorCode",
+      "type": "string"
+    },
+    "SuggestionRationale": {
+      "description": "Why a dish gets this suggestion (03 \"Price-suggestion formula\", MR-33 decision U4).",
+      "enum": [
+        "raise_to_target",
+        "raise_capped",
+        "review_portion_cost"
+      ],
+      "title": "SuggestionRationale",
       "type": "string"
     },
     "TargetBreach": {

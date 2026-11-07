@@ -75,16 +75,35 @@ JSONB_ARGS = {"period", "since", "period_a", "period_b"}
 CASTS = {"location_id": "uuid", "location_ids": "uuid[]"}
 
 
-def call(db_url: str, rpc: str, args: dict[str, Any], claims: dict[str, Any]) -> Any:
+def call(
+    db_url: str,
+    rpc: str,
+    args: dict[str, Any],
+    claims: dict[str, Any],
+    *,
+    setup: tuple[str, ...] = (),
+    evaluate: bool = False,
+) -> Any:
+    """`setup` runs first (as the owner role); `evaluate` runs the backend's cost alert job on
+    the seed's today, which writes the alerts and the price suggestions."""
+
     def cast(name: str) -> str:
         return "jsonb" if name in JSONB_ARGS else CASTS.get(name, "text")
 
     params = ", ".join(f'"{name}" => %s::{cast(name)}' for name in args)
     values = [json.dumps(v) if cast(k) == "jsonb" else v for k, v in args.items()]
     with psycopg.connect(db_url) as conn:
+        for statement in setup:
+            conn.execute(statement)  # test-only literals
         conn.execute(
             "select app.compute_dish_costs(%s, '2026-09-01', '2026-10-12')", [TENANT]
         )  # the backend's cost job, rolled back with the rest
+        if evaluate:
+            conn.execute("set local role service_role")
+            conn.execute(
+                "select app.evaluate_cost_alerts(%s, '2026-10-12', '2026-10-12')", [TENANT]
+            )
+            conn.execute("reset role")
         conn.execute("set local role authenticated")
         conn.execute("select set_config('request.jwt.claims', %s, true)", [json.dumps(claims)])
         conn.execute("set local app.today = '2026-10-12'")
@@ -136,12 +155,14 @@ def test_every_cost_answer_carries_its_confidence(db_url: str) -> None:
 EXAMPLES = Path(__file__).parent / "examples" / "rpc"
 
 
-def example_and_live(db_url: str, name: str, file: str | None = None) -> tuple[Any, Any]:
+def example_and_live(
+    db_url: str, name: str, file: str | None = None, **kwargs: Any
+) -> tuple[Any, Any]:
     doc = json.loads((EXAMPLES / f"{file or name}.json").read_text())
     adapter = envelope(name)
     return (
         adapter.validate_python(doc["response"]),
-        adapter.validate_python(call(db_url, name, doc["args"], OWNER)),
+        adapter.validate_python(call(db_url, name, doc["args"], OWNER, **kwargs)),
     )
 
 
@@ -200,7 +221,25 @@ def test_sales_breakdown_example_figures(db_url: str) -> None:
 
 
 def test_cost_alerts_example_figures(db_url: str) -> None:
-    example, live = example_and_live(db_url, "get_cost_alerts")
+    example, live = example_and_live(db_url, "get_cost_alerts", evaluate=True)
     assert live.data.price_moves == example.data.price_moves
     assert live.data.breaches == example.data.breaches
-    assert live.data.suggestions == []  # the backend writes price_suggestion; the seed has none
+    # Centro's puzzles and dog: "revisa porción/costo"; its plowhorses are resale or capped flat
+    assert live.data.suggestions == example.data.suggestions
+
+
+QUESO_DOUBLES = (
+    "insert into public.ingredient_price"
+    " (tenant_id, ingredient_id, unit_price_net, effective_from, source)"
+    f" values ('{TENANT}', '5268568b-3d45-535f-9197-4b2f1873700e', 0.280, '2026-09-28', 'cfdi')",
+)
+
+
+def test_cost_alerts_raise_example_is_what_the_rpc_answers(db_url: str) -> None:
+    """Queso Oaxaca $140 -> $280/kg on 09-28: the quesadilla at Polanco (a plowhorse, $50)
+    breaches on 10-05 and 10-12 and gets $55, the +10 % cap ($70.37 would reach 32 %)."""
+    example, live = example_and_live(
+        db_url, "get_cost_alerts", "get_cost_alerts.raise", setup=QUESO_DOUBLES, evaluate=True
+    )
+    assert live.data == example.data
+    assert live.flags == example.flags
